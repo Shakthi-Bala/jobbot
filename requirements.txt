@@ -1,0 +1,17 @@
+anthropic>=0.70
+httpx>=0.27
+pydantic>=2.6
+pyyaml>=6.0
+jinja2>=3.1
+streamlit>=1.35
+pandas>=2.0
+beautifulsoup4>=4.12
+rapidfuzz>=3.6
+pypdf>=4.0
+# Python bindings for Typst; used when the `typst` CLI is not on PATH
+typst>=0.11
+# Optional: Gmail job-alert ingestion
+google-api-python-client>=2.100
+google-auth-oauthlib>=1.2
+# Dev
+pytest>=8.0

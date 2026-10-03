@@ -1,0 +1,37 @@
+# --- Personal data: stays on your machine, never in git ---
+data/profile.yaml
+data/answers_bank.yaml
+data/tracker.db
+data/tracker.db-*
+data/decisions.tsv
+data/daily_log.md
+data/weekly_review.md
+data/run.log
+data/credentials.json
+data/token.json
+data/uploads/
+out/
+.env
+.env.*
+
+# --- Python ---
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Streamlit ---
+.streamlit/secrets.toml
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
