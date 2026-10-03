@@ -148,3 +148,7 @@ class OutreachDraft(BaseModel):
 class BlindVerdict(BaseModel):
     winner: Literal["A", "B", "tie"]
     reason: str
+
+
+class ParagraphList(BaseModel):
+    paragraphs: list[Paragraph]

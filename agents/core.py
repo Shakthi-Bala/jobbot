@@ -46,9 +46,9 @@ STATUSES = [
 ]
 
 FACT_TAG_RE = re.compile(r"\[([FEXP]\d{3})\]")
-ANSWER_TAG_RE = re.compile(r"\[A:([a-z0-9_]+)\]")
+ANSWER_TAG_RE = re.compile(r"\[A:([a-z0-9_.]+)\]")
 NEED_INPUT_RE = re.compile(r"\[NEED INPUT:[^\]]*\]")
-ANY_TAG_RE = re.compile(r"\s*\[(?:[FEXP]\d{3}|A:[a-z0-9_]+)\]")
+ANY_TAG_RE = re.compile(r"\s*\[(?:[FEXP]\d{3}|A:[a-z0-9_.]+)\]")
 
 
 class JobbotError(RuntimeError):

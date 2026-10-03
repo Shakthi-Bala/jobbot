@@ -1,0 +1,307 @@
+"""Application writing agent: choose, order and reword verified facts for one job.
+
+The model proposes; code disposes. Every bullet must cite fact IDs that belong to
+the entry it sits under, or it is deleted. Output is written twice: a tagged
+version that checks/ read, and a clean rendered version you send.
+"""
+from __future__ import annotations
+
+import difflib
+import json
+import shutil
+import subprocess
+from pathlib import Path
+
+from . import core
+from .schemas import ParagraphList, TailoredPacket
+
+MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
+
+
+def fmt_month(value) -> str:
+    s = str(value or "").strip()
+    if s.lower() == "present" or not s:
+        return s.capitalize() if s else ""
+    parts = s.split("-")
+    if len(parts) >= 2 and parts[1].isdigit() and 1 <= int(parts[1]) <= 12:
+        return f"{MONTHS[int(parts[1]) - 1]} {parts[0]}"
+    return s
+
+
+def dates(entry: dict) -> str:
+    start, end = fmt_month(entry.get("start")), fmt_month(entry.get("end"))
+    return f"{start} – {end}" if start and end else start or end or str(entry.get("dates", ""))
+
+
+def packet_dir(job_id: str) -> Path:
+    return core.OUT / job_id
+
+
+# ------------------------------------------------------------- drafting
+
+def draft(conn, job_id: str, feedback: list[str] | None = None) -> TailoredPacket:
+    profile = core.load_profile()
+    job = core.get_job(conn, job_id)
+    fit = conn.execute("SELECT * FROM fit WHERE job_id=?", (job_id,)).fetchone()
+    parsed = json.loads(job["parsed_json"] or "{}")
+    prefs = profile.get("preferences", {})
+
+    user = (
+        "## Profile (the ONLY source of facts)\n" + core.dumps({
+            k: profile.get(k) for k in
+            ("person", "education", "experience", "projects", "skills", "facts")
+        })
+        + "\n\n## Answers bank (approved by the candidate; cite as answer_bank_keys)\n"
+        + core.dumps(core.load_answers_bank())
+        + "\n\n## Preferences\n" + core.dumps(prefs)
+        + f"\n\n## Job\nCompany: {job['company']}\nTitle: {job['title']}\n"
+        f"Req ID: {job['req_id']}\nParsed: {core.dumps(parsed)}\n"
+        + (f"Fit analysis: strengths={fit['strengths_json']} gaps={fit['gaps_json']}\n"
+           if fit else "")
+        + f"Cover letter requested: {parsed.get('cover_letter_requested', False)}\n"
+        f"Application questions: {core.dumps(parsed.get('application_questions', []))}\n\n"
+        + core.untrusted("posting", job["raw_text"])
+    )
+    if feedback:
+        user += ("\n\n## Fix these problems from the previous draft\n"
+                 + "\n".join(f"- {f}" for f in feedback))
+    return core.llm_json("writing", core.system_prompt("tailor"), user, TailoredPacket,
+                         max_tokens=32000)
+
+
+def unslop(paragraphs: list[dict], profile: dict) -> list[dict]:
+    """Remove filler and AI-sounding phrasing. Keeps each paragraph's fact IDs."""
+    if not paragraphs:
+        return paragraphs
+    banned = profile.get("preferences", {}).get("banned_phrases", [])
+    result = core.llm_json(
+        "writing", core.system_prompt("unslop"),
+        f"Banned phrases: {banned}\n\nParagraphs:\n" + core.dumps(paragraphs),
+        ParagraphList, max_tokens=8000,
+    )
+    out = []
+    for before, after in zip(paragraphs, result.paragraphs):
+        # The rewrite may not add sources. Fall back to the original if it did.
+        if set(after.fact_ids) <= set(before["fact_ids"]) and after.fact_ids:
+            out.append(after.model_dump())
+        else:
+            out.append(before)
+    return out + paragraphs[len(result.paragraphs):]
+
+
+# ------------------------------------------------------------ validation
+
+def enforce(packet: TailoredPacket, profile: dict, job_id: str,
+            must_have: list[str]) -> dict:
+    """Apply no-unsourced-claims in code. Returns a plain dict ready to render."""
+    known = core.profile_ids(profile)
+    entries = {e["id"]: e for e in profile.get("experience", []) + profile.get("projects", [])}
+    bank = core.load_answers_bank()
+
+    def keep_entry(entry) -> dict | None:
+        src = entries.get(entry.ref_id)
+        if not src:
+            core.log_decision("tailor", job_id, "dropped_entry", f"unknown ref {entry.ref_id}")
+            return None
+        allowed = set(src.get("facts", []))
+        bullets = []
+        for b in entry.bullets:
+            if b.fact_ids and set(b.fact_ids) <= allowed:
+                bullets.append({"text": b.text.strip(), "fact_ids": b.fact_ids})
+            else:
+                core.log_decision("tailor", job_id, "dropped_bullet",
+                                  f"{entry.ref_id}: ids {b.fact_ids} not in {sorted(allowed)}: "
+                                  f"{b.text[:100]}")
+        return {"ref_id": entry.ref_id, "bullets": bullets} if bullets else None
+
+    skills_src = {s["skill"].lower(): s for s in profile.get("skills", [])}
+    required = " ".join(must_have).lower()
+    skills = []
+    for name in packet.skills:
+        s = skills_src.get(name.lower())
+        if not s or not s.get("evidence"):
+            continue
+        if s.get("level") in ("strong", "working"):
+            skills.append({"skill": s["skill"], "fact_ids": s["evidence"]})
+        elif s.get("level") == "familiar" and s["skill"].lower() in required:
+            skills.append({"skill": f"{s['skill']} (familiar)", "fact_ids": s["evidence"]})
+
+    paragraphs = [p.model_dump() for p in packet.cover_letter
+                  if p.fact_ids and set(p.fact_ids) <= known]
+
+    answers = []
+    for a in packet.answers:
+        keys = [k for k in a.answer_bank_keys if _bank_get(bank, k) is not None]
+        ids = [f for f in a.fact_ids if f in known]
+        if a.need_input or not (keys or ids):
+            answers.append({"question": a.question, "answer": "", "fact_ids": [],
+                            "keys": [], "need_input": a.need_input or "no supporting fact"})
+        else:
+            answers.append({"question": a.question, "answer": a.answer.strip(),
+                            "fact_ids": ids, "keys": keys, "need_input": None})
+
+    return {
+        "experience": [e for e in map(keep_entry, packet.experience) if e],
+        "projects": [e for e in map(keep_entry, packet.projects) if e],
+        "skills": skills,
+        "cover_letter": paragraphs,
+        "answers": answers,
+        "rationale": packet.rationale,
+    }
+
+
+def _bank_get(bank: dict, dotted: str):
+    node = bank
+    for part in dotted.split("."):
+        if not isinstance(node, dict) or part not in node:
+            return None
+        node = node[part]
+    return node
+
+
+# -------------------------------------------------------------- writing
+
+def tags(ids: list[str], keys: list[str] = ()) -> str:
+    return "".join(f"[{i}]" for i in ids) + "".join(f"[A:{k}]" for k in keys)
+
+
+def write_packet(job, content: dict, profile: dict, version: int) -> Path:
+    d = packet_dir(job["id"])
+    d.mkdir(parents=True, exist_ok=True)
+    person = profile.get("person", {})
+    entries = {e["id"]: e for e in profile.get("experience", []) + profile.get("projects", [])}
+
+    meta = {"job_id": job["id"], "company": job["company"], "title": job["title"],
+            "req_id": job["req_id"], "url": job["url"], "location": job["location"],
+            "version": version, "created_at": core.now()}
+    (d / "meta.json").write_text(core.dumps(meta))
+
+    # --- resume: tagged markdown (for checks) + json (for Typst) ----------
+    lines = [f"# {person.get('name', '')} | {person.get('email', '')} | "
+             f"{person.get('phone', '')} | {person.get('location', '')}", "", "## Education"]
+    edu_json = []
+    for e in profile.get("education", []):
+        lines.append(f"{e['degree']}, {e['school']}, {dates(e)}"
+                     + (f", GPA {e['gpa']}" if e.get("gpa") else "") + f" [{e['id']}]")
+        details = []
+        if e.get("thesis", {}).get("title"):
+            details.append(f"Thesis: {e['thesis']['title']}")
+        if e.get("coursework"):
+            details.append("Coursework: " + ", ".join(e["coursework"]))
+        lines += [f"- {x} [{e['id']}]" for x in details]
+        edu_json.append({"degree": e["degree"], "school": e["school"], "dates": dates(e),
+                         "location": e.get("location", ""), "gpa": str(e.get("gpa") or ""),
+                         "details": details})
+
+    def section(title: str, items: list[dict], kind: str) -> list[dict]:
+        out = []
+        if items:
+            lines.extend(["", f"## {title}"])
+        for item in items:
+            src = entries[item["ref_id"]]
+            heading = (f"{src['title']}, {src['org']}" if kind == "experience"
+                       else src["name"])
+            lines.append(f"### {heading}, {dates(src)} [{src['id']}]")
+            lines.extend(f"- {b['text']} {tags(b['fact_ids'])}" for b in item["bullets"])
+            out.append({"heading": heading, "title": src.get("title", src.get("name", "")),
+                        "org": src.get("org", ""), "location": src.get("location", ""),
+                        "dates": dates(src), "links": src.get("links", {}) or {},
+                        "bullets": [b["text"] for b in item["bullets"]]})
+        return out
+
+    exp_json = section("Experience", content["experience"], "experience")
+    proj_json = section("Projects", content["projects"], "project")
+    if content["skills"]:
+        lines.extend(["", "## Skills"])
+        lines.extend(f"- {s['skill']} {tags(s['fact_ids'])}" for s in content["skills"])
+    (d / "resume.tagged.md").write_text("\n".join(lines) + "\n")
+
+    resume_json = {
+        "person": {k: person.get(k, "") for k in ("name", "email", "phone", "location")}
+        | {"links": person.get("links", {}) or {}},
+        "education": edu_json, "experience": exp_json, "projects": proj_json,
+        "skills": [s["skill"] for s in content["skills"]],
+    }
+    (d / "resume.json").write_text(core.dumps(resume_json))
+    shutil.copy(core.TEMPLATES / "resume.typ", d / "resume.typ")
+
+    # --- cover letter --------------------------------------------------
+    for p in ("cover_letter.tagged.md", "cover_letter.md", "cover_letter.json",
+              "cover_letter.typ", "cover_letter.pdf"):
+        (d / p).unlink(missing_ok=True)
+    if content["cover_letter"]:
+        tagged = [f"# Cover letter: {job['title']}, {job['company']}", ""]
+        tagged += [f"{p['text']} {tags(p['fact_ids'])}\n" for p in content["cover_letter"]]
+        (d / "cover_letter.tagged.md").write_text("\n".join(tagged))
+        clean = [p["text"] for p in content["cover_letter"]]
+        (d / "cover_letter.md").write_text("\n\n".join(clean) + "\n")
+        (d / "cover_letter.json").write_text(core.dumps({
+            "person": resume_json["person"], "company": job["company"],
+            "title": job["title"], "date": core.today(), "paragraphs": clean}))
+        shutil.copy(core.TEMPLATES / "cover_letter.typ", d / "cover_letter.typ")
+
+    # --- answers -------------------------------------------------------
+    tagged, clean = [f"# Application answers: {job['title']}, {job['company']}", ""], []
+    for a in content["answers"]:
+        tagged.append(f"## Q: {a['question']}")
+        clean.append(f"**{a['question']}**\n")
+        if a["need_input"]:
+            tagged.append(f"[NEED INPUT: {a['need_input']}]")
+            clean.append(f"[NEED INPUT: {a['need_input']}]\n")
+        else:
+            tagged.append(f"{a['answer']} {tags(a['fact_ids'], a['keys'])}")
+            clean.append(a["answer"] + "\n")
+        tagged.append("")
+    (d / "answers.tagged.md").write_text("\n".join(tagged))
+    (d / "answers.md").write_text("\n".join(clean))
+
+    # --- diff vs master ------------------------------------------------
+    facts = core.facts_by_id(profile)
+    master, tailored = [], []
+    for e in profile.get("experience", []) + profile.get("projects", []):
+        master.append(f"### {e['id']} {e.get('title') or e.get('name')}")
+        master += [f"- {facts[f]['text']}" for f in e.get("facts", []) if f in facts]
+    for item in content["experience"] + content["projects"]:
+        src = entries[item["ref_id"]]
+        tailored.append(f"### {src['id']} {src.get('title') or src.get('name')}")
+        tailored += [f"- {b['text']}" for b in item["bullets"]]
+    diff = difflib.unified_diff(master, tailored, "master (profile.yaml)", "tailored", lineterm="")
+    (d / "changes.diff").write_text("\n".join(diff) + "\n")
+    (d / "rationale.md").write_text(content["rationale"] + "\n")
+    return d
+
+
+def compile_typst(src: Path) -> Path:
+    pdf = src.with_suffix(".pdf")
+    if shutil.which("typst"):
+        subprocess.run(["typst", "compile", str(src), str(pdf)], check=True,
+                       capture_output=True, text=True)
+    else:
+        import typst
+        typst.compile(str(src), output=str(pdf))
+    return pdf
+
+
+def render(d: Path) -> list[Path]:
+    pdfs = []
+    for name in ("resume.typ", "cover_letter.typ"):
+        if (d / name).exists():
+            try:
+                pdfs.append(compile_typst(d / name))
+            except (subprocess.CalledProcessError, RuntimeError, ImportError) as e:
+                detail = getattr(e, "stderr", "") or str(e)
+                raise core.JobbotError(f"Typst failed on {name}: {detail}") from e
+    return pdfs
+
+
+def build(conn, job_id: str, feedback: list[str] | None = None, version: int = 1) -> Path:
+    profile = core.load_profile()
+    job = core.get_job(conn, job_id)
+    parsed = json.loads(job["parsed_json"] or "{}")
+    packet = draft(conn, job_id, feedback)
+    content = enforce(packet, profile, job_id, parsed.get("must_have", []))
+    content["cover_letter"] = unslop(content["cover_letter"], profile)
+    d = write_packet(job, content, profile, version)
+    render(d)
+    core.log_decision("tailor", job_id, f"packet_v{version}", content["rationale"][:300])
+    return d
