@@ -51,7 +51,10 @@ def build(job_id: str, skip_review: bool = False, offline: bool = False) -> dict
         return _stop(conn, job_id, "blocked", "fit agent found a blocking restriction")
 
     # 4-9. Tailor -> checks -> review, with at most MAX_FIX_LOOPS rewrites.
-    feedback: list[str] = []
+    # Changes you requested from the dashboard seed the first draft.
+    requested = core.OUT / job_id / "requested_changes.md"
+    feedback: list[str] = [f"The candidate asked for: {requested.read_text().strip()}"] \
+        if requested.exists() else []
     d: Path | None = None
     results: dict = {}
     judgment = None
@@ -85,6 +88,7 @@ def build(job_id: str, skip_review: bool = False, offline: bool = False) -> dict
         return _stop(conn, job_id, "needs_input",
                      f"{len(feedback)} issue(s) remain after {MAX_FIX_LOOPS} fix loops; see open_issues.md")
     (d / "open_issues.md").unlink(missing_ok=True)
+    requested.unlink(missing_ok=True)
     core.set_status(conn, job_id, "ready_for_review")
     core.log_decision("packet", job_id, "ready_for_review",
                       "all checks passed" + ("; has [NEED INPUT] answers" if need_input else ""))
