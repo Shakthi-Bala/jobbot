@@ -1,0 +1,17 @@
+# Copy to data/answers_bank.yaml (gitignored). Your approved answers, written once by you.
+# The writing agent cites these as [A:key] (dotted for nested keys).
+
+why_field: >-
+  I like problems where a robot has to make sense of noisy sensor data in real time.
+why_now: >-
+  I finish my M.S. in May 2027 and want to apply what I've built in research to products.
+greatest_challenge: >-
+  Getting a learned depth model to run in real time on a small onboard computer.
+salary_expectation: "I'm open to discussing a range that fits the role and location."
+start_date: "January 2027"
+how_heard_default: "Company careers page"
+self_identification:
+  gender: "Decline to answer"
+  race_ethnicity: "Decline to answer"
+  veteran_status: "Decline to answer"
+  disability: "Decline to answer"

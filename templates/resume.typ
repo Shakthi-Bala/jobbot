@@ -24,8 +24,7 @@
 #align(center)[
   #text(size: 17pt, weight: "bold", d.person.name)
   #v(-0.4em)
-  #let contact = (d.person.location, d.person.email, d.person.phone)
-    .filter(x => x != "")
+  #let contact = (d.person.location, d.person.email, d.person.phone).filter(x => x != "")
   #let links = d.person.links.values().filter(x => x != "" and x != none)
   #(contact + links).join("  |  ")
 ]

@@ -33,13 +33,13 @@ with tabs[0]:
         st.dataframe(df(
             "SELECT j.id, f.score, j.title, j.company, j.location, j.deadline, j.url FROM jobs j "
             "JOIN fit f ON f.job_id=j.id WHERE j.status='shortlisted' ORDER BY f.score DESC"),
-            hide_index=True, use_container_width=True)
+            hide_index=True, width="stretch")
         st.subheader("Packets ready for review")
         st.dataframe(df("SELECT id, title, company FROM jobs WHERE status='ready_for_review'"),
-                     hide_index=True, use_container_width=True)
+                     hide_index=True, width="stretch")
         st.subheader("Need your input")
         st.dataframe(df("SELECT id, title, company FROM jobs WHERE status='needs_input'"),
-                     hide_index=True, use_container_width=True)
+                     hide_index=True, width="stretch")
     with c2:
         st.subheader("Follow-ups due")
         due = tracker.due_followups(conn)
@@ -56,7 +56,7 @@ with tabs[0]:
         st.dataframe(df(
             "SELECT deadline, title, company, status FROM jobs WHERE deadline BETWEEN date('now') "
             "AND date('now','+7 days') AND status NOT IN ('applied','rejected','closed','skipped')"),
-            hide_index=True, use_container_width=True)
+            hide_index=True, width="stretch")
 
 # --------------------------------------------------------------- Pipeline
 with tabs[1]:
@@ -71,7 +71,7 @@ with tabs[1]:
         mask = jobs.title.str.contains(q, case=False, na=False) | \
             jobs.company.str.contains(q, case=False, na=False)
         jobs = jobs[mask]
-    st.dataframe(jobs, hide_index=True, use_container_width=True)
+    st.dataframe(jobs, hide_index=True, width="stretch")
     st.caption(" · ".join(f"{k}: {v}" for k, v in tracker.pipeline_counts(conn).items()))
 
 # ----------------------------------------------------------------- Packet
@@ -184,7 +184,7 @@ with tabs[4]:
         st.info("No data yet.")
     else:
         st.bar_chart(weekly.set_index("week")[["discovered", "shortlisted", "applied", "positive"]])
-        st.dataframe(weekly, hide_index=True, use_container_width=True)
+        st.dataframe(weekly, hide_index=True, width="stretch")
     if st.button("Generate weekly review"):
         st.markdown(tracker.weekly_review())
 
@@ -196,6 +196,6 @@ with tabs[5]:
         term = st.text_input("Search decisions")
         if term and not log.empty:
             log = log[log.apply(lambda r: r.astype(str).str.contains(term, case=False).any(), axis=1)]
-        st.dataframe(log.iloc[::-1], hide_index=True, use_container_width=True)
+        st.dataframe(log.iloc[::-1], hide_index=True, width="stretch")
     else:
         st.info("No decisions logged yet.")

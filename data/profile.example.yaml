@@ -1,0 +1,109 @@
+# Copy to data/profile.yaml (gitignored) and replace everything with YOUR verified facts.
+# Rules: every claim the agents may use is a fact with an ID. A metric of null means
+# "no number" and can never appear in output. Give evidence, not adjectives.
+
+person:
+  name: "Alex Example"
+  email: "alex@example.com"
+  phone: "+1-555-0100"
+  location: "Boston, MA"
+  links: {github: "github.com/alex-example", site: "", scholar: "", linkedin: ""}
+
+authorization:
+  us_work_authorized: true            # exactly as you'd answer on a form
+  needs_sponsorship_now: false
+  needs_sponsorship_future: true
+  export_control_eligible: unsure     # yes | no | unsure
+  clearance_eligible: unsure
+  start_date: "2027-01"
+  relocation: ["Boston", "Bay Area", "remote"]
+  work_mode: ["onsite", "hybrid", "remote"]
+  travel_pct_max: 20
+
+education:
+  - id: E001
+    degree: "M.S. Robotics Engineering"
+    school: "Example Polytechnic Institute"
+    location: "Boston, MA"
+    start: "2025-08"
+    end: "2027-05"
+    gpa: null
+    thesis: {title: "Compact networks for monocular depth", summary: "...", status: "in progress"}
+    coursework: ["Computer Vision", "Deep Learning", "Robot Dynamics", "Motion Planning"]
+
+facts:
+  - id: F001
+    source: project:coded-aperture
+    text: "Designed a learned 11×11 coded aperture jointly trained with a CNN depth classifier"
+    metrics: {}
+    evidence: "repo link / figure / paper"
+    can_demo: true
+  - id: F002
+    source: project:vio
+    text: "Trained visual-inertial odometry networks (vision-only, IMU-only, fusion) on an HPC cluster"
+    metrics: {drift_reduction_pct: null}   # fill with a real number or leave null
+    evidence: "repo"
+    can_demo: true
+  - id: F003
+    source: experience:X001
+    text: "Built a ROS 2 perception pipeline running at 30 FPS on a Raspberry Pi 5"
+    metrics: {fps: 30}
+    evidence: "video"
+    can_demo: true
+
+experience:
+  - id: X001
+    title: "Graduate Research Assistant"
+    org: "Example Perception Lab"
+    location: "Boston, MA"
+    start: "2025-09"
+    end: "present"
+    facts: [F003]
+    verifier: "Advisor name (for your reference only, never sent)"
+
+projects:
+  - id: P001
+    name: "Coded-aperture depth estimation"
+    start: "2025-09"
+    end: "2026-05"
+    facts: [F001]
+    links: {repo: "", video: ""}
+  - id: P002
+    name: "Learned visual-inertial odometry"
+    start: "2026-01"
+    end: "2026-08"
+    facts: [F002]
+    links: {repo: ""}
+
+skills:                               # strong | working | familiar, with evidence
+  - {skill: "PyTorch", level: strong, evidence: [F001, F002]}
+  - {skill: "ROS 2", level: working, evidence: [F003]}
+  - {skill: "Python", level: strong, evidence: [F001, F002, F003]}
+  - {skill: "CUDA", level: familiar, evidence: []}
+
+targets:
+  titles: ["Perception Engineer", "Robotics Software Engineer", "Computer Vision Engineer"]
+  seniority: ["new grad", "entry"]
+  include_keywords: ["SLAM", "VIO", "sensor fusion", "ROS 2", "depth estimation", "perception"]
+  exclude_keywords: ["Staff", "Principal", "Senior", "Manager", "Director"]
+  max_years_experience: 3
+  locations: ["Boston, MA", "Remote US"]
+  min_fit_score: 70
+
+dealbreakers:
+  employment_types: ["full-time", "full time"]   # leave empty to allow any
+  excluded_terms: []                             # e.g. industries you won't work in
+  # min_salary is kept local and never sent to a model
+
+preferences:
+  resume_pages: 1
+  cover_letter_max_words: 300
+  outreach_max_words: 120
+  banned_phrases: ["passionate", "leverage", "synergy", "results-driven"]
+
+writing_samples: []                   # 2-3 short emails/letters that sound like you
+
+networking:
+  max_contacts_per_company: 3
+  channels: ["email", "linkedin_message"]
+  affiliations: ["Example Polytechnic Institute", "Example Perception Lab"]

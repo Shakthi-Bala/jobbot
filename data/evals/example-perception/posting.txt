@@ -1,0 +1,17 @@
+Perception Engineer, Example Robotics (Boston, MA)
+
+We build small autonomous drones for indoor inspection. You'll develop the perception
+stack that lets them fly without GPS.
+
+Required:
+- B.S. or M.S. in Robotics, Computer Science, or related field
+- Experience with visual or visual-inertial odometry
+- Strong Python and PyTorch
+- Experience with ROS 2
+
+Preferred:
+- Depth estimation from monocular cameras
+- Deploying models on embedded hardware
+
+This position requires access to export-controlled information; applicants must be
+U.S. persons as defined by ITAR.

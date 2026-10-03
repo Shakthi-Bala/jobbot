@@ -13,8 +13,12 @@ def check(d: Path) -> list[str]:
     if not pdf.exists():
         return ["resume.pdf missing: render failed or never ran"]
     data = json.loads(data_path.read_text())
-    text = core.normalize(pdf_text(pdf))
+    raw = pdf_text(pdf)
+    text = core.normalize(raw)
     bad = []
+    for leak in ("=>", "#let", "#for", ".filter(", ".join(", "d.person"):
+        if leak in raw:
+            bad.append(f"template code leaked into the PDF: {leak!r}")
 
     sections = [s for s in ("education", "experience", "projects", "skills") if data.get(s)]
     positions = []

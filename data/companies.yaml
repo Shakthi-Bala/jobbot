@@ -1,0 +1,7 @@
+# Target companies. ats: greenhouse | lever | ashby. slug is the board name in the URL:
+#   boards.greenhouse.io/<slug>   jobs.lever.co/<slug>   jobs.ashbyhq.com/<slug>
+# Check each slug by opening the board URL in a browser first.
+companies:
+  - {name: "Example Robotics", ats: greenhouse, slug: examplerobotics, industry: drones}
+  # - {name: "...", ats: lever, slug: "...", industry: "autonomous vehicles"}
+  # - {name: "...", ats: ashby, slug: "...", industry: "AR/VR"}

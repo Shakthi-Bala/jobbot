@@ -192,17 +192,32 @@ jobbot/
 ## 6. Setup
 
 ```bash
-mkdir -p ~/jobbot && cd ~/jobbot
-git init
+cd ~/job_tracker_bot
 python3 -m venv .venv && source .venv/bin/activate
-pip install anthropic httpx pydantic pyyaml jinja2 streamlit pandas \
-            google-api-python-client google-auth-oauthlib beautifulsoup4 rapidfuzz
+pip install -r requirements.txt
 sudo apt install -y poppler-utils sqlite3     # pdftotext for ATS checks
-sudo snap install typst                       # or: cargo install typst-cli
-mkdir -p data/evals skills/jobbot-mode/playbooks principles checks agents templates dashboard out
+# Typst: the `typst` pip package is used automatically; the CLI (snap/cargo) is optional
 echo 'export ANTHROPIC_API_KEY=sk-ant-...' >> ~/.bashrc && source ~/.bashrc
-printf 'data/profile.yaml\ndata/tracker.db\ndata/answers_bank.yaml\nout/\n.venv/\n' > .gitignore
+python jobbot.py init      # creates data/tracker.db, copies the example profile + answers bank
 ```
+
+Then fill in `data/profile.yaml`, `data/answers_bank.yaml` and `data/companies.yaml`.
+
+**Day-to-day commands**
+
+```bash
+python jobbot.py add-jd jd.txt --company "Acme" --title "Perception Engineer"   # phase 1: paste a JD
+python jobbot.py packet JOB_ID          # tailor -> checks -> multi-model review -> ready_for_review
+python jobbot.py checks JOB_ID          # re-run the checks on a packet
+python jobbot.py mark-applied JOB_ID    # after YOU submit; records the resume hash
+python jobbot.py outreach JOB_ID        # contacts + drafts; then mark-sent CONTACT_ID after you send
+python jobbot.py followups --draft      # due follow-ups, with draft nudges
+python jobbot.py outcome JOB_ID interview --note "..."
+python run_daily.py                     # discovery + fit + top-3 packets + daily_log.md
+streamlit run dashboard/app.py
+```
+
+Tests (no API calls): `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest` (the env var keeps a sourced ROS install from injecting pytest plugins).
 
 Your personal data stays out of git and stays on your machine.
 
@@ -585,12 +600,12 @@ if missing:
 `models.yaml`:
 ```yaml
 discovery_parse: claude-haiku-4-5-20251001   # fast, cheap extraction
-fit: claude-sonnet-5-5
+fit: claude-sonnet-5
 writing: claude-opus-5-5                      # judgment + prose
 outreach: claude-opus-5-5
 review_lead: claude-opus-5-5
 reviewers:                                    # diversity is the point
-  - claude-sonnet-5-5
+  - claude-sonnet-5
   - <second-provider-model>
   - <third-provider-model>
 ```
