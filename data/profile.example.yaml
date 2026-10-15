@@ -89,6 +89,7 @@ targets:
   max_years_experience: 3
   locations: ["Boston, MA", "Remote US"]
   min_fit_score: 70
+  min_base_salary_usd: 80000          # pay floor; work starts at $200K+ and moves down
 
 dealbreakers:
   employment_types: ["full-time", "full time"]   # leave empty to allow any

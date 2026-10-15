@@ -55,6 +55,14 @@ class JobbotError(RuntimeError):
     """A stop condition the pipeline should log and surface to you."""
 
 
+class ManualTaskPending(JobbotError):
+    """Manual mode: an AI step is waiting for Claude (in Claude Code) to answer a task file."""
+
+    def __init__(self, key: str, path: Path):
+        self.key, self.path = key, path
+        super().__init__(f"waiting for Claude: {path.relative_to(ROOT) if path.is_relative_to(ROOT) else path}")
+
+
 # --------------------------------------------------------------------- time
 
 def now() -> str:
@@ -186,7 +194,66 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript((ROOT / "schema.sql").read_text(encoding="utf-8"))
+    _migrate(conn)
     return conn
+
+
+# Columns added after the first schema; older tracker.db files get them on connect.
+_JOB_COLUMNS = {
+    "comp_min": "INTEGER", "comp_max": "INTEGER", "comp_currency": "TEXT",
+    "comp_text": "TEXT", "comp_source": "TEXT",
+}
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    have = {r["name"] for r in conn.execute("PRAGMA table_info(jobs)")}
+    for col, typ in _JOB_COLUMNS.items():
+        if col not in have:
+            conn.execute(f"ALTER TABLE jobs ADD COLUMN {col} {typ}")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_comp ON jobs(comp_max)")
+    conn.commit()
+
+
+# --------------------------------------------------------------------- pay
+
+# Bands, highest first. Work always starts at the top band and moves down.
+PAY_BANDS = [(200_000, "$200K+"), (150_000, "$150-200K"), (120_000, "$120-150K"),
+             (100_000, "$100-120K"), (80_000, "$80-100K"), (0, "below $80K")]
+HOURS_PER_YEAR = 2080
+PAY_ORDER_SQL = "(j.comp_max IS NULL), j.comp_max DESC"   # unknown pay goes last
+
+_AMOUNT = r"\$\s?(\d[\d,]*(?:\.\d+)?)\s?([kK])?"
+_RANGE_RE = re.compile(_AMOUNT + r"\s*(?:USD)?\s*(?:-|–|—|to)\s*" + _AMOUNT)
+
+
+def pay_band(comp_max: int | None) -> str:
+    if comp_max is None:
+        return "pay not listed"
+    return next(label for floor, label in PAY_BANDS if comp_max >= floor)
+
+
+def min_salary(profile: dict) -> int:
+    return int(profile.get("targets", {}).get("min_base_salary_usd", 80_000))
+
+
+def _amount(num: str, k: str | None) -> float:
+    value = float(num.replace(",", ""))
+    return value * 1000 if k else value
+
+
+def parse_pay_text(text: str) -> tuple[int, int] | None:
+    """Annual USD (min, max) from posting text like '$136,000—$174,000 USD' or
+    '$60 — $75 per hour'. Several ranges (e.g. per location) -> the widest span."""
+    lows, highs = [], []
+    for m in _RANGE_RE.finditer(text or ""):
+        lo, hi = _amount(m.group(1), m.group(2)), _amount(m.group(3), m.group(4))
+        context = text[max(0, m.start() - 60): m.end() + 40].lower()
+        if hi < 1000 and ("hour" in context or "/hr" in context or hi < 300):
+            lo, hi = lo * HOURS_PER_YEAR, hi * HOURS_PER_YEAR
+        if 20_000 <= lo <= hi <= 2_000_000:
+            lows.append(lo)
+            highs.append(hi)
+    return (int(min(lows)), int(max(highs))) if lows else None
 
 
 def get_job(conn: sqlite3.Connection, job_id: str) -> sqlite3.Row:
@@ -293,12 +360,62 @@ def client():
 T = TypeVar("T")
 
 
+def is_manual() -> bool:
+    """Manual mode (models.yaml `mode: manual`, or JOBBOT_MODE=manual): no API key is
+    used. Each AI step is written to out/tasks/ for Claude in Claude Code to answer."""
+    env = os.environ.get("JOBBOT_MODE")
+    if env:
+        return env == "manual"
+    return load_yaml(ROOT / "models.yaml", default={}).get("mode", "api") == "manual"
+
+
+def tasks_dir() -> Path:
+    return OUT / "tasks"
+
+
+def manual_json(role_label: str, system: str, user: str, schema_model: type[T]) -> T:
+    """Return the saved answer for this exact prompt, or write a task file and raise
+    ManualTaskPending. Same prompt -> same key, so re-running a command picks up answers."""
+    name = schema_model.__name__
+    key = hashlib.sha256(f"{name}\n{system}\n{user}".encode()).hexdigest()[:16]
+    d = tasks_dir()
+    d.mkdir(parents=True, exist_ok=True)
+    answer = d / f"{key}.answer.json"
+    if answer.exists():
+        try:
+            return schema_model.model_validate_json(answer.read_text(encoding="utf-8"))
+        except ValueError as e:
+            raise JobbotError(f"{answer.name} does not match {name}: {e}") from e
+    task = d / f"{key}.task.md"
+    if not task.exists():
+        task.write_text(
+            f"# Task {key}: {role_label} -> {name}\n\n"
+            f"Answer with JSON matching the schema below, saved to `{answer.name}` in this folder.\n"
+            f"Validate with: python jobbot.py tasks --check\n\n"
+            f"## Schema ({name})\n```json\n{json.dumps(strict_schema(schema_model), indent=1)}\n```\n\n"
+            f"## System\n\n{system}\n\n## Input\n\n{user}\n", encoding="utf-8")
+    raise ManualTaskPending(key, task)
+
+
+def pending_tasks() -> list[Path]:
+    d = tasks_dir()
+    if not d.exists():
+        return []
+    return sorted((p for p in d.glob("*.task.md")
+                   if not (d / p.name.replace(".task.md", ".answer.json")).exists()),
+                  key=lambda p: p.stat().st_mtime)
+
+
 def llm_json(role: str | dict, system: str, user: str, schema_model: type[T],
              max_tokens: int = 16000) -> T:
     """One structured-output call. Returns a validated pydantic instance.
 
     `role` is a models.yaml role name or an explicit {"model", "effort"} dict.
+    In manual mode this goes through manual_json() instead of the API.
     """
+    if is_manual():
+        label = role if isinstance(role, str) else role.get("model", "claude")
+        return manual_json(label, system, user, schema_model)
     cfg = model_for(role) if isinstance(role, str) else role
     output_config: dict[str, Any] = {
         "format": {"type": "json_schema", "schema": strict_schema(schema_model)},

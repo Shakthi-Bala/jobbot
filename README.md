@@ -137,7 +137,18 @@ curl -s "https://api.ashbyhq.com/posting-api/job-board/COMPANY?includeCompensati
 | **Produces** | `out/<job_id>/review.md` with findings bucketed **Act on / Consider / Noted / Dismissed** and an agreement map |
 | **Guardrails** | Fixes go back to the writing agent at most twice, then to you. The review agent never edits documents itself |
 
-### 4.6 Tracker and scheduler (regular software)
+### 4.6 Gap coach
+| | |
+|---|---|
+| **Inputs** | Jobs at or above the pay floor, highest pay first, and `profile.yaml` |
+| **Does** | Marks each requirement met / partial / missing (with fact IDs), lists resume fixes from existing work, remaining gaps, 1-3 genuine grad-level projects that would close them, how to get the job, and likely interview topics |
+| **Produces** | `out/<job_id>/gaps.md` and `out/gaps/summary.md` (jobs by pay band, most common missing must-haves, projects ranked by how many jobs they help) |
+| **Guardrails** | "Met" requires real fact IDs or it is downgraded to missing. Projects go into the profile only after they are done and measured |
+
+### 4.7 Pay ranking
+Pay ranges come from the job board (Ashby, Lever) or the posting text (Greenhouse). Work always starts at the **$200K+** band and moves down: $150-200K, $120-150K, $100-120K, $80-100K. Jobs whose range tops out below `targets.min_base_salary_usd` (default $80K) are dropped. Posted ranges are base pay; total compensation with equity is usually higher.
+
+### 4.8 Tracker and scheduler (regular software)
 | | |
 |---|---|
 | **Does** | Records every action, document version (with hash), reply, deadline, and follow-up. Builds a daily next-action queue |
@@ -215,6 +226,14 @@ python jobbot.py followups --draft      # due follow-ups, with draft nudges
 python jobbot.py outcome JOB_ID interview --note "..."
 python run_daily.py                     # discovery + fit + top-3 packets + daily_log.md
 streamlit run dashboard/app.py
+```
+
+**Manual mode (no API key).** `models.yaml` has `mode: manual`. Each AI step is written to `out/tasks/<key>.task.md`; Claude, in a Claude Code session, writes `<key>.answer.json`; re-run the same command and it continues. `python jobbot.py tasks` lists what's waiting, `python jobbot.py tasks --check` validates answers. Set `mode: api` to call the Anthropic API instead.
+
+```bash
+python jobbot.py gaps --top 10          # gap coach on the 10 best-paying jobs
+python jobbot.py gaps --summary         # rebuild out/gaps/summary.md
+python jobbot.py ingest URL [URL ...]   # add postings Claude found by web search
 ```
 
 Tests (no API calls): `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest` (the env var keeps a sourced ROS install from injecting pytest plugins).

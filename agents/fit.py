@@ -56,6 +56,14 @@ def dealbreaker_hits(job, profile: dict) -> list[str]:
 def score_job(conn, job_id: str, profile: dict | None = None) -> dict:
     profile = profile or core.load_profile()
     job = core.get_job(conn, job_id)
+    if job["parsed_json"] is None:  # manual mode: discovery queued the parse as a task
+        from . import discover
+        parsed = discover.parse_posting(dict(job))
+        if not discover.apply_parse(conn, job_id, job["raw_text"], parsed, "",
+                                    profile.get("targets", {})):
+            return {"job_id": job_id, "score": 0, "decision": "skip", "blockers": [],
+                    "pay": core.pay_band(job["comp_max"])}
+        job = core.get_job(conn, job_id)
     known_ids = core.profile_ids(profile)
 
     user = (
@@ -115,20 +123,25 @@ def score_job(conn, job_id: str, profile: dict | None = None) -> dict:
     reason = f"score {score} (threshold {threshold}); " + "; ".join(blockers + deal) \
         if blockers or deal else f"score {score} (threshold {threshold}). {result.summary}"
     core.log_decision("fit", job_id, decision, reason, [job["url"] or ""])
-    return {"job_id": job_id, "score": score, "decision": decision, "blockers": blockers + deal}
+    return {"job_id": job_id, "score": score, "decision": decision, "blockers": blockers + deal,
+            "pay": core.pay_band(job["comp_max"])}
 
 
 def run(job_ids: list[str] | None = None) -> list[dict]:
-    """Score the given jobs, or every active job still at 'discovered'."""
+    """Score the given jobs, or every active job still at 'discovered', highest pay first.
+    In manual mode, jobs waiting on a task are skipped; re-run after answering."""
     conn = core.connect()
     profile = core.load_profile()
     if job_ids is None:
         job_ids = [r["id"] for r in conn.execute(
-            "SELECT id FROM jobs WHERE status='discovered' AND active=1").fetchall()]
+            "SELECT j.id FROM jobs j WHERE j.status='discovered' AND j.active=1 "
+            f"ORDER BY {core.PAY_ORDER_SQL}").fetchall()]
     results = []
     for jid in job_ids:
         try:
             results.append(score_job(conn, jid, profile))
+        except core.ManualTaskPending:
+            continue
         except core.JobbotError as e:
             core.warn(f"fit {jid}: {e}")
             core.log_decision("fit", jid, "error", str(e))

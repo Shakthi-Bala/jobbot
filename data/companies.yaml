@@ -1,7 +1,40 @@
 # Target companies. ats: greenhouse | lever | ashby. slug is the board name in the URL:
 #   boards.greenhouse.io/<slug>   jobs.lever.co/<slug>   jobs.ashbyhq.com/<slug>
-# Check each slug by opening the board URL in a browser first.
+# Every entry below was checked against the live board API on 2026-10-15.
+# Not supported (no public board API): Tesla, Boston Dynamics, NVIDIA, Apple, Amazon,
+# Zoox, Google/Intrinsic. Watch those through job-alert emails or add JDs by hand.
 companies:
-  - {name: "Example Robotics", ats: greenhouse, slug: examplerobotics, industry: drones}
-  # - {name: "...", ats: lever, slug: "...", industry: "autonomous vehicles"}
-  # - {name: "...", ats: ashby, slug: "...", industry: "AR/VR"}
+  # --- Humanoids / robot learning (often the highest entry pay)
+  - {name: "Figure AI", ats: greenhouse, slug: figureai, industry: humanoids}
+  - {name: "1X", ats: ashby, slug: 1x, industry: humanoids}
+  - {name: "Physical Intelligence", ats: ashby, slug: physicalintelligence, industry: robot learning}
+  - {name: "Agility Robotics", ats: greenhouse, slug: agilityrobotics, industry: humanoids}
+  - {name: "Apptronik", ats: greenhouse, slug: apptronik, industry: humanoids}
+  - {name: "The Bot Company", ats: ashby, slug: thebotcompany, industry: home robots}
+  - {name: "Toyota Research Institute", ats: lever, slug: tri, industry: robot learning}
+  # --- Autonomous vehicles
+  - {name: "Waymo", ats: greenhouse, slug: waymo, industry: autonomous vehicles}
+  - {name: "Nuro", ats: greenhouse, slug: nuro, industry: autonomous vehicles}
+  - {name: "Wayve", ats: ashby, slug: wayve, industry: autonomous vehicles}
+  - {name: "Motional", ats: greenhouse, slug: motional, industry: autonomous vehicles}
+  - {name: "Kodiak", ats: greenhouse, slug: kodiak, industry: autonomous trucking}
+  - {name: "Stack AV", ats: greenhouse, slug: stackav, industry: autonomous trucking}
+  # --- Drones / defense autonomy (often citizenship/ITAR restricted; fit agent checks)
+  - {name: "Skydio", ats: ashby, slug: skydio, industry: drones}
+  - {name: "Shield AI", ats: lever, slug: shieldai, industry: drones}
+  - {name: "Zipline", ats: greenhouse, slug: flyzipline, industry: drones}
+  - {name: "Saronic", ats: ashby, slug: saronic, industry: maritime autonomy}
+  # --- Manipulation / industrial / warehouse
+  - {name: "Standard Bots", ats: ashby, slug: standardbots, industry: manipulation}
+  - {name: "Path Robotics", ats: greenhouse, slug: pathrobotics, industry: manipulation}
+  - {name: "Pickle Robot", ats: lever, slug: picklerobot, industry: warehouse robotics}
+  - {name: "Ambi Robotics", ats: lever, slug: ambirobotics, industry: warehouse robotics}
+  - {name: "Nimble Robotics", ats: greenhouse, slug: nimblerobotics, industry: warehouse robotics}
+  - {name: "Formic", ats: greenhouse, slug: formic, industry: industrial automation}
+  - {name: "Carbon Robotics", ats: greenhouse, slug: carbonrobotics, industry: ag robotics}
+  - {name: "Diligent Robotics", ats: greenhouse, slug: diligentrobotics, industry: service robots}
+  # --- Medical / neurotech robotics
+  - {name: "Neuralink", ats: greenhouse, slug: neuralink, industry: neurotech robotics}
+  # --- Frontier AI labs with robotics teams (mostly generic ML roles; uncomment to include)
+  # - {name: "OpenAI", ats: ashby, slug: openai, industry: AI lab}
+  # - {name: "Scale AI", ats: greenhouse, slug: scaleai, industry: AI data}

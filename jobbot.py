@@ -15,6 +15,13 @@
     python jobbot.py jobs [--status S]
     python jobbot.py weekly
     python jobbot.py eval run LABEL | eval compare LABEL_A LABEL_B
+    python jobbot.py gaps [JOB_ID ...] [--top N] [--summary]   what you're missing, highest pay first
+    python jobbot.py ingest URL [URL ...]       add postings by ATS URL (manual-mode web search)
+    python jobbot.py tasks [--check]           manual mode: AI steps waiting for Claude
+
+Manual mode (models.yaml `mode: manual`) uses no API key: each AI step is written to
+out/tasks/<key>.task.md, Claude (in Claude Code) writes <key>.answer.json, and you
+re-run the same command to continue.
 """
 from __future__ import annotations
 
@@ -40,16 +47,17 @@ def cmd_init(_):
 def cmd_discover(a):
     from agents import discover
     ids = discover.run(web=not a.no_web, alerts=not a.no_alerts)
-    print(f"{len(ids)} new job(s)")
-    for i in ids:
-        print(" ", i)
+    print(f"{len(ids)} new job(s), highest pay first")
+    _print_jobs(ids)
+    _pending_note()
 
 
 def cmd_fit(a):
     from agents import fit
     for r in fit.run(a.job_ids or None):
         extra = f" blocked by: {'; '.join(r['blockers'])}" if r["blockers"] else ""
-        print(f"{r['job_id']}  {r['score']:>3}  {r['decision']}{extra}")
+        print(f"{r['job_id']}  {r['pay']:<15} {r['score']:>3}  {r['decision']}{extra}")
+    _pending_note()
 
 
 def cmd_add_jd(a):
@@ -125,12 +133,76 @@ def cmd_followups(a):
 
 def cmd_jobs(a):
     conn = core.connect()
-    sql = ("SELECT j.id, j.status, j.company, j.title, f.score FROM jobs j "
-           "LEFT JOIN fit f ON f.job_id=j.id")
-    rows = conn.execute(sql + " WHERE j.status=? ORDER BY f.score DESC", (a.status,)).fetchall() \
-        if a.status else conn.execute(sql + " ORDER BY j.first_seen DESC LIMIT 100").fetchall()
-    for r in rows:
-        print(f"{r['id']}  {r['status']:<16} {str(r['score'] or ''):>3}  {r['title']}, {r['company']}")
+    where = "WHERE j.status=?" if a.status else ""
+    rows = conn.execute(
+        "SELECT j.id FROM jobs j LEFT JOIN fit f ON f.job_id=j.id "
+        f"{where} ORDER BY {core.PAY_ORDER_SQL}, f.score DESC LIMIT 200",
+        (a.status,) if a.status else ()).fetchall()
+    _print_jobs([r["id"] for r in rows])
+
+
+def _print_jobs(ids):
+    conn = core.connect()
+    for jid in ids:
+        r = conn.execute("SELECT j.*, f.score FROM jobs j LEFT JOIN fit f ON f.job_id=j.id "
+                         "WHERE j.id=?", (jid,)).fetchone()
+        pay = f"${r['comp_min'] // 1000}-{r['comp_max'] // 1000}K" if r["comp_max"] else "pay n/a"
+        print(f"{r['id']}  {pay:<13} {r['status']:<16} {str(r['score'] or ''):>3}  "
+              f"{r['title']}, {r['company']}")
+
+
+def _pending_note():
+    n = len(core.pending_tasks())
+    if n:
+        print(f"\n{n} AI step(s) waiting for Claude in out/tasks/ "
+              "(ask Claude to answer them, then re-run this command)")
+
+
+def cmd_gaps(a):
+    from agents import gaps
+    if a.summary:
+        print(gaps.summary())
+        return
+    r = gaps.run(a.job_ids or None, top=a.top)
+    print(f"analyzed {len(r['analyzed'])} job(s)")
+    for jid in r["analyzed"]:
+        print(f"  out/{jid}/gaps.md")
+    if r["analyzed"]:
+        print("summary: out/gaps/summary.md")
+    _pending_note()
+
+
+def cmd_ingest(a):
+    from agents import discover
+    profile = core.load_profile()
+    ids = discover.ingest_urls(core.connect(), a.urls, profile.get("targets", {}), "web",
+                               core.min_salary(profile))
+    print(f"{len(ids)} new job(s)")
+    _print_jobs(discover.sort_by_pay(core.connect(), ids))
+    _pending_note()
+
+
+def cmd_tasks(a):
+    from agents import schemas
+    d = core.tasks_dir()
+    if a.check:
+        bad = 0
+        for ans in sorted(d.glob("*.answer.json")) if d.exists() else []:
+            task = d / ans.name.replace(".answer.json", ".task.md")
+            name = task.read_text().split("-> ", 1)[1].split("\n", 1)[0].strip() \
+                if task.exists() else None
+            try:
+                getattr(schemas, name).model_validate_json(ans.read_text())
+            except Exception as e:
+                bad += 1
+                print(f"INVALID {ans.name}: {str(e)[:300]}")
+        print("all answers valid" if not bad else f"{bad} invalid answer(s)")
+        sys.exit(1 if bad else 0)
+    pending = core.pending_tasks()
+    if not pending:
+        print("no pending tasks")
+    for t in pending:
+        print(f"{t.relative_to(core.ROOT)}  {t.read_text().splitlines()[0][2:]}")
 
 
 def cmd_weekly(_):
@@ -177,10 +249,20 @@ def main(argv=None):
     sub.add_parser("weekly").set_defaults(fn=cmd_weekly)
     s = sub.add_parser("eval"); s.set_defaults(fn=cmd_eval)
     s.add_argument("action", choices=["run", "compare"]); s.add_argument("labels", nargs="+")
+    s = sub.add_parser("gaps"); s.set_defaults(fn=cmd_gaps); s.add_argument("job_ids", nargs="*")
+    s.add_argument("--top", type=int, default=10); s.add_argument("--summary", action="store_true")
+    s = sub.add_parser("ingest"); s.set_defaults(fn=cmd_ingest); s.add_argument("urls", nargs="+")
+    s = sub.add_parser("tasks"); s.set_defaults(fn=cmd_tasks)
+    s.add_argument("--check", action="store_true")
 
     a = p.parse_args(argv)
     try:
         a.fn(a)
+    except core.ManualTaskPending as e:
+        print(f"{e}\nAsk Claude to answer it, then re-run: python jobbot.py "
+              + " ".join(sys.argv[1:] if argv is None else argv))
+        _pending_note()
+        sys.exit(3)
     except core.JobbotError as e:
         print(f"error: {e}", file=sys.stderr)
         sys.exit(1)

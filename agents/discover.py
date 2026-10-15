@@ -63,15 +63,29 @@ def hidden_text_flags(raw_html: str) -> list[str]:
     return flags
 
 
+def _pay(lo, hi, text: str, source: str) -> dict:
+    return {"comp_min": int(lo) if lo else None, "comp_max": int(hi) if hi else None,
+            "comp_currency": "USD" if hi else None, "comp_text": text or None,
+            "comp_source": source if hi else None}
+
+
+def _pay_from_text(text: str) -> dict:
+    found = core.parse_pay_text(text)
+    if not found:
+        return _pay(None, None, None, None)
+    return _pay(*found, f"${found[0]:,} - ${found[1]:,} (from posting text)", "text")
+
+
 def _greenhouse_job(slug: str, j: dict) -> dict:
     content = html.unescape(j.get("content") or "")
-    return {
+    text = html_to_text(content)
+    return _pay_from_text(text) | {
         "company": j.get("company_name") or slug, "title": j["title"],
         "location": (j.get("location") or {}).get("name", ""),
         "req_id": str(j.get("requisition_id") or j.get("internal_job_id") or j["id"]),
         "url": j.get("absolute_url"), "source": "greenhouse",
         "posted_at": j.get("first_published") or j.get("updated_at"),
-        "raw_text": html_to_text(content), "raw_html": content,
+        "raw_text": text, "raw_html": content,
     }
 
 
@@ -84,23 +98,43 @@ def _lever_job(slug: str, j: dict) -> dict:
         raw_html += lst.get("content", "")
     parts.append(j.get("additionalPlain") or "")
     created = j.get("createdAt")
-    return {
+    raw_text = "\n\n".join(p for p in parts if p).strip()
+    sr = j.get("salaryRange") or {}
+    if sr.get("max") and sr.get("currency", "USD") == "USD":
+        mult = core.HOURS_PER_YEAR if "hour" in (sr.get("interval") or "") else 1
+        pay = _pay(sr.get("min", 0) * mult, sr["max"] * mult,
+                   f"${sr.get('min')}-${sr['max']} {sr.get('interval', '')}", "ats")
+    else:
+        pay = _pay_from_text(raw_text)
+    return pay | {
         "company": slug, "title": j["text"],
         "location": (j.get("categories") or {}).get("location", ""),
         "req_id": j["id"], "url": j.get("hostedUrl"), "source": "lever",
         "posted_at": datetime.fromtimestamp(created / 1000, timezone.utc).date().isoformat()
         if created else None,
-        "raw_text": "\n\n".join(p for p in parts if p).strip(), "raw_html": raw_html,
+        "raw_text": raw_text, "raw_html": raw_html,
     }
 
 
 def _ashby_job(slug: str, j: dict) -> dict:
     raw_html = j.get("descriptionHtml") or ""
-    return {
+    raw_text = j.get("descriptionPlain") or html_to_text(raw_html)
+    comp = j.get("compensation") or {}
+    salary = [c for c in comp.get("summaryComponents", [])
+              if c.get("compensationType") == "Salary" and c.get("maxValue")
+              and (c.get("currencyCode") or "USD") == "USD"]
+    if salary:
+        c = salary[0]
+        mult = core.HOURS_PER_YEAR if "HOUR" in (c.get("interval") or "") else 1
+        pay = _pay((c.get("minValue") or 0) * mult, c["maxValue"] * mult,
+                   comp.get("compensationTierSummary"), "ats")
+    else:
+        pay = _pay_from_text(raw_text)
+    return pay | {
         "company": slug, "title": j["title"], "location": j.get("location", ""),
         "req_id": j["id"], "url": j.get("jobUrl"), "source": "ashby",
         "posted_at": (j.get("publishedAt") or "")[:10] or None,
-        "raw_text": j.get("descriptionPlain") or html_to_text(raw_html), "raw_html": raw_html,
+        "raw_text": raw_text, "raw_html": raw_html,
     }
 
 
@@ -156,15 +190,23 @@ def fetch_by_url(url: str) -> dict | None:
 
 # ------------------------------------------------------------- filters
 
+def _has_word(phrase: str, text: str) -> bool:
+    """Whole-word match, so 'RL' doesn't match 'world' and 'Intern' doesn't match 'Internal'."""
+    return re.search(rf"(?<![\w]){re.escape(phrase.lower())}(?![\w])", text) is not None
+
+
 def matches_targets(job: dict, targets: dict) -> tuple[bool, str]:
     title = job["title"].lower()
     for kw in targets.get("exclude_keywords", []):
-        if kw.lower() in title:
+        if _has_word(kw, title):
             return False, f"title contains excluded keyword {kw!r}"
     titles = targets.get("titles", [])
     includes = targets.get("include_keywords", [])
-    title_hit = any(fuzz.token_set_ratio(t.lower(), title) >= 85 for t in titles)
-    kw_hit = any(k.lower() in title for k in includes)
+    norm_title = core.normalize(title)  # strip punctuation: "Engineer," must match "Engineer"
+    # token_sort, not token_set: extra words count against the match, so
+    # "Mechanical Engineer, Robotics" no longer matches "Robotics Engineer".
+    title_hit = any(fuzz.token_sort_ratio(core.normalize(t), norm_title) >= 85 for t in titles)
+    kw_hit = any(_has_word(k, title) for k in includes)
     if titles and not (title_hit or kw_hit):
         return False, "title does not match any target title or keyword"
     locations = targets.get("locations", [])
@@ -202,53 +244,79 @@ def verify_quotes(parsed: ParsedPosting, raw_text: str) -> list[str]:
 
 # --------------------------------------------------------------- store
 
-def upsert_jobs(conn, jobs: Iterable[dict], targets: dict, parse: bool = True) -> list[str]:
-    """Insert new matching jobs, refresh known ones. Returns new job IDs."""
+def apply_parse(conn, job_id: str, raw_text: str, parsed: ParsedPosting, raw_html: str,
+                targets: dict) -> bool:
+    """Store a parse result after rules-as-code. False if the job is now excluded."""
+    for q in verify_quotes(parsed, raw_text):
+        core.log_decision("discover", job_id, "dropped_restriction",
+                          f"quote not found verbatim: {q[:120]}")
+    data = parsed.model_dump()
+    data["injection_flags"] = hidden_text_flags(raw_html)
+    if parsed.injection_attempt:
+        data["injection_flags"].append(f"model flagged: {parsed.injection_attempt}")
+    conn.execute("UPDATE jobs SET parsed_json=?, deadline=COALESCE(deadline, ?) WHERE id=?",
+                 (core.dumps(data), parsed.deadline, job_id))
+    max_years = targets.get("max_years_experience")
+    if max_years is not None and (parsed.min_years_experience or 0) > max_years:
+        conn.execute("UPDATE jobs SET status='skipped' WHERE id=?", (job_id,))
+        core.log_decision("discover", job_id, "excluded",
+                          f"requires {parsed.min_years_experience}+ years")
+        conn.commit()
+        return False
+    conn.commit()
+    return True
+
+
+def upsert_jobs(conn, jobs: Iterable[dict], targets: dict, parse: bool = True,
+                min_pay: int = 0) -> list[str]:
+    """Insert new matching jobs, refresh known ones. Returns new job IDs.
+
+    In manual mode the requirements parse becomes a task; the job is stored with
+    parsed_json NULL and fit.run() picks the parse up once Claude has answered.
+    """
     new_ids = []
     for job in jobs:
         jid = core.job_id_for(job["company"], job["title"], job.get("location", ""))
-        existing = conn.execute("SELECT id, req_id FROM jobs WHERE id = ?", (jid,)).fetchone()
-        if existing:
-            conn.execute("UPDATE jobs SET last_verified=?, active=1, url=COALESCE(?, url) WHERE id=?",
-                         (core.now(), job.get("url"), jid))
+        comp = (job.get("comp_min"), job.get("comp_max"), job.get("comp_currency"),
+                job.get("comp_text"), job.get("comp_source"))
+        if conn.execute("SELECT 1 FROM jobs WHERE id = ?", (jid,)).fetchone():
+            conn.execute(
+                "UPDATE jobs SET last_verified=?, active=1, url=COALESCE(?, url), "
+                "comp_min=COALESCE(?, comp_min), comp_max=COALESCE(?, comp_max), "
+                "comp_currency=COALESCE(?, comp_currency), comp_text=COALESCE(?, comp_text), "
+                "comp_source=COALESCE(?, comp_source) WHERE id=?",
+                (core.now(), job.get("url"), *comp, jid))
             continue
         ok, reason = matches_targets(job, targets)
         if not ok:
             continue  # not logged: most postings at a company are irrelevant
-        parsed_json = None
-        if parse:
-            try:
-                parsed = parse_posting(job)
-            except core.JobbotError as e:
-                core.log_decision("discover", jid, "parse_failed", str(e), [job.get("url", "")])
-                parsed = None
-            if parsed:
-                dropped = verify_quotes(parsed, job["raw_text"])
-                for q in dropped:
-                    core.log_decision("discover", jid, "dropped_restriction",
-                                      f"quote not found verbatim: {q[:120]}")
-                data = parsed.model_dump()
-                data["injection_flags"] = hidden_text_flags(job.get("raw_html", ""))
-                if parsed.injection_attempt:
-                    data["injection_flags"].append(f"model flagged: {parsed.injection_attempt}")
-                max_years = targets.get("max_years_experience")
-                if max_years is not None and (parsed.min_years_experience or 0) > max_years:
-                    core.log_decision("discover", jid, "excluded",
-                                      f"requires {parsed.min_years_experience}+ years")
-                    continue
-                parsed_json = core.dumps(data)
-                job["deadline"] = parsed.deadline
+        if min_pay and job.get("comp_max") and job["comp_max"] < min_pay:
+            core.log_decision("discover", jid, "excluded",
+                              f"pay tops out at ${job['comp_max']:,} (< ${min_pay:,} minimum)",
+                              [job.get("url") or ""])
+            continue
         conn.execute(
             "INSERT INTO jobs (id, company, title, location, req_id, url, source, posted_at, "
-            "deadline, first_seen, last_verified, active, raw_text, parsed_json, status) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,'discovered')",
+            "deadline, first_seen, last_verified, active, raw_text, parsed_json, status, "
+            "comp_min, comp_max, comp_currency, comp_text, comp_source) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,NULL,'discovered',?,?,?,?,?)",
             (jid, job["company"], job["title"], job.get("location", ""), job.get("req_id"),
              job.get("url"), job["source"], job.get("posted_at"), job.get("deadline"),
-             core.now(), core.now(), job["raw_text"], parsed_json),
+             core.now(), core.now(), job["raw_text"], *comp),
         )
         conn.commit()
-        core.log_decision("discover", jid, "new_job", reason, [job.get("url") or ""])
+        core.log_decision("discover", jid, "new_job",
+                          f"{reason}; pay {core.pay_band(job.get('comp_max'))}",
+                          [job.get("url") or ""])
         new_ids.append(jid)
+        if parse:
+            try:
+                apply_parse(conn, jid, job["raw_text"], parse_posting(job),
+                            job.get("raw_html", ""), targets)
+            except core.ManualTaskPending:
+                pass  # answered later; fit.run() re-tries the parse
+            except core.JobbotError as e:
+                core.log_decision("discover", jid, "parse_failed", str(e), [job.get("url", "")])
     conn.commit()
     return new_ids
 
@@ -266,7 +334,7 @@ def mark_missing_inactive(conn, company: str, seen_ids: set[str]) -> int:
 
 # ------------------------------------------------------------- sources
 
-def poll_boards(conn, targets: dict) -> list[str]:
+def poll_boards(conn, targets: dict, min_pay: int = 0) -> list[str]:
     new_ids = []
     for c in core.load_companies():
         ats, slug = c.get("ats"), c.get("slug")
@@ -282,7 +350,7 @@ def poll_boards(conn, targets: dict) -> list[str]:
         name = c.get("name") or slug
         for j in jobs:
             j["company"] = name
-        new_ids += upsert_jobs(conn, jobs, targets)
+        new_ids += upsert_jobs(conn, jobs, targets, min_pay=min_pay)
         seen = {core.job_id_for(name, j["title"], j.get("location", "")) for j in jobs}
         mark_missing_inactive(conn, name, seen)
     return new_ids
@@ -295,7 +363,8 @@ def _company_name_for(slug: str) -> str:
     return slug
 
 
-def ingest_urls(conn, urls: Iterable[str], targets: dict, source: str) -> list[str]:
+def ingest_urls(conn, urls: Iterable[str], targets: dict, source: str,
+                min_pay: int = 0) -> list[str]:
     new_ids = []
     for url in dict.fromkeys(urls):
         try:
@@ -307,7 +376,7 @@ def ingest_urls(conn, urls: Iterable[str], targets: dict, source: str) -> list[s
             continue
         job["company"] = _company_name_for(parse_ats_url(url)[1])
         job["source"] = source
-        new_ids += upsert_jobs(conn, [job], targets)
+        new_ids += upsert_jobs(conn, [job], targets, min_pay=min_pay)
     return new_ids
 
 
@@ -354,8 +423,8 @@ def _walk_parts(part: dict) -> Iterable[str]:
 def web_search_urls(targets: dict, max_queries: int = 4) -> list[str]:
     """Ask Claude's web search for postings, restricted to public ATS domains."""
     titles = targets.get("titles", [])[:max_queries]
-    if not titles:
-        return []
+    if not titles or core.is_manual():
+        return []  # manual mode: Claude searches in chat and runs `jobbot.py ingest URL...`
     cfg = core.model_for("fit")
     locations = ", ".join(targets.get("locations", [])) or "United States"
     prompt = (
@@ -385,19 +454,30 @@ def web_search_urls(targets: dict, max_queries: int = 4) -> list[str]:
 def run(web: bool = True, alerts: bool = True) -> list[str]:
     profile = core.load_profile()
     targets = profile.get("targets", {})
+    min_pay = core.min_salary(profile)
     conn = core.connect()
-    new_ids = poll_boards(conn, targets)
+    new_ids = poll_boards(conn, targets, min_pay)
     if alerts:
         try:
-            new_ids += ingest_urls(conn, gmail_alert_urls(), targets, "alert_email")
+            new_ids += ingest_urls(conn, gmail_alert_urls(), targets, "alert_email", min_pay)
         except Exception as e:  # optional source; never fail the run on it
             core.warn(f"gmail alerts skipped: {e}")
     if web:
         try:
-            new_ids += ingest_urls(conn, web_search_urls(targets), targets, "web")
+            new_ids += ingest_urls(conn, web_search_urls(targets), targets, "web", min_pay)
         except Exception as e:
             core.warn(f"web search skipped: {e}")
-    return new_ids
+    return sort_by_pay(conn, new_ids)
+
+
+def sort_by_pay(conn, job_ids: list[str]) -> list[str]:
+    """Highest pay first; unlisted pay last."""
+    if not job_ids:
+        return []
+    rows = conn.execute(
+        f"SELECT j.id FROM jobs j WHERE j.id IN ({','.join('?' * len(job_ids))}) "
+        f"ORDER BY {core.PAY_ORDER_SQL}", job_ids).fetchall()
+    return [r["id"] for r in rows]
 
 
 def add_manual(company: str, title: str, text: str, location: str = "", url: str = "",
@@ -406,6 +486,7 @@ def add_manual(company: str, title: str, text: str, location: str = "", url: str
     conn = core.connect()
     job = {"company": company, "title": title, "location": location, "url": url or None,
            "req_id": req_id or None, "source": "manual", "raw_text": text, "raw_html": ""}
+    job |= _pay_from_text(text)
     jid = core.job_id_for(company, title, location)
     if conn.execute("SELECT 1 FROM jobs WHERE id=?", (jid,)).fetchone():
         return jid

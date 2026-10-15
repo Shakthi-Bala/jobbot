@@ -17,5 +17,6 @@ reorder steps. If a step says stop, stop and log why.
 | Nudge people who haven't replied | `playbooks/follow-up.md` | `python jobbot.py followups --draft` |
 | Record a rejection, interview or offer | `playbooks/post-outcome.md` | `python jobbot.py outcome JOB_ID ...` |
 | Weekly funnel and tuning | `playbooks/weekly-review.md` | `python jobbot.py weekly` |
+| What am I missing for these roles, what to build | `playbooks/career-gaps.md` | `python jobbot.py gaps` |
 
 If no playbook fits, say so and ask. Do not improvise a new pipeline.

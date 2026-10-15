@@ -1,3 +1,5 @@
+mode: manual        # manual = no API key; AI steps become out/tasks/*.task.md for Claude Code. api = call the Anthropic API
+
 # role -> model mapping. Every agent reads this file and falls back to
 # DEFAULTS in agents/core.py if a role is missing.
 # A role may be a plain model id, or {model: ..., effort: low|medium|high|xhigh|max}.

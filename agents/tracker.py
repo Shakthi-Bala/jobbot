@@ -87,9 +87,11 @@ def daily_log(new_ids: list[str], packets: list[dict]) -> str:
     lines += ["## New shortlist", ""]
     new = set(new_ids)
     rows = conn.execute(
-        "SELECT j.id, j.company, j.title, j.location, j.url, f.score FROM jobs j "
-        "JOIN fit f ON f.job_id=j.id WHERE j.status='shortlisted' ORDER BY f.score DESC").fetchall()
-    lines += [f"- {'**new** ' if r['id'] in new else ''}[{r['score']}] {r['title']}, "
+        "SELECT j.id, j.company, j.title, j.location, j.url, j.comp_max, f.score FROM jobs j "
+        "JOIN fit f ON f.job_id=j.id WHERE j.status='shortlisted' "
+        f"ORDER BY {core.PAY_ORDER_SQL}, f.score DESC").fetchall()
+    lines += [f"- {'**new** ' if r['id'] in new else ''}{core.pay_band(r['comp_max'])} · "
+              f"fit {r['score']} · {r['title']}, "
               f"{r['company']} ({r['location']}) `{r['id']}` {r['url'] or ''}"
               for r in rows] or ["- none"]
 

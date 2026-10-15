@@ -152,3 +152,49 @@ class BlindVerdict(BaseModel):
 
 class ParagraphList(BaseModel):
     paragraphs: list[Paragraph]
+
+
+# ----------------------------------------------------------- gap coach
+
+class RequirementCheck(BaseModel):
+    requirement: str
+    kind: Literal["must_have", "nice_to_have"]
+    status: Literal["met", "partial", "missing"]
+    fact_ids: list[str] = Field(description="Profile IDs proving met/partial; empty if missing")
+    note: str
+
+
+class ResumeImprovement(BaseModel):
+    change: str = Field(description="A concrete edit using work already in the profile")
+    fact_ids: list[str]
+    why: str
+
+
+class Gap(BaseModel):
+    gap: str
+    importance: Literal["critical", "important", "nice"]
+    how_to_close: str
+    weeks: int = Field(description="Realistic part-time weeks to close it")
+
+
+class ProjectIdea(BaseModel):
+    title: str
+    closes: list[str] = Field(description="The posting requirements this project would evidence")
+    description: str
+    builds_on: list[str] = Field(description="Profile IDs of existing work it extends")
+    stack: list[str]
+    deliverables: list[str] = Field(description="Public repo, video, write-up, benchmark...")
+    success_metric: str = Field(description="The number that would go on the resume once measured")
+    weeks: int
+
+
+class GapReport(BaseModel):
+    verdict: Literal["apply_now", "apply_after_quick_fixes", "stretch", "not_a_fit"]
+    readiness: int = Field(description="0-100: how competitive the candidate is today")
+    summary: str
+    requirements: list[RequirementCheck]
+    resume_improvements: list[ResumeImprovement]
+    gaps: list[Gap]
+    projects: list[ProjectIdea]
+    how_to_get_it: list[str] = Field(description="Referral path, timing, team, application tactics")
+    interview_topics: list[str]

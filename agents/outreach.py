@@ -17,11 +17,9 @@ BLOCKED_DOMAINS = ["linkedin.com", "glassdoor.com", "dice.com"]
 CYCLE_DAYS = 30
 
 
-def search_people(job, profile: dict) -> str:
-    """Web research step. Returns the model's notes with source URLs."""
-    cfg = core.model_for("outreach")
+def people_prompt(job, profile: dict) -> str:
     net = profile.get("networking", {})
-    prompt = (
+    return (
         f"I'm applying for {job['title']} at {job['company']}. Find up to 6 people at "
         f"{job['company']} who would plausibly work with or hire for this role "
         "(team leads, engineers on the relevant team, researchers, recruiters for this area). "
@@ -34,7 +32,12 @@ def search_people(job, profile: dict) -> str:
         "them (e.g. a paper or talk related to the role), with its URL.\n\n"
         + core.untrusted("posting_excerpt", (job["raw_text"] or "")[:3000])
     )
-    messages = [{"role": "user", "content": prompt}]
+
+
+def search_people(job, profile: dict) -> str:
+    """Web research step (API mode). Returns the model's notes with source URLs."""
+    cfg = core.model_for("outreach")
+    messages = [{"role": "user", "content": people_prompt(job, profile)}]
     notes = []
     for _ in range(3):
         resp = core.client().messages.create(
@@ -85,8 +88,22 @@ def run(job_id: str, offline_review: bool = False) -> dict:
                           f"{job['company']} in the last {CYCLE_DAYS} days")
         return {"job_id": job_id, "drafted": 0, "reason": "contact cap reached"}
 
-    notes = search_people(job, profile)
-    found = core.llm_json(
+    if core.is_manual():
+        # Claude researches with its own web search in chat and answers with the list.
+        # Code still re-fetches every source below before anyone is drafted.
+        found = core.llm_json(
+            "outreach", "Research these people with web search, then answer with the list. "
+            "Copy URLs exactly. Leave out anyone without two source URLs on different sites "
+            "or without a concrete, sourced reason.",
+            people_prompt(job, profile)
+            + f"\nAllowed channels: {net.get('channels', ['email'])}", ContactList)
+    else:
+        found = _extract_contacts(job, net, search_people(job, profile))
+    return _draft_all(conn, job_id, job, profile, net, room, found, offline_review)
+
+
+def _extract_contacts(job, net: dict, notes: str) -> ContactList:
+    return core.llm_json(
         "outreach",
         "Extract the people described in these research notes. Copy URLs exactly. "
         "Leave out anyone without at least two source URLs or without a concrete reason.",
@@ -95,11 +112,14 @@ def run(job_id: str, offline_review: bool = False) -> dict:
         ContactList, max_tokens=8000,
     )
 
+
+def _draft_all(conn, job_id: str, job, profile: dict, net: dict, room: int,
+               found: ContactList, offline_review: bool) -> dict:
     d = core.OUT / job_id / "outreach"
     d.mkdir(parents=True, exist_ok=True)
-    drafted = []
+    drafted, pending = [], 0
     for c in found.candidates:
-        if len(drafted) >= room:
+        if len(drafted) + pending >= room:
             break
         if conn.execute("SELECT 1 FROM contacts WHERE company=? AND name=?",
                         (job["company"], c.name)).fetchone():
@@ -110,7 +130,11 @@ def run(job_id: str, offline_review: bool = False) -> dict:
                               f"{c.name}: {len(verified)} verified source(s)", c.sources)
             continue
         candidate = c.model_dump() | {"sources": verified, "company": job["company"]}
-        msg = draft_message(job, candidate, profile)
+        try:
+            msg = draft_message(job, candidate, profile)
+        except core.ManualTaskPending:
+            pending += 1  # every draft becomes a task in one pass; re-run after answering
+            continue
         slug = core.slugify(c.name)
         (d / f"{slug}.json").write_text(core.dumps(candidate))
         (d / f"{slug}.md").write_text(f"Subject: {msg.subject}\n\n{msg.body.strip()}\n")
@@ -134,6 +158,9 @@ def run(job_id: str, offline_review: bool = False) -> dict:
         core.log_decision("outreach", job_id, "drafted", f"{c.name}: {c.reason}", verified)
         drafted.append({"id": cur.lastrowid, "name": c.name, "file": str(d / f"{slug}.md")})
 
+    if pending:
+        raise core.JobbotError(f"{pending} outreach draft(s) waiting for Claude; "
+                               "answer the tasks, then re-run outreach")
     if drafted:
         results = run_all.run(d.parent, outreach=True, offline=offline_review)
         failed = run_all.failures(results)

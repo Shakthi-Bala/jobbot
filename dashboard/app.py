@@ -23,7 +23,12 @@ def df(sql: str, *args) -> pd.DataFrame:
 st.title("jobbot")
 st.caption("Nothing here submits or sends anything. You do that, then record it.")
 
-tabs = st.tabs(["Today", "Pipeline", "Packet", "Contacts", "Funnel", "Log"])
+tabs = st.tabs(["Today", "Pipeline", "Packet", "Gaps", "Contacts", "Funnel", "Log"])
+GAPS, CONTACTS, FUNNEL, LOG = 3, 4, 5, 6
+
+pending = core.pending_tasks()
+if pending:
+    st.info(f"{len(pending)} AI step(s) waiting for Claude in out/tasks/ (manual mode).")
 
 # ------------------------------------------------------------------ Today
 with tabs[0]:
@@ -31,8 +36,9 @@ with tabs[0]:
     with c1:
         st.subheader("New shortlist")
         st.dataframe(df(
-            "SELECT j.id, f.score, j.title, j.company, j.location, j.deadline, j.url FROM jobs j "
-            "JOIN fit f ON f.job_id=j.id WHERE j.status='shortlisted' ORDER BY f.score DESC"),
+            "SELECT j.id, j.comp_min AS pay_min, j.comp_max AS pay_max, f.score, j.title, "
+            "j.company, j.location, j.deadline, j.url FROM jobs j JOIN fit f ON f.job_id=j.id "
+            f"WHERE j.status='shortlisted' ORDER BY {core.PAY_ORDER_SQL}, f.score DESC"),
             hide_index=True, width="stretch")
         st.subheader("Packets ready for review")
         st.dataframe(df("SELECT id, title, company FROM jobs WHERE status='ready_for_review'"),
@@ -62,9 +68,10 @@ with tabs[0]:
 with tabs[1]:
     statuses = st.multiselect("Status", core.STATUSES, default=[])
     q = st.text_input("Search title/company")
-    jobs = df("SELECT j.id, j.status, f.score, f.decision, j.title, j.company, j.location, j.source, "
-              "j.first_seen, j.deadline, j.active, j.url FROM jobs j "
-              "LEFT JOIN fit f ON f.job_id=j.id ORDER BY j.first_seen DESC")
+    jobs = df("SELECT j.id, j.status, j.comp_min AS pay_min, j.comp_max AS pay_max, f.score, "
+              "f.decision, j.title, j.company, j.location, j.source, j.first_seen, j.deadline, "
+              "j.active, j.url FROM jobs j LEFT JOIN fit f ON f.job_id=j.id "
+              f"ORDER BY {core.PAY_ORDER_SQL}, f.score DESC")
     if statuses:
         jobs = jobs[jobs.status.isin(statuses)]
     if q:
@@ -143,8 +150,20 @@ with tabs[2]:
             core.log_decision("me", choice["id"], "skip", "skipped from dashboard")
             st.rerun()
 
+# ------------------------------------------------------------------- Gaps
+with tabs[GAPS]:
+    summary = core.OUT / "gaps" / "summary.md"
+    if summary.exists():
+        st.markdown(summary.read_text())
+    else:
+        st.info("No gap reports yet. Run `python jobbot.py gaps`.")
+    reports = sorted(core.OUT.glob("*/gaps.md"))
+    if reports:
+        pick = st.selectbox("Job report", reports, format_func=lambda p: p.read_text().splitlines()[0][2:])
+        st.markdown(pick.read_text())
+
 # --------------------------------------------------------------- Contacts
-with tabs[3]:
+with tabs[CONTACTS]:
     contacts = conn.execute(
         "SELECT c.*, j.title FROM contacts c LEFT JOIN jobs j ON j.id=c.job_id "
         "ORDER BY c.created_at DESC").fetchall()
@@ -173,7 +192,7 @@ with tabs[3]:
                 st.rerun()
 
 # ----------------------------------------------------------------- Funnel
-with tabs[4]:
+with tabs[FUNNEL]:
     weekly = df("""
         SELECT strftime('%Y-%W', first_seen) AS week, COUNT(*) AS discovered,
                SUM(CASE WHEN id IN (SELECT job_id FROM fit WHERE decision='shortlist') THEN 1 ELSE 0 END) AS shortlisted,
@@ -189,7 +208,7 @@ with tabs[4]:
         st.markdown(tracker.weekly_review())
 
 # -------------------------------------------------------------------- Log
-with tabs[5]:
+with tabs[LOG]:
     if core.DECISIONS_PATH.exists():
         with open(core.DECISIONS_PATH, encoding="utf-8") as f:
             log = pd.DataFrame(list(csv.DictReader(f, delimiter="\t")))

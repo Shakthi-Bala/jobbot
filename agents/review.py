@@ -63,6 +63,23 @@ def review(conn, job_id: str, d: Path, check_results: dict[str, list[str]],
         + extra + "\n\n" + core.untrusted("posting", job["raw_text"])
     )
 
+    failed_checks = {k: v for k, v in check_results.items() if v}
+    checks_text = ("\n\n## Check failures (rules as code; these are facts, not opinions)\n"
+                   + (core.dumps(failed_checks) if failed_checks else "none"))
+    lead_system = (core.system_prompt(SKILL) + "\n\n" + rubric + "\n\n"
+                   + core.read_skill_ref(SKILL, "lead-judgment.md"))
+
+    if core.is_manual():
+        # No API: one reviewer (Claude in Claude Code) reviews and buckets in one step.
+        reports = [("R1:claude-code", None)]
+        judgment = core.llm_json(
+            "review_lead",
+            lead_system + "\n\nThere are no separate reviewer reports. Review the packet "
+            "yourself against the rubric, then bucket your findings. Use raised_by: [\"R1\"].",
+            user + checks_text, LeadJudgment)
+        write_review(d, job, parsed, judgment, reports, check_results, outreach)
+        return judgment
+
     reviewers = []
     for cfg in core.reviewer_models():
         if not cfg["model"].startswith("claude-"):
@@ -89,14 +106,7 @@ def review(conn, job_id: str, d: Path, check_results: dict[str, list[str]],
     findings_text = "\n\n".join(
         f"### {label}\n" + core.dumps([f.model_dump() for f in rep.findings])
         for label, rep in reports)
-    failed_checks = {k: v for k, v in check_results.items() if v}
-    lead_user = (
-        user + "\n\n## Reviewer findings\n" + findings_text
-        + "\n\n## Check failures (rules as code; these are facts, not opinions)\n"
-        + (core.dumps(failed_checks) if failed_checks else "none")
-    )
-    lead_system = (core.system_prompt(SKILL) + "\n\n" + rubric + "\n\n"
-                   + core.read_skill_ref(SKILL, "lead-judgment.md"))
+    lead_user = user + "\n\n## Reviewer findings\n" + findings_text + checks_text
     judgment = core.llm_json("review_lead", lead_system, lead_user, LeadJudgment)
 
     write_review(d, job, parsed, judgment, reports, check_results, outreach)

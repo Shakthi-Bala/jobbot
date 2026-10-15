@@ -8,7 +8,9 @@ CREATE TABLE IF NOT EXISTS jobs (
   active INTEGER DEFAULT 1,
   raw_text TEXT,                     -- stored posting (untrusted data)
   parsed_json TEXT,                  -- must_have, nice_to_have, restrictions...
-  status TEXT DEFAULT 'discovered'   -- pipeline status, see README section 9
+  status TEXT DEFAULT 'discovered',  -- pipeline status, see README section 9
+  comp_min INTEGER, comp_max INTEGER,-- annual base pay in USD, from the posting
+  comp_currency TEXT, comp_text TEXT, comp_source TEXT   -- ats | text
 );
 
 CREATE TABLE IF NOT EXISTS fit (

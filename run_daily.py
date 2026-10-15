@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Daily orchestrator: daily-discovery, then new-job-packet for the top N new shortlisted jobs.
+"""Daily orchestrator: daily-discovery, then new-job-packet for the top N shortlisted jobs,
+highest pay first. In manual mode, run it during your session with Claude: AI steps
+become tasks in out/tasks/, and re-running continues where it stopped.
 
     python run_daily.py [--top 3] [--no-web] [--no-alerts] [--no-packets]
 
-Cron (7:40am weekdays):
-    40 7 * * 1-5 cd ~/jobbot && .venv/bin/python run_daily.py >> data/run.log 2>&1
+Run it while you're at the computer. Nothing is ever submitted or sent.
 """
 from __future__ import annotations
 
@@ -33,10 +34,12 @@ def main(argv=None) -> None:
         top = conn.execute(
             "SELECT j.id FROM jobs j JOIN fit f ON f.job_id=j.id "
             "WHERE j.status='shortlisted' AND j.active=1 "
-            "ORDER BY (j.deadline IS NULL), j.deadline, f.score DESC LIMIT ?", (a.top,)).fetchall()
+            f"ORDER BY {core.PAY_ORDER_SQL}, f.score DESC LIMIT ?", (a.top,)).fetchall()
         for row in top:
             try:
                 r = packet.build(row["id"])
+            except core.ManualTaskPending as e:
+                r = {"job_id": row["id"], "status": "waiting_for_claude", "reason": str(e)}
             except Exception as e:  # one bad packet must not stop the run
                 core.log_decision("run_daily", row["id"], "packet_error", repr(e))
                 r = {"job_id": row["id"], "status": "error", "reason": repr(e)}
@@ -44,6 +47,10 @@ def main(argv=None) -> None:
             packets.append(r)
 
     print(tracker.daily_log(new_ids, packets))
+    pending = core.pending_tasks()
+    if pending:
+        print(f"{len(pending)} AI step(s) waiting for Claude in out/tasks/; "
+              "answer them, then re-run run_daily.py")
 
 
 if __name__ == "__main__":
