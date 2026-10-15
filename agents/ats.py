@@ -15,15 +15,28 @@ import re
 
 from . import core
 
-# Spelling variants an ATS (or a recruiter's search) treats as the same thing.
-SYNONYMS = {
-    "sim to real": ["sim2real", "sim-to-real", "simulation to real"],
-    "reinforcement learning": ["rl"],
-    "isaac lab": ["isaaclab", "isaac sim"],
+# Spelling variants an ATS treats as the same token (used everywhere).
+FORMAT_VARIANTS = {
+    "sim to real": ["sim2real", "sim-to-real"],
+    "isaac lab": ["isaaclab"],
     "ros 2": ["ros2"],
+}
+# Same skill, different words. Used only to decide whether the PROFILE proves a keyword;
+# the resume must then use the posting's own spelling, because an ATS matches literally.
+EQUIVALENTS = {
+    "sim to real": ["simulation to real"],
+    "reinforcement learning": ["rl"],
+    "isaac lab": ["isaac sim"],
+    "isaac sim": ["isaac lab"],          # Isaac Lab is built on Isaac Sim
     "computer vision": ["cv"],
     "machine learning": ["ml"],
-    "3d vision": ["3d perception", "depth estimation"],
+    "3d vision": ["3d perception", "depth estimation", "3d localization"],
+    "reward shaping": ["reward design"],
+    "parallel rollouts": ["parallel training", "massively parallel simulation", "parallel environments"],
+    "flying robots": ["drone", "drones"],
+    "uas": ["drone", "drones"],
+    "kinematics": ["inverse kinematics", "ik"],
+    "controls": ["control", "control barrier functions"],
 }
 
 
@@ -31,15 +44,19 @@ def _norm(text: str) -> str:
     return " " + core.normalize(text) + " "
 
 
-def mentions(keyword: str, text: str) -> bool:
-    """Whole-word, punctuation-insensitive match, with symbol-safe handling of C++/C#."""
+def mentions(keyword: str, text: str, equivalents: bool = False) -> bool:
+    """Whole-word, punctuation-insensitive match, with symbol-safe handling of C++/C#.
+    equivalents=True also accepts other words for the same skill (profile side only)."""
     kw = keyword.strip()
     if not kw:
         return False
     if re.search(r"[+#]", kw):  # "C++" would normalize to "c" and match everything
         return re.search(rf"(?<![\w+#]){re.escape(kw.lower())}(?![\w+#])", text.lower()) is not None
-    hay, hay_compact = _norm(text), _norm(text).replace(" ", "")
-    for variant in [kw] + SYNONYMS.get(core.normalize(kw), []):
+    hay = _norm(text)
+    hay_compact = hay.replace(" ", "")
+    key = core.normalize(kw)
+    variants = [kw] + FORMAT_VARIANTS.get(key, []) + (EQUIVALENTS.get(key, []) if equivalents else [])
+    for variant in variants:
         v = core.normalize(variant)
         if v and (f" {v} " in hay or (len(v) > 4 and v.replace(" ", "") in hay_compact)):
             return True
@@ -73,7 +90,7 @@ def classify(keywords: list[str], profile: dict, resume_text: str | None) -> dic
     for k in keywords:
         if resume_text is not None and mentions(k, resume_text):
             buckets["in_resume"].append(k)
-        elif mentions(k, ptext):
+        elif mentions(k, ptext, equivalents=True):
             buckets["fixable"].append(k)
         else:
             buckets["gap"].append(k)

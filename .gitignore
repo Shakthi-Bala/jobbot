@@ -13,6 +13,8 @@ data/credentials.json
 data/token.json
 data/uploads/
 out/
+*.answer.json
+*.task.md
 .env
 .env.*
 
