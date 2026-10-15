@@ -18,6 +18,7 @@
     python jobbot.py gaps [JOB_ID ...] [--top N] [--summary]   what you're missing, highest pay first
     python jobbot.py ingest URL [URL ...]       add postings by ATS URL (manual-mode web search)
     python jobbot.py tasks [--check]           manual mode: AI steps waiting for Claude
+    python jobbot.py sheet                     refresh data/applications.xlsx (keeps your Applied?/Notes)
 
 Manual mode (models.yaml `mode: manual`) uses no API key: each AI step is written to
 out/tasks/<key>.task.md, Claude (in Claude Code) writes <key>.answer.json, and you
@@ -182,6 +183,14 @@ def cmd_ingest(a):
     _pending_note()
 
 
+def cmd_sheet(_):
+    from agents import sheet
+    r = sheet.build()
+    print(f"{r['rows']} job(s) -> {r['path'].relative_to(core.ROOT)}")
+    for jid in r["recorded_applied"]:
+        print(f"  recorded as applied (from the sheet): {jid}")
+
+
 def cmd_tasks(a):
     from agents import schemas
     d = core.tasks_dir()
@@ -252,6 +261,7 @@ def main(argv=None):
     s = sub.add_parser("gaps"); s.set_defaults(fn=cmd_gaps); s.add_argument("job_ids", nargs="*")
     s.add_argument("--top", type=int, default=10); s.add_argument("--summary", action="store_true")
     s = sub.add_parser("ingest"); s.set_defaults(fn=cmd_ingest); s.add_argument("urls", nargs="+")
+    sub.add_parser("sheet").set_defaults(fn=cmd_sheet)
     s = sub.add_parser("tasks"); s.set_defaults(fn=cmd_tasks)
     s.add_argument("--check", action="store_true")
 

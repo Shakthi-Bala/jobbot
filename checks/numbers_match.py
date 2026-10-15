@@ -30,6 +30,8 @@ def check(d: Path) -> list[str]:
     bad = []
     for path in tagged_files(d):
         for n, line in claim_lines(path):
+            if core.NEED_INPUT_RE.fullmatch(line):
+                continue  # a question for you, not a claim
             allowed = set(always_ok)
             for t in core.FACT_TAG_RE.findall(line):
                 allowed |= src.get(t, set())

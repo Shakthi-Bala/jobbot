@@ -137,3 +137,29 @@ def test_mark_applied_records_resume_hash(packet):
     row = conn.execute("SELECT * FROM actions WHERE job_id=? AND action='applied'", (jid,)).fetchone()
     assert row["doc_id"] == doc_id and "sha256=" in row["detail"]
     assert core.get_job(conn, jid)["status"] == "applied"
+
+
+def test_degree_name_is_not_a_role_title(packet):
+    (packet / "cover_letter.md").write_text(
+        "Example Robotics. I study Robotics Engineering and want to be a Perception Engineer.\n")
+    assert consistency.check(packet) == []
+
+
+def test_sheet_keeps_your_edits_and_records_applied(packet, tmp_path):
+    from openpyxl import load_workbook
+    from agents import sheet
+    path = tmp_path / "applications.xlsx"
+    assert sheet.build(path)["rows"] == 1
+    wb = load_workbook(path)
+    ws = wb["Applications"]
+    ws.cell(sheet.FIRST_ROW, sheet.COL["applied"]).value = "Yes"
+    ws.cell(sheet.FIRST_ROW, sheet.COL["notes"]).value = "Referral from alum"
+    wb.save(path)
+    r = sheet.build(path)                                   # refresh
+    jid = json.loads((packet / "meta.json").read_text())["job_id"]
+    assert r["recorded_applied"] == [jid]
+    assert core.get_job(core.connect(), jid)["status"] == "applied"
+    ws = load_workbook(path)["Applications"]
+    assert ws.cell(sheet.FIRST_ROW, sheet.COL["notes"]).value == "Referral from alum"
+    assert ws.cell(sheet.FIRST_ROW, sheet.COL["applied"]).value == "Yes"
+    assert sheet.build(path)["recorded_applied"] == []     # recorded once, not twice

@@ -38,9 +38,11 @@ def check(d: Path) -> list[str]:
 
     # A different job title for this role should not appear in the letter.
     letter = rendered_texts(d).get("cover_letter.md", "")
+    job_title = (m.get("title") or "").lower()
     for t in profile.get("targets", {}).get("titles", []):
-        if t.lower() != (m.get("title") or "").lower() and t.lower() in letter.lower() \
-                and t.lower() not in (m.get("title") or "").lower():
+        # Whole words: "Robotics Engineering" (a degree) is not "Robotics Engineer" (a role).
+        named = re.search(rf"\b{re.escape(t.lower())}\b", letter.lower())
+        if named and t.lower() not in job_title:
             bad.append(f"cover letter names a different role title: {t!r}")
     return bad
 
