@@ -182,7 +182,7 @@ def summary() -> str:
     missing = [(q["requirement"], r) for r in reports for q in r["requirements"]
                if q["status"] != "met" and q["kind"] == "must_have"]
     clusters = sorted(_cluster(missing), key=lambda c: -sum(_weight(m["comp_max"]) for _, m in c))
-    lines += ["## Most common missing must-haves (weighted toward higher pay)", "",
+    lines += ["## Most common unmet must-haves: missing or partial (weighted toward higher pay)", "",
               "| Requirement | Jobs | Highest pay |", "|---|---|---|"]
     for c in clusters[:15]:
         jobs = {m["job_id"]: m for _, m in c}
