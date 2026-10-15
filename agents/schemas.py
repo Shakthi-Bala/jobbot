@@ -82,6 +82,7 @@ class Answer(BaseModel):
 
 
 class TailoredPacket(BaseModel):
+    summary: Paragraph = Field(description="2-line professional summary, keyword-dense, every claim cited")
     experience: list[ResumeEntry]
     projects: list[ResumeEntry]
     skills: list[str] = Field(description="Skill names from profile.skills only")
@@ -198,3 +199,99 @@ class GapReport(BaseModel):
     projects: list[ProjectIdea]
     how_to_get_it: list[str] = Field(description="Referral path, timing, team, application tactics")
     interview_topics: list[str]
+
+
+# ------------------------------------------------------- review panel
+
+class ScreenDecision(BaseModel):
+    """Automated screening system: does a human ever see this resume?"""
+    decision: Literal["pass_to_human", "reject"]
+    score: int = Field(description="0-100 screening score")
+    knockout_failures: list[str] = Field(description="Hard requirements the resume visibly fails")
+    missing_keywords: list[str]
+    parsing_problems: list[str]
+    reason: str
+
+
+class InterviewDecision(BaseModel):
+    """Hiring manager: does this candidate get an interview?"""
+    decision: Literal["interview", "maybe", "no"]
+    confidence: int = Field(description="0-100")
+    reasons_for: list[str]
+    reasons_against: list[str]
+    what_would_change_my_mind: list[str]
+    interview_questions: list[str]
+
+
+class LineCritique(BaseModel):
+    quote: str = Field(description="Exact text from the resume or cover letter")
+    why: str
+
+
+class SuggestedEdit(BaseModel):
+    edit: str
+    uses_existing_evidence: bool = Field(description="True if doable with facts already in the profile")
+    fact_ids: list[str]
+
+
+class PersonaReview(BaseModel):
+    """One reader's honest reaction to the resume and cover letter alone."""
+    verdict: Literal["advance", "maybe", "pass"]
+    score: int = Field(description="1-10")
+    first_impression: str = Field(description="What registered in the first 10 seconds")
+    strongest: str
+    weakest: str
+    lines_that_hurt: list[LineCritique]
+    edits: list[SuggestedEdit]
+
+
+class Revision(BaseModel):
+    instruction: str = Field(description="A precise edit the writer can make with existing facts")
+    fact_ids: list[str]
+    raised_by: list[str]
+
+
+class RevisionPlan(BaseModel):
+    """Editor: turns the panel's conflicting feedback into one revision plan."""
+    keep: list[str] = Field(description="What works and must not be lost")
+    revisions: list[Revision]
+    conflicts_resolved: list[str]
+    needs_new_evidence: list[str] = Field(description="Feedback only new work or new facts can fix")
+    bulletproof: bool = Field(description="True when no further edit with existing evidence would help")
+
+
+# ------------------------------------------------------- master resume
+
+Family = Literal["perception", "rl", "robotics_swe", "ml"]
+
+
+class MasterBullet(BaseModel):
+    text: str
+    fact_ids: list[str]
+    families: list[Family] = Field(description="Role families this bullet is strong for")
+    priority: int = Field(description="1 = lead bullet, higher = lower priority")
+
+
+class MasterEntry(BaseModel):
+    ref_id: str
+    bullets: list[MasterBullet]
+
+
+class FamilySummary(BaseModel):
+    family: Family
+    text: str
+    fact_ids: list[str]
+
+
+class FamilyPlan(BaseModel):
+    family: Family
+    label: str
+    experience: list[str] = Field(description="Experience IDs in display order")
+    projects: list[str] = Field(description="Project IDs in display order")
+    skill_categories: list[str]
+
+
+class MasterResume(BaseModel):
+    entries: list[MasterEntry]
+    summaries: list[FamilySummary]
+    families: list[FamilyPlan]

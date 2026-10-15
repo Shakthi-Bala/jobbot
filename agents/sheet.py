@@ -43,6 +43,9 @@ COLUMNS = [
     ("Location", 18, "location"), ("Base pay (posted)", 18, "pay"), ("Pay band", 11, "band"),
     ("Posted on", 11, "posted"), ("Days since posted", 9, None),
     ("Fit score (0-100)", 8, "score"), ("Readiness (0-100)", 9, "readiness"),
+    ("ATS keyword score (now / max with your evidence)", 12, "ats"),
+    ("ATS gate", 11, "gate"), ("Hiring manager", 11, "hm"), ("Panel readers avg /10", 9, "panel_avg"),
+    ("Panel", 8, "panel"),
     ("Recommendation", 22, "recommend"), ("Fix before applying", 48, "fixes"),
     ("Project that would make you stronger", 40, "project"),
     ("Job posting", 12, "url"), ("Resume", 9, "resume"), ("Cover letter", 9, "cover"),
@@ -116,6 +119,9 @@ def collect(conn) -> list[dict]:
         if need:
             fixes.append(f"Fill {need} [NEED INPUT] answer(s) in answers.md")
         projects = gaps.get("projects", [])
+        ats = json.loads((d / "ats.json").read_text()) if (d / "ats.json").exists() else {}
+        rounds = json.loads((d / "panel.json").read_text()) if (d / "panel.json").exists() else []
+        last = rounds[-1] if rounds else {}
         rows.append({
             "job_id": j["id"], "company": j["company"], "title": j["title"].strip(),
             "location": j["location"],
@@ -130,6 +136,10 @@ def collect(conn) -> list[dict]:
             "resume": d / "resume.pdf", "cover": d / "cover_letter.pdf",
             "answers": d / "answers.md", "review": d / "review.md", "gaps": d / "gaps.md",
             "status": j["status"],
+            "ats": f"{ats['score']}% / {ats['max_score']}%" if ats else "-",
+            "gate": {"pass_to_human": "Pass", "reject": "Reject"}.get(last.get("gate"), "-"),
+            "hm": {"interview": "Interview", "maybe": "Maybe", "no": "No"}.get(last.get("hiring_manager"), "-"),
+            "panel_avg": last.get("reader_avg"), "panel": d / "panel.md",
             "gap_report": gaps,
         })
     for n, r in enumerate(rows, 1):
@@ -190,7 +200,7 @@ def _applications(ws, rows: list[dict], edits: dict[str, dict], path: Path) -> N
             elif key == "url":
                 if r["url"]:
                     cell.value, cell.hyperlink, cell.font = "Open posting", r["url"], link_font
-            elif key in ("resume", "cover", "answers", "review", "gaps"):
+            elif key in ("resume", "cover", "answers", "review", "gaps", "panel"):
                 target = r[key]
                 if target.exists():
                     cell.value, cell.hyperlink, cell.font = "Open", _rel(target, path), link_font

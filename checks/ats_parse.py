@@ -1,6 +1,7 @@
 """The real PDF, read by pdftotext, contains every section, the contact info and the
 job's keywords that the resume uses, in reading order."""
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -20,10 +21,13 @@ def check(d: Path) -> list[str]:
         if leak in raw:
             bad.append(f"template code leaked into the PDF: {leak!r}")
 
-    sections = [s for s in ("education", "experience", "projects", "skills") if data.get(s)]
+    order = data.get("sections") or ["education", "experience", "projects", "skills"]
+    sections = [s for s in order if data.get(s)]
     positions = []
     for s in sections:
-        pos = text.find(s)
+        # A heading is a line of its own ("SKILLS"), not the word inside a bullet.
+        m = re.search(rf"^\s*{s}\s*$", raw, re.I | re.M)
+        pos = m.start() if m else -1
         if pos < 0:
             bad.append(f"section header missing in parsed PDF: {s}")
         positions.append(pos)

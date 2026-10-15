@@ -18,6 +18,7 @@
     python jobbot.py gaps [JOB_ID ...] [--top N] [--summary]   what you're missing, highest pay first
     python jobbot.py ingest URL [URL ...]       add postings by ATS URL (manual-mode web search)
     python jobbot.py tasks [--check]           manual mode: AI steps waiting for Claude
+    python jobbot.py master [--draft] [--family F]   master resume; F = perception|rl|robotics_swe|ml
     python jobbot.py sheet                     refresh data/applications.xlsx (keeps your Applied?/Notes)
 
 Manual mode (models.yaml `mode: manual`) uses no API key: each AI step is written to
@@ -73,7 +74,8 @@ def cmd_add_jd(a):
 
 def cmd_packet(a):
     from agents import packet
-    r = packet.build(a.job_id, skip_review=a.skip_review, offline=a.offline)
+    r = packet.build(a.job_id, skip_review=a.skip_review, offline=a.offline,
+                     skip_panel=a.no_panel)
     print(f"{r['job_id']}: {r['status']}" + (f" ({r['reason']})" if r.get("reason") else ""))
     if r.get("dir"):
         print(f"review it in {r['dir']}/ (review.md first), then submit it yourself and run:")
@@ -183,6 +185,19 @@ def cmd_ingest(a):
     _pending_note()
 
 
+def cmd_master(a):
+    from agents import master
+    if a.draft:
+        print(f"wrote {master.draft().relative_to(core.ROOT)}")
+    families = list(master.FAMILIES) if a.family == "all" else [a.family]
+    for fam in families:
+        r = master.render(None if fam == "full" else fam)
+        bad = [f"{k}: {p}" for k, v in r["results"].items() for p in v]
+        print(f"{r['dir'].name}/resume.pdf  " + ("all checks pass" if not bad else f"{len(bad)} problem(s)"))
+        for b in bad:
+            print("   -", b)
+
+
 def cmd_sheet(_):
     from agents import sheet
     r = sheet.build()
@@ -243,6 +258,7 @@ def main(argv=None):
     s.add_argument("--req-id", default="")
     s = sub.add_parser("packet"); s.set_defaults(fn=cmd_packet); s.add_argument("job_id")
     s.add_argument("--skip-review", action="store_true"); s.add_argument("--offline", action="store_true")
+    s.add_argument("--no-panel", action="store_true", help="skip the 7-reader review panel")
     s = sub.add_parser("checks"); s.set_defaults(fn=cmd_checks); s.add_argument("job_id")
     s.add_argument("--offline", action="store_true"); s.add_argument("--outreach", action="store_true")
     s = sub.add_parser("outreach"); s.set_defaults(fn=cmd_outreach); s.add_argument("job_id")
@@ -262,6 +278,10 @@ def main(argv=None):
     s.add_argument("--top", type=int, default=10); s.add_argument("--summary", action="store_true")
     s = sub.add_parser("ingest"); s.set_defaults(fn=cmd_ingest); s.add_argument("urls", nargs="+")
     sub.add_parser("sheet").set_defaults(fn=cmd_sheet)
+    s = sub.add_parser("master"); s.set_defaults(fn=cmd_master)
+    s.add_argument("--draft", action="store_true", help="(re)write data/master_resume.yaml")
+    s.add_argument("--family", default="full",
+                   choices=["full", "all", "perception", "rl", "robotics_swe", "ml"])
     s = sub.add_parser("tasks"); s.set_defaults(fn=cmd_tasks)
     s.add_argument("--check", action="store_true")
 

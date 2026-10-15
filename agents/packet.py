@@ -8,12 +8,13 @@ import json
 import sys
 from pathlib import Path
 
-from . import core, discover, review, tailor
+from . import core, discover, panel, review, tailor
 
 sys.path.insert(0, str(core.ROOT))
 from checks import run_all  # noqa: E402
 
 MAX_FIX_LOOPS = 2
+MAX_PANEL_ROUNDS = 3
 
 
 def _stop(conn, job_id: str, status: str, reason: str) -> dict:
@@ -22,7 +23,8 @@ def _stop(conn, job_id: str, status: str, reason: str) -> dict:
     return {"job_id": job_id, "status": status, "reason": reason}
 
 
-def build(job_id: str, skip_review: bool = False, offline: bool = False) -> dict:
+def build(job_id: str, skip_review: bool = False, offline: bool = False,
+          skip_panel: bool = False) -> dict:
     conn = core.connect()
     job = core.get_job(conn, job_id)
 
@@ -50,35 +52,41 @@ def build(job_id: str, skip_review: bool = False, offline: bool = False) -> dict
     if fit["decision"] == "blocked":
         return _stop(conn, job_id, "blocked", "fit agent found a blocking restriction")
 
-    # 4-9. Tailor -> checks -> review, with at most MAX_FIX_LOOPS rewrites.
+    # 4-9. Tailor -> checks -> accuracy review -> review panel, round after round.
+    # Blocking problems (failed checks, false claims) get MAX_FIX_LOOPS rewrites; then
+    # the panel's editor sends persuasiveness revisions back for up to MAX_PANEL_ROUNDS.
     # Changes you requested from the dashboard seed the first draft.
     requested = core.job_dir(job_id, conn) / "requested_changes.md"
     feedback: list[str] = [f"The candidate asked for: {requested.read_text().strip()}"] \
         if requested.exists() else []
     d: Path | None = None
-    results: dict = {}
-    judgment = None
-    for attempt in range(MAX_FIX_LOOPS + 1):
+    blocking: list[str] = []
+    fix_loops = panel_round = 0
+    while True:
         version = _next_version(job_id, conn)
         d = tailor.build(conn, job_id, feedback or None, version)
         core.set_status(conn, job_id, "packet_drafted")
         results = run_all.run(d, offline=offline)
-        failed = run_all.failures(results)
-        if failed:
-            core.log_decision("packet", job_id, f"checks_failed_v{version}", "; ".join(failed)[:500])
-            feedback = failed
-            if attempt < MAX_FIX_LOOPS:
+        blocking = run_all.failures(results)
+        if not blocking and not skip_review:
+            blocking = review.act_on(review.review(conn, job_id, d, results))
+            core.set_status(conn, job_id, "reviewed")
+        if blocking:
+            core.log_decision("packet", job_id, f"blocking_v{version}", "; ".join(blocking)[:500])
+            if fix_loops < MAX_FIX_LOOPS:
+                fix_loops += 1
+                feedback = blocking
                 continue
             break
-        if skip_review:
+        if skip_review or skip_panel:
             break
-        judgment = review.review(conn, job_id, d, results)
-        core.set_status(conn, job_id, "reviewed")
-        feedback = review.act_on(judgment)
-        if not feedback:
+        panel_round += 1
+        verdict = panel.run(conn, job_id, d, panel_round)
+        if verdict["done"] or panel_round >= MAX_PANEL_ROUNDS:
             break
-        core.log_decision("packet", job_id, f"review_act_on_v{version}", "; ".join(feedback)[:500])
+        feedback = [f"Review panel (round {panel_round}): {r}" for r in verdict["revisions"]]
 
+    feedback = blocking
     assert d is not None
     _record_documents(conn, job_id, d, "passed" if not feedback else "changes_requested")
     need_input = "[NEED INPUT" in (d / "answers.md").read_text()

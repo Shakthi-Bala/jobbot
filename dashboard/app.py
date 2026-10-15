@@ -104,7 +104,10 @@ with tabs[2]:
 
         if (d / "open_issues.md").exists():
             st.warning((d / "open_issues.md").read_text())
-        sub = st.tabs(["Review", "Resume", "Cover letter", "Answers", "changes.diff", "Checks"])
+        sub = st.tabs(["Review", "Resume", "Cover letter", "Answers", "changes.diff", "Checks", "Panel"])
+        with sub[6]:
+            st.markdown((d / "panel.md").read_text() if (d / "panel.md").exists()
+                        else "_Review panel hasn't run yet._")
         with sub[0]:
             st.markdown((d / "review.md").read_text() if (d / "review.md").exists()
                         else "_No review yet._")

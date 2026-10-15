@@ -62,6 +62,18 @@ def draft(conn, job_id: str, feedback: list[str] | None = None) -> TailoredPacke
         f"Application questions: {core.dumps(parsed.get('application_questions', []))}\n\n"
         + core.untrusted("posting", job["raw_text"])
     )
+    from . import ats, master
+    kw = ats.classify(ats.posting_keywords(job), profile, None)
+    user += ("\n\n## ATS keywords from this posting that your profile proves "
+             "(use these EXACT spellings in the summary, skills and bullets)\n"
+             + ", ".join(kw["fixable"])
+             + "\n\n## Posting keywords with NO evidence in the profile (never claim these)\n"
+             + (", ".join(kw["gap"]) or "none"))
+    m = master.load()
+    if m:
+        user += ("\n\n## Master resume: approved, recruiter-grade bullets. Start from these; "
+                 "reorder and adjust wording to the posting, keep fact IDs and numbers exact.\n"
+                 + core.dumps(m))
     if feedback:
         user += ("\n\n## Fix these problems from the previous draft\n"
                  + "\n".join(f"- {f}" for f in feedback))
@@ -91,8 +103,31 @@ def unslop(paragraphs: list[dict], profile: dict) -> list[dict]:
 
 # ------------------------------------------------------------ validation
 
+def select_skills(chosen: list[str], profile: dict, must_have: list[str],
+                  posting_text: str = "") -> list[dict]:
+    """Writer's picks, plus every evidence-backed skill the posting mentions (so the
+    ATS always finds a keyword you can prove). Familiar skills only if required."""
+    from . import ats
+    required = " ".join(must_have)
+    picked = {c.lower() for c in chosen}
+    out = []
+    for s in profile.get("skills", []):
+        if not s.get("evidence"):
+            continue
+        wanted = s["skill"].lower() in picked or (posting_text and ats.mentions(s["skill"], posting_text))
+        if not wanted:
+            continue
+        if s.get("level") in ("strong", "working"):
+            out.append({"skill": s["skill"], "fact_ids": s["evidence"],
+                        "category": s.get("category", "Skills")})
+        elif s.get("level") == "familiar" and ats.mentions(s["skill"], required):
+            out.append({"skill": f"{s['skill']} (familiar)", "fact_ids": s["evidence"],
+                        "category": s.get("category", "Skills")})
+    return out
+
+
 def enforce(packet: TailoredPacket, profile: dict, job_id: str,
-            must_have: list[str]) -> dict:
+            must_have: list[str], posting_text: str = "") -> dict:
     """Apply no-unsourced-claims in code. Returns a plain dict ready to render."""
     known = core.profile_ids(profile)
     entries = {e["id"]: e for e in profile.get("experience", []) + profile.get("projects", [])}
@@ -114,17 +149,14 @@ def enforce(packet: TailoredPacket, profile: dict, job_id: str,
                                   f"{b.text[:100]}")
         return {"ref_id": entry.ref_id, "bullets": bullets} if bullets else None
 
-    skills_src = {s["skill"].lower(): s for s in profile.get("skills", [])}
-    required = " ".join(must_have).lower()
-    skills = []
-    for name in packet.skills:
-        s = skills_src.get(name.lower())
-        if not s or not s.get("evidence"):
-            continue
-        if s.get("level") in ("strong", "working"):
-            skills.append({"skill": s["skill"], "fact_ids": s["evidence"]})
-        elif s.get("level") == "familiar" and s["skill"].lower() in required:
-            skills.append({"skill": f"{s['skill']} (familiar)", "fact_ids": s["evidence"]})
+    skills = select_skills(packet.skills, profile, must_have, posting_text)
+
+    summary = None
+    if packet.summary.fact_ids and set(packet.summary.fact_ids) <= known:
+        summary = packet.summary.model_dump()
+    else:
+        core.log_decision("tailor", job_id, "dropped_summary",
+                          f"uncited or unknown ids {packet.summary.fact_ids}")
 
     paragraphs = [p.model_dump() for p in packet.cover_letter
                   if p.fact_ids and set(p.fact_ids) <= known]
@@ -141,6 +173,7 @@ def enforce(packet: TailoredPacket, profile: dict, job_id: str,
                             "fact_ids": ids, "keys": keys, "need_input": None})
 
     return {
+        "summary": summary,
         "experience": [e for e in map(keep_entry, packet.experience) if e],
         "projects": [e for e in map(keep_entry, packet.projects) if e],
         "skills": skills,
@@ -178,16 +211,20 @@ def write_packet(job, content: dict, profile: dict, version: int) -> Path:
 
     # --- resume: tagged markdown (for checks) + json (for Typst) ----------
     lines = [f"# {person.get('name', '')} | {person.get('email', '')} | "
-             f"{person.get('phone', '')} | {person.get('location', '')}", "", "## Education"]
+             f"{person.get('phone', '')} | {person.get('location', '')}", ""]
+    summary = content.get("summary")
+    if summary:
+        lines += ["## Summary", f"{summary['text']} {tags(summary['fact_ids'])}", ""]
+    lines.append("## Education")
     edu_json = []
-    for e in profile.get("education", []):
+    for i, e in enumerate(profile.get("education", [])):
         lines.append(f"{e['degree']}, {e['school']}, {dates(e)}"
                      + (f", GPA {e['gpa']}" if e.get("gpa") else "") + f" [{e['id']}]")
         details = []
         if e.get("thesis", {}).get("title"):
             details.append(f"Thesis: {e['thesis']['title']}")
-        if e.get("coursework"):
-            details.append("Coursework: " + ", ".join(e["coursework"]))
+        if e.get("coursework") and i == 0:  # coursework only for the current degree
+            details.append("Relevant coursework: " + ", ".join(e["coursework"][:6]))
         lines += [f"- {x} [{e['id']}]" for x in details]
         edu_json.append({"degree": e["degree"], "school": e["school"], "dates": dates(e),
                          "location": e.get("location", ""), "gpa": str(e.get("gpa") or ""),
@@ -211,16 +248,25 @@ def write_packet(job, content: dict, profile: dict, version: int) -> Path:
 
     exp_json = section("Experience", content["experience"], "experience")
     proj_json = section("Projects", content["projects"], "project")
-    if content["skills"]:
+    groups: dict[str, list[dict]] = {}
+    for sk in content["skills"]:
+        groups.setdefault(sk.get("category", "Skills"), []).append(sk)
+    if groups:
         lines.extend(["", "## Skills"])
-        lines.extend(f"- {s['skill']} {tags(s['fact_ids'])}" for s in content["skills"])
+        for cat, items in groups.items():
+            ids = sorted({i for sk in items for i in sk["fact_ids"]})
+            lines.append(f"- {cat}: {', '.join(sk['skill'] for sk in items)} {tags(ids)}")
     (d / "resume.tagged.md").write_text("\n".join(lines) + "\n")
 
     resume_json = {
         "person": {k: person.get(k, "") for k in ("name", "email", "phone", "location")}
         | {"links": person.get("links", {}) or {}},
+        "summary": summary["text"] if summary else "",
+        # Must match the section order in templates/resume.typ (checked by ats_parse).
+        "sections": ["summary", "skills", "experience", "projects", "education"],
         "education": edu_json, "experience": exp_json, "projects": proj_json,
-        "skills": [s["skill"] for s in content["skills"]],
+        "skills": [{"category": c, "items": [sk["skill"] for sk in items]}
+                   for c, items in groups.items()],
     }
     (d / "resume.json").write_text(core.dumps(resume_json))
     shutil.copy(core.TEMPLATES / "resume.typ", d / "resume.typ")
@@ -299,7 +345,8 @@ def build(conn, job_id: str, feedback: list[str] | None = None, version: int = 1
     job = core.get_job(conn, job_id)
     parsed = json.loads(job["parsed_json"] or "{}")
     packet = draft(conn, job_id, feedback)
-    content = enforce(packet, profile, job_id, parsed.get("must_have", []))
+    content = enforce(packet, profile, job_id, parsed.get("must_have", []),
+                      job["raw_text"] + " " + " ".join(parsed.get("keywords", [])))
     content["cover_letter"] = unslop(content["cover_letter"], profile)
     d = write_packet(job, content, profile, version)
     render(d)

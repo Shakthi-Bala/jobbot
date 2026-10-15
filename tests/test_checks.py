@@ -11,6 +11,9 @@ from checks import (ats_parse, banned_phrases, consistency, fact_ids, injection_
 
 def good_packet() -> TailoredPacket:
     return TailoredPacket.model_validate({
+        "summary": {"text": "Robotics M.S. student training PPO policies in Isaac Lab and running "
+                            "ROS 2 perception at 30 FPS on a Raspberry Pi 5.",
+                    "fact_ids": ["E001", "F002", "F003"]},
         "experience": [{"ref_id": "X001", "bullets": [
             {"text": "Built a ROS 2 perception pipeline running at 30 FPS on a Raspberry Pi 5",
              "fact_ids": ["F003"]}]}],

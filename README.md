@@ -137,6 +137,17 @@ curl -s "https://api.ashbyhq.com/posting-api/job-board/COMPANY?includeCompensati
 | **Produces** | `out/<Company>_<Role>/review.md` with findings bucketed **Act on / Consider / Noted / Dismissed** and an agreement map |
 | **Guardrails** | Fixes go back to the writing agent at most twice, then to you. The review agent never edits documents itself |
 
+### 4.5b Review panel (resume loop)
+| | |
+|---|---|
+| **Readers** | **ATS gate** (automated screen: does a human see it?), **hiring manager** (interview / maybe / no), and five readers who see only the resume and cover letter: **team lead**, **competing applicant**, **CEO**, **senior engineer**, **recruiter** |
+| **Then** | An **editor** merges their reactions into one revision plan; the writer rewrites; the panel reads again. Up to 3 rounds, until the editor calls it bulletproof |
+| **Produces** | `panel.md` / `panel.json` per packet, `ats.json` (code-computed keyword score: now vs the max your evidence allows) |
+| **Guardrails** | Edits that need new evidence become gaps, never claims. Persona prompts live in `skills/panel/personas/` |
+
+### 4.5c Master resume
+`data/master_resume.yaml` (gitignored) holds every fact as a recruiter-grade bullet tagged by role family. `python jobbot.py master --family rl` renders a one-page resume instantly with no AI step; the writing agent also starts from these bullets.
+
 ### 4.6 Gap coach
 | | |
 |---|---|

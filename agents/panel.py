@@ -1,0 +1,157 @@
+"""Review panel: seven independent readers, then an editor, round after round.
+
+  ats_gate         automated screening system: does a human ever see this?
+  hiring_manager   interview, maybe, or no (reads the posting)
+  team_lead        \\
+  competing_applicant \\
+  ceo               >  read the resume and cover letter alone
+  senior_engineer  /
+  recruiter       /
+  editor           merges all reactions into one revision plan for the writer
+
+packet.build() runs the panel after the checks and accuracy review pass, sends the
+editor's revisions back to the writer, and repeats until the editor calls the resume
+bulletproof or the round limit is hit. Every round is saved in panel.json / panel.md.
+"""
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+from . import ats, core
+from .schemas import InterviewDecision, PersonaReview, RevisionPlan, ScreenDecision
+
+READERS = {
+    "team_lead": "team-lead.md",
+    "competing_applicant": "competing-applicant.md",
+    "ceo": "ceo.md",
+    "senior_engineer": "senior-engineer.md",
+    "recruiter": "recruiter.md",
+}
+LABELS = {"ats_gate": "ATS gate", "hiring_manager": "Hiring manager", "team_lead": "Team lead",
+          "competing_applicant": "Competing applicant", "ceo": "CEO",
+          "senior_engineer": "Senior engineer", "recruiter": "Recruiter"}
+
+
+def persona_prompt(file: str) -> str:
+    base = core.strip_front_matter((core.SKILLS / "panel" / "SKILL.md").read_text())
+    return base + "\n\n# Your role\n\n" + (core.SKILLS / "panel" / "personas" / file).read_text()
+
+
+def _documents(d: Path) -> tuple[str, str]:
+    sys.path.insert(0, str(core.ROOT))
+    from checks._lib import pdf_text
+    resume = pdf_text(d / "resume.pdf") if (d / "resume.pdf").exists() else ""
+    letter = (d / "cover_letter.md").read_text() if (d / "cover_letter.md").exists() else "(no cover letter)"
+    return resume, letter
+
+
+def _gather(calls: dict) -> dict:
+    """Run every call; in manual mode queue all tasks before stopping, so Claude can
+    answer the whole panel at once instead of one persona per re-run."""
+    out, pending = {}, None
+    for name, fn in calls.items():
+        try:
+            out[name] = fn()
+        except core.ManualTaskPending as e:
+            pending = pending or e
+    if pending:
+        raise pending
+    return out
+
+
+def run(conn, job_id: str, d: Path, round_no: int) -> dict:
+    job = core.get_job(conn, job_id)
+    resume, letter = _documents(d)
+    keywords = ats.score_packet(conn, job_id, d)
+    role = f"Role: {job['title']} at {job['company']}"
+    docs = f"## Resume (text as parsed from the PDF)\n{resume}\n\n## Cover letter\n{letter}"
+    posting = core.untrusted("posting", job["raw_text"])
+
+    calls = {
+        "ats_gate": lambda: core.llm_json(
+            "review_lead", persona_prompt("ats-gate.md"),
+            f"{role}\n\n## Code-computed keyword match\n{core.dumps(keywords)}\n\n{docs}\n\n{posting}",
+            ScreenDecision),
+        "hiring_manager": lambda: core.llm_json(
+            "review_lead", persona_prompt("hiring-manager.md"), f"{role}\n\n{docs}\n\n{posting}",
+            InterviewDecision),
+    }
+    for name, file in READERS.items():
+        calls[name] = (lambda f=file: core.llm_json(
+            "review_lead", persona_prompt(f), f"{role}\n\n{docs}", PersonaReview))
+    reviews = _gather(calls)
+
+    profile_ids = sorted(core.profile_ids(core.load_profile()))
+    plan = core.llm_json(
+        "review_lead", persona_prompt("editor.md"),
+        f"{role}\nRound {round_no}.\n\nFact IDs available: {', '.join(profile_ids)}\n\n{docs}\n\n"
+        "## Panel reviews\n" + core.dumps({k: v.model_dump() for k, v in reviews.items()}),
+        RevisionPlan)
+
+    result = summarize(reviews, plan, keywords, round_no)
+    save(d, result)
+    core.log_decision("panel", job_id, f"round_{round_no}",
+                      f"gate={result['gate']} hm={result['hiring_manager']} "
+                      f"avg={result['reader_avg']} ats={keywords['score']} "
+                      f"revisions={len(plan.revisions)} bulletproof={plan.bulletproof}")
+    return result
+
+
+def summarize(reviews: dict, plan: RevisionPlan, keywords: dict, round_no: int) -> dict:
+    readers = {k: reviews[k] for k in READERS if k in reviews}
+    avg = round(sum(r.score for r in readers.values()) / max(1, len(readers)), 1)
+    gate, hm = reviews["ats_gate"], reviews["hiring_manager"]
+    done = plan.bulletproof or not plan.revisions or (
+        gate.decision == "pass_to_human" and hm.decision == "interview" and avg >= 8)
+    return {
+        "round": round_no, "gate": gate.decision, "gate_score": gate.score,
+        "hiring_manager": hm.decision, "reader_avg": avg, "ats_keyword_score": keywords["score"],
+        "ats_max_score": keywords["max_score"], "done": done,
+        "revisions": [f"{r.instruction} (raised by {', '.join(r.raised_by)}; facts {', '.join(r.fact_ids) or '-'})"
+                      for r in plan.revisions],
+        "reviews": {k: v.model_dump() for k, v in reviews.items()},
+        "plan": plan.model_dump(),
+    }
+
+
+def save(d: Path, result: dict) -> None:
+    path = d / "panel.json"
+    history = json.loads(path.read_text()) if path.exists() else []
+    history = [h for h in history if h["round"] != result["round"]] + [result]
+    path.write_text(core.dumps(history))
+    (d / "panel.md").write_text(render_md(history))
+
+
+def render_md(history: list[dict]) -> str:
+    lines = ["# Review panel", "",
+             "| Round | ATS gate | ATS keywords | Hiring manager | Readers (avg /10) | Revisions |",
+             "|---|---|---|---|---|---|"]
+    for h in history:
+        lines.append(f"| {h['round']} | {h['gate']} ({h['gate_score']}) | {h['ats_keyword_score']}% "
+                     f"(max {h['ats_max_score']}%) | {h['hiring_manager']} | {h['reader_avg']} | "
+                     f"{len(h['revisions'])} |")
+    last = history[-1]
+    r = last["reviews"]
+    lines += ["", f"## Latest round ({last['round']})", "",
+              f"**ATS gate: {r['ats_gate']['decision']}** ({r['ats_gate']['score']}). {r['ats_gate']['reason']}"]
+    if r["ats_gate"]["missing_keywords"]:
+        lines.append(f"- Missing keywords: {', '.join(r['ats_gate']['missing_keywords'])}")
+    for k in ("knockout_failures", "parsing_problems"):
+        lines += [f"- {k.replace('_', ' ').capitalize()}: {x}" for x in r["ats_gate"][k]]
+    hm = r["hiring_manager"]
+    lines += ["", f"**Hiring manager: {hm['decision']}** (confidence {hm['confidence']})"]
+    lines += [f"- For: {x}" for x in hm["reasons_for"]] + [f"- Against: {x}" for x in hm["reasons_against"]]
+    lines += [f"- Would change my mind: {x}" for x in hm["what_would_change_my_mind"]]
+    lines += ["", "| Reader | Verdict | Score | First impression |", "|---|---|---|---|"]
+    for k in READERS:
+        if k in r:
+            lines.append(f"| {LABELS[k]} | {r[k]['verdict']} | {r[k]['score']} | {r[k]['first_impression']} |")
+    plan = last["plan"]
+    lines += ["", "## Editor's plan", ""] + [f"- Keep: {x}" for x in plan["keep"]]
+    lines += [f"- Revise: {x}" for x in last["revisions"]]
+    lines += [f"- Needs new evidence (gap): {x}" for x in plan["needs_new_evidence"]]
+    lines += [f"- Conflict resolved: {x}" for x in plan["conflicts_resolved"]]
+    lines += ["", f"**Bulletproof:** {'yes' if plan['bulletproof'] else 'not yet'}"]
+    return "\n".join(lines) + "\n"
