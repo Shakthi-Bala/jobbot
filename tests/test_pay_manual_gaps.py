@@ -140,5 +140,5 @@ def test_gap_summary_orders_by_pay(env):
     text = gaps.summary()
     assert text.index("$200K+") < text.index("$100-120K")
     assert "helps 2 job(s)" in text
-    assert json.loads((core.OUT / ids[0] / "gaps.json").read_text())["verdict"] == "stretch"
-    assert (core.OUT / ids[1] / "gaps.md").read_text().startswith("# Gaps: Robot Learning Engineer")
+    assert json.loads((core.job_dir(ids[0]) / "gaps.json").read_text())["verdict"] == "stretch"
+    assert (core.job_dir(ids[1]) / "gaps.md").read_text().startswith("# Gaps: Robot Learning Engineer")

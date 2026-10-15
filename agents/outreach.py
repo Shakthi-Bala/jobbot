@@ -115,7 +115,7 @@ def _extract_contacts(job, net: dict, notes: str) -> ContactList:
 
 def _draft_all(conn, job_id: str, job, profile: dict, net: dict, room: int,
                found: ContactList, offline_review: bool) -> dict:
-    d = core.OUT / job_id / "outreach"
+    d = core.job_dir(job_id, conn) / "outreach"
     d.mkdir(parents=True, exist_ok=True)
     drafted, pending = [], 0
     for c in found.candidates:

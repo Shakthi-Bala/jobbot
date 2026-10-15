@@ -52,14 +52,14 @@ def build(job_id: str, skip_review: bool = False, offline: bool = False) -> dict
 
     # 4-9. Tailor -> checks -> review, with at most MAX_FIX_LOOPS rewrites.
     # Changes you requested from the dashboard seed the first draft.
-    requested = core.OUT / job_id / "requested_changes.md"
+    requested = core.job_dir(job_id, conn) / "requested_changes.md"
     feedback: list[str] = [f"The candidate asked for: {requested.read_text().strip()}"] \
         if requested.exists() else []
     d: Path | None = None
     results: dict = {}
     judgment = None
     for attempt in range(MAX_FIX_LOOPS + 1):
-        version = _next_version(job_id)
+        version = _next_version(job_id, conn)
         d = tailor.build(conn, job_id, feedback or None, version)
         core.set_status(conn, job_id, "packet_drafted")
         results = run_all.run(d, offline=offline)
@@ -96,8 +96,8 @@ def build(job_id: str, skip_review: bool = False, offline: bool = False) -> dict
             "need_input": need_input}
 
 
-def _next_version(job_id: str) -> int:
-    meta = core.OUT / job_id / "meta.json"
+def _next_version(job_id: str, conn) -> int:
+    meta = core.job_dir(job_id, conn) / "meta.json"
     return json.loads(meta.read_text())["version"] + 1 if meta.exists() else 1
 
 

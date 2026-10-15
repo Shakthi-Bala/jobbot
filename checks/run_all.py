@@ -1,6 +1,6 @@
 """Run every check on a packet. Writes checks.json; exits 1 if any check fails.
 
-    python checks/run_all.py out/<job_id> [--outreach] [--offline]
+    python checks/run_all.py out/<Company>_<Role> [--outreach] [--offline]
 """
 import json
 import sys

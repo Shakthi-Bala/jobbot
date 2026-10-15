@@ -324,6 +324,32 @@ def slugify(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60] or "item"
 
 
+def readable_name(text: str, limit: int = 60) -> str:
+    """'Figure AI' + 'Helix AI Engineer, Perception' -> 'Figure-AI_Helix-AI-Engineer-Perception'."""
+    return re.sub(r"[^A-Za-z0-9]+", "-", text).strip("-")[:limit].strip("-") or "job"
+
+
+def job_dir(job_id: str, conn: sqlite3.Connection | None = None) -> Path:
+    """The packet folder for a job: out/<Company>_<Role>, readable instead of a hash.
+
+    If a different job already owns that name (same company and title, other
+    location), the short job ID is appended. A folder from before this naming
+    (out/<job_id>) is renamed on first use, so nothing is lost.
+    """
+    row = (conn or connect()).execute(
+        "SELECT company, title FROM jobs WHERE id=?", (job_id,)).fetchone()
+    if row is None:
+        return OUT / job_id
+    d = OUT / f"{readable_name(row['company'], 30)}_{readable_name(row['title'])}"
+    meta = d / "meta.json"
+    if meta.exists() and json.loads(meta.read_text()).get("job_id") != job_id:
+        d = d.with_name(f"{d.name}_{job_id[:6]}")
+    legacy = OUT / job_id
+    if legacy.is_dir() and not d.exists():
+        legacy.rename(d)
+    return d
+
+
 def strip_tags(text: str) -> str:
     """Remove [Fxxx] / [A:key] tags for the rendered, human-facing version."""
     return ANY_TAG_RE.sub("", text)

@@ -61,7 +61,7 @@ def draft_nudges() -> list[str]:
     for f in due_followups(conn):
         if not f["contact_id"]:
             continue
-        d = core.OUT / f["job_id"] / "outreach"
+        d = core.job_dir(f["job_id"], conn) / "outreach"
         original = d / f"{core.slugify(f['contact_name'])}.md"
         if not original.exists():
             continue
@@ -97,7 +97,7 @@ def daily_log(new_ids: list[str], packets: list[dict]) -> str:
 
     lines += ["", "## Packets ready for your review", ""]
     rows = conn.execute("SELECT id, company, title FROM jobs WHERE status='ready_for_review'").fetchall()
-    lines += [f"- {r['title']}, {r['company']}: out/{r['id']}/" for r in rows] or ["- none"]
+    lines += [f"- {r['title']}, {r['company']}: out/{core.job_dir(r['id'], conn).name}/" for r in rows] or ["- none"]
     stuck = [p for p in packets if p.get("status") not in ("ready_for_review",)]
     if stuck:
         lines += ["", "## Packets that stopped", ""]

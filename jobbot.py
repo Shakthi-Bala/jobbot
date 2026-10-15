@@ -83,7 +83,7 @@ def cmd_packet(a):
 def cmd_checks(a):
     sys.path.insert(0, str(core.ROOT))
     from checks import run_all
-    results = run_all.run(core.OUT / a.job_id, outreach=a.outreach, offline=a.offline)
+    results = run_all.run(core.job_dir(a.job_id), outreach=a.outreach, offline=a.offline)
     for name, probs in results.items():
         print(f"{'ok  ' if not probs else 'FAIL'} {name}")
         for p in probs:
@@ -167,7 +167,7 @@ def cmd_gaps(a):
     r = gaps.run(a.job_ids or None, top=a.top)
     print(f"analyzed {len(r['analyzed'])} job(s)")
     for jid in r["analyzed"]:
-        print(f"  out/{jid}/gaps.md")
+        print(f"  out/{core.job_dir(jid).name}/gaps.md")
     if r["analyzed"]:
         print("summary: out/gaps/summary.md")
     _pending_note()

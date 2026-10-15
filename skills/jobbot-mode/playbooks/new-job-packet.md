@@ -12,4 +12,4 @@
 10. Stop. You review and submit.
 
 Code: `agents/packet.py:build`. Unresolved issues after 2 loops set status
-`needs_input` and are written to `out/<job_id>/open_issues.md`.
+`needs_input` and are written to `out/<Company>_<Role>/open_issues.md`.

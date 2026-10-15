@@ -88,7 +88,7 @@ def db() -> sqlite3.Connection:
 
 def cli(check: Callable[[Path], list[str]], name: str) -> None:
     if len(sys.argv) != 2:
-        print(f"usage: python checks/{name}.py out/<job_id>")
+        print(f"usage: python checks/{name}.py out/<Company>_<Role>")
         sys.exit(2)
     problems = check(Path(sys.argv[1]))
     if problems:

@@ -1,6 +1,6 @@
 """Gap coach: for each job, highest pay first, what's missing and how to close it.
 
-Per job it writes out/<job_id>/gaps.md (+ gaps.json). The summary aggregates every
+Per job it writes out/<Company>_<Role>/gaps.md (+ gaps.json). The summary aggregates every
 report into out/gaps/summary.md: jobs by pay band, the most common missing
 requirements, and the projects that would close gaps across the most jobs.
 """
@@ -67,7 +67,7 @@ def enforce(report: GapReport, profile: dict, job_id: str) -> GapReport:
 
 
 def write(job, report: GapReport) -> Path:
-    d = core.OUT / job["id"]
+    d = core.job_dir(job["id"])
     d.mkdir(parents=True, exist_ok=True)
     (d / "gaps.json").write_text(core.dumps(
         report.model_dump() | {"job_id": job["id"], "company": job["company"],
@@ -176,7 +176,7 @@ def summary() -> str:
         for r in by_band[band]:
             lines.append(f"| {r['title']}, {r['company']} | {r['comp_text'] or '-'} | "
                          f"{VERDICT_LABEL[r['verdict']]} | {r['readiness']} | "
-                         f"out/{r['job_id']}/gaps.md |")
+                         f"out/{core.job_dir(r['job_id']).name}/gaps.md |")
         lines.append("")
 
     missing = [(q["requirement"], r) for r in reports for q in r["requirements"]

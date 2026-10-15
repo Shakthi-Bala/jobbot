@@ -107,7 +107,7 @@ def collect(conn) -> list[dict]:
         "SELECT j.*, f.score FROM jobs j LEFT JOIN fit f ON f.job_id=j.id "
         f"ORDER BY {core.PAY_ORDER_SQL}, f.score DESC").fetchall()
     for j in jobs:
-        d = core.OUT / j["id"]
+        d = core.job_dir(j["id"], conn)
         if not (d / "meta.json").exists():
             continue
         gaps = json.loads((d / "gaps.json").read_text()) if (d / "gaps.json").exists() else {}
@@ -157,7 +157,7 @@ def _applications(ws, rows: list[dict], edits: dict[str, dict], path: Path) -> N
                 "Run `python jobbot.py sheet` to refresh; your entries are kept.")
     ws["A3"] = ("Days since posted = today minus Posted on (live formula). Pay is the posted base-pay "
                 "range; total compensation with equity is usually higher.")
-    ws["A4"] = (f"Generated {core.today()} from the jobbot tracker. Links open files in out/<job id>/.")
+    ws["A4"] = (f"Generated {core.today()} from the jobbot tracker. Links open files in out/<Company>_<Role>/.")
     for r in (2, 3, 4):
         ws.cell(r, 1).font = Font(name=FONT, size=9, italic=True)
     _header(ws, FIRST_ROW - 1, [h for h, _, _ in COLUMNS], [w for _, w, _ in COLUMNS])

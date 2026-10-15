@@ -5,7 +5,7 @@
 2. For each job, run the gap coach: requirements met/partial/missing, resume
    improvements from existing work, remaining gaps, 1-3 grad-level projects, how to
    get the job, interview topics.
-3. Write `out/<job_id>/gaps.md` for each job.
+3. Write `out/<Company>_<Role>/gaps.md` for each job.
 4. Aggregate into `out/gaps/summary.md`: jobs by pay band, the most common missing
    requirements (weighted toward higher pay), and the projects that close gaps across
    the most jobs.

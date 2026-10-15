@@ -118,7 +118,7 @@ curl -s "https://api.ashbyhq.com/posting-api/job-board/COMPANY?includeCompensati
 |---|---|
 | **Inputs** | A shortlisted job, its fit row, and `profile.yaml` |
 | **Does** | Selects and reorders resume bullets and rewords them to match the job's keywords. Drafts a cover letter only if the posting requests one or it clearly helps. Drafts answers to application questions |
-| **Produces** | `out/<job_id>/resume.pdf`, `resume.typ`, `cover_letter.md`, `answers.md`, and `changes.diff` (compared with the master) |
+| **Produces** | `out/<Company>_<Role>/resume.pdf`, `resume.typ`, `cover_letter.md`, `answers.md`, and `changes.diff` (compared with the master) |
 | **Guardrails** | Every line is tagged `[Fxxx]` until render. Unsupported answers become `[NEED INPUT: ...]`. One-page or two-page limit is set in your preferences |
 
 ### 4.4 Networking agent
@@ -126,7 +126,7 @@ curl -s "https://api.ashbyhq.com/posting-api/job-board/COMPANY?includeCompensati
 |---|---|
 | **Inputs** | A shortlisted job and `profile.yaml → networking` |
 | **Does** | Finds relevant people from **public professional sources**: company team and research pages, papers, conference talks, GitHub, university alumni pages. Finds one concrete, true reason to contact each person. Drafts a short message and follow-up dates |
-| **Produces** | `contacts` rows and `out/<job_id>/outreach/<contact>.md` |
+| **Produces** | `contacts` rows and `out/<Company>_<Role>/outreach/<contact>.md` |
 | **Guardrails** | No LinkedIn scraping and no personal-life details. Identity must be confirmed by 2 sources. At most 3 contacts per company per cycle. You send everything yourself |
 
 ### 4.5 Review agent
@@ -134,7 +134,7 @@ curl -s "https://api.ashbyhq.com/posting-api/job-board/COMPANY?includeCompensati
 |---|---|
 | **Inputs** | A complete packet or outreach draft, plus `profile.yaml` and the stored posting text |
 | **Does** | Runs all `checks/`, then sends the same packet and rubric to several models. A lead reviewer combines the findings |
-| **Produces** | `out/<job_id>/review.md` with findings bucketed **Act on / Consider / Noted / Dismissed** and an agreement map |
+| **Produces** | `out/<Company>_<Role>/review.md` with findings bucketed **Act on / Consider / Noted / Dismissed** and an agreement map |
 | **Guardrails** | Fixes go back to the writing agent at most twice, then to you. The review agent never edits documents itself |
 
 ### 4.6 Gap coach
@@ -142,7 +142,7 @@ curl -s "https://api.ashbyhq.com/posting-api/job-board/COMPANY?includeCompensati
 |---|---|
 | **Inputs** | Jobs at or above the pay floor, highest pay first, and `profile.yaml` |
 | **Does** | Marks each requirement met / partial / missing (with fact IDs), lists resume fixes from existing work, remaining gaps, 1-3 genuine grad-level projects that would close them, how to get the job, and likely interview topics |
-| **Produces** | `out/<job_id>/gaps.md` and `out/gaps/summary.md` (jobs by pay band, most common missing must-haves, projects ranked by how many jobs they help) |
+| **Produces** | `out/<Company>_<Role>/gaps.md` and `out/gaps/summary.md` (jobs by pay band, most common missing must-haves, projects ranked by how many jobs they help) |
 | **Guardrails** | "Met" requires real fact IDs or it is downgraded to missing. Projects go into the profile only after they are done and measured |
 
 ### 4.7 Pay ranking
@@ -195,7 +195,7 @@ jobbot/
 │   └── cover_letter.typ
 ├── dashboard/app.py                # Streamlit
 ├── run_daily.py                    # orchestrator
-└── out/<job_id>/                   # one folder per application packet
+└── out/<Company>_<Role>/                   # one folder per application packet
 ```
 
 ---

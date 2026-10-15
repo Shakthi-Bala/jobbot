@@ -85,13 +85,13 @@ with tabs[1]:
 with tabs[2]:
     packet_jobs = [r for r in conn.execute(
         "SELECT id, title, company, status FROM jobs ORDER BY first_seen DESC").fetchall()
-        if (core.OUT / r["id"] / "meta.json").exists()]
+        if (core.job_dir(r["id"], conn) / "meta.json").exists()]
     if not packet_jobs:
         st.info("No packets yet. Run `python jobbot.py packet JOB_ID`.")
     else:
         choice = st.selectbox("Job", packet_jobs,
                               format_func=lambda r: f"{r['title']}, {r['company']} [{r['status']}]")
-        d = core.OUT / choice["id"]
+        d = core.job_dir(choice["id"], conn)
         meta = json.loads((d / "meta.json").read_text())
         st.write(f"**{meta['title']}** at **{meta['company']}** · req {meta.get('req_id') or 'n/a'} "
                  f"· v{meta['version']} · [posting]({meta.get('url') or '#'})")
@@ -174,7 +174,7 @@ with tabs[CONTACTS]:
                          f"next: {c['next_followup'] or '-'}"):
             st.write(f"**Reason:** {c['reason']}  \n**Channel:** {c['channel']}")
             st.write("**Sources:** " + ", ".join(json.loads(c["sources_json"] or "[]")))
-            draft = core.OUT / (c["job_id"] or "") / "outreach" / f"{core.slugify(c['name'])}.md"
+            draft = core.job_dir(c["job_id"] or "", conn) / "outreach" / f"{core.slugify(c['name'])}.md"
             if draft.exists():
                 st.code(draft.read_text(), language=None)
             cols = st.columns(3)

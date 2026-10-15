@@ -34,7 +34,7 @@ def dates(entry: dict) -> str:
 
 
 def packet_dir(job_id: str) -> Path:
-    return core.OUT / job_id
+    return core.job_dir(job_id)
 
 
 # ------------------------------------------------------------- drafting
