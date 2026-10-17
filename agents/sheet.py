@@ -111,8 +111,8 @@ def collect(conn) -> list[dict]:
         f"ORDER BY {core.PAY_ORDER_SQL}, f.score DESC").fetchall()
     for j in jobs:
         d = core.job_dir(j["id"], conn)
-        if not (d / "meta.json").exists():
-            continue
+        if not (d / "meta.json").exists() or j["status"] in ("skipped", "blocked", "closed"):
+            continue  # only jobs you're still considering
         gaps = json.loads((d / "gaps.json").read_text()) if (d / "gaps.json").exists() else {}
         fixes = [i["change"] for i in gaps.get("resume_improvements", [])][:3]
         need = (d / "answers.md").read_text().count("[NEED INPUT") if (d / "answers.md").exists() else 0
