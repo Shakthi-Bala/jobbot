@@ -12,6 +12,7 @@ data/master_resume.yaml
 data/credentials.json
 data/token.json
 data/uploads/
+my_resume/
 out/
 *.answer.json
 *.task.md
