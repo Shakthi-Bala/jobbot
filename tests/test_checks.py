@@ -40,15 +40,6 @@ def good_packet() -> TailoredPacket:
     })
 
 
-@pytest.fixture
-def packet(job):
-    profile = core.load_profile()
-    content = tailor.enforce(good_packet(), profile, job["id"], ["ROS 2"])
-    d = tailor.write_packet(job, content, profile, version=1)
-    tailor.render(d)
-    return d
-
-
 def test_enforce_drops_cross_entry_and_unlisted(job):
     content = tailor.enforce(good_packet(), core.load_profile(), job["id"], [])
     p001 = next(e for e in content["projects"] if e["ref_id"] == "P001")

@@ -78,7 +78,13 @@ def content_for(master: dict, profile: dict, family: str | None) -> dict:
             if family:
                 bullets = [b for b in bullets if family in b.get("families", [])]
                 bullets = bullets[:MAX_BULLETS[kind]]
-            if bullets and ref in entries:
+            if ref not in entries:
+                continue
+            # The profile may have changed since the master was written: keep only
+            # bullets whose facts still belong to this entry.
+            allowed = set(entries[ref].get("facts", []))
+            bullets = [b for b in bullets if b["fact_ids"] and set(b["fact_ids"]) <= allowed]
+            if bullets:
                 items.append({"ref_id": ref, "bullets": [
                     {"text": b["text"], "fact_ids": b["fact_ids"]} for b in bullets]})
         return items
@@ -108,7 +114,9 @@ def render(family: str | None = None) -> dict:
     label = master["families"][family]["label"] if family else "Full master CV"
     job = {"id": f"Master_Resume_{family or 'full'}", "company": "(master)", "title": label,
            "req_id": None, "url": None, "location": ""}
-    d = tailor.write_packet(job, content_for(master, profile, family), profile, version=1)
+    pages = 1 if family else 2
+    d = tailor.write_packet(job, content_for(master, profile, family), profile, version=1,
+                            pages=pages, pages_reason="family one-pager" if family else "full master CV")
     for name in ("answers.md", "answers.tagged.md", "changes.diff", "rationale.md"):
         (d / name).unlink(missing_ok=True)
     tailor.render(d)

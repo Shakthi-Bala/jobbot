@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import difflib
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -31,6 +32,27 @@ def fmt_month(value) -> str:
 def dates(entry: dict) -> str:
     start, end = fmt_month(entry.get("start")), fmt_month(entry.get("end"))
     return f"{start} – {end}" if start and end else start or end or str(entry.get("dates", ""))
+
+
+RESEARCH_TITLE_RE = re.compile(r"\b(research|researcher|scientist|ph\.?d)\b", re.I)
+RESEARCH_ASK_RE = re.compile(r"\b(publications?|publication record|ph\.?\s?d|first[- ]author|peer[- ]reviewed)\b", re.I)
+
+
+def decide_pages(job, parsed: dict, profile: dict) -> tuple[int, str]:
+    """1 or 2 pages for this job, and why. preferences.resume_pages: auto | 1 | 2."""
+    pref = profile.get("preferences", {}).get("resume_pages", "auto")
+    if str(pref) in ("1", "2"):
+        return int(pref), f"fixed by preferences.resume_pages = {pref}"
+    if RESEARCH_TITLE_RE.search(job["title"] or ""):
+        return 2, "research-titled role: two pages let publications and research depth show"
+    if RESEARCH_ASK_RE.search(job["raw_text"] or ""):
+        return 2, "posting asks for publications or a PhD: two pages"
+    return 1, "engineering role for a new grad: one page"
+
+
+def resume_format(profile: dict) -> str:
+    """preferences.resume_format: latex (my_resume/main.tex style) | typst."""
+    return profile.get("preferences", {}).get("resume_format", "typst")
 
 
 def packet_dir(job_id: str) -> Path:
@@ -63,6 +85,12 @@ def draft(conn, job_id: str, feedback: list[str] | None = None) -> TailoredPacke
         + core.untrusted("posting", job["raw_text"])
     )
     from . import ats, master
+    pages, why = decide_pages(job, parsed, profile)
+    user += (f"\n\n## Page budget: {pages} page(s) ({why}). "
+             + ("Choose the 4-6 strongest entries and keep bullets to one or two lines."
+                if pages == 1 else
+                "Use the room for depth: more research entries, projects and results, "
+                "but every line must still earn its place."))
     kw = ats.classify(ats.posting_keywords(job), profile, None)
     user += ("\n\n## ATS keywords from this posting that your profile proves "
              "(use these EXACT spellings in the summary, skills and bullets)\n"
@@ -198,7 +226,8 @@ def tags(ids: list[str], keys: list[str] = ()) -> str:
     return "".join(f"[{i}]" for i in ids) + "".join(f"[A:{k}]" for k in keys)
 
 
-def write_packet(job, content: dict, profile: dict, version: int) -> Path:
+def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1,
+                 pages_reason: str = "") -> Path:
     d = packet_dir(job["id"])
     d.mkdir(parents=True, exist_ok=True)
     person = profile.get("person", {})
@@ -206,7 +235,8 @@ def write_packet(job, content: dict, profile: dict, version: int) -> Path:
 
     meta = {"job_id": job["id"], "company": job["company"], "title": job["title"],
             "req_id": job["req_id"], "url": job["url"], "location": job["location"],
-            "version": version, "created_at": core.now()}
+            "version": version, "created_at": core.now(),
+            "pages": pages, "pages_reason": pages_reason, "format": resume_format(profile)}
     (d / "meta.json").write_text(core.dumps(meta))
 
     # --- resume: tagged markdown (for checks) + json (for Typst) ----------
@@ -243,6 +273,7 @@ def write_packet(job, content: dict, profile: dict, version: int) -> Path:
             out.append({"heading": heading, "title": src.get("title", src.get("name", "")),
                         "org": src.get("org", ""), "location": src.get("location", ""),
                         "dates": dates(src), "links": src.get("links", {}) or {},
+                        "focus": src.get("focus"), "tools": src.get("tools") or [],
                         "bullets": [b["text"] for b in item["bullets"]]})
         return out
 
@@ -262,6 +293,7 @@ def write_packet(job, content: dict, profile: dict, version: int) -> Path:
         "person": {k: person.get(k, "") for k in ("name", "email", "phone", "location")}
         | {"links": person.get("links", {}) or {}},
         "summary": summary["text"] if summary else "",
+        "courses": (profile.get("education") or [{}])[0].get("coursework", []) or [],
         # Must match the section order in templates/resume.typ (checked by ats_parse).
         "sections": ["summary", "skills", "experience", "projects", "education"],
         "education": edu_json, "experience": exp_json, "projects": proj_json,
@@ -330,6 +362,21 @@ def compile_typst(src: Path) -> Path:
 
 def render(d: Path) -> list[Path]:
     pdfs = []
+    meta = json.loads((d / "meta.json").read_text()) if (d / "meta.json").exists() else {}
+    note = d / "LATEX_NOTE.md"
+    note.unlink(missing_ok=True)
+    if meta.get("format") == "latex" and (d / "resume.json").exists():
+        from . import latex
+        tex = latex.render_tex(json.loads((d / "resume.json").read_text()), d / "resume.tex",
+                               pages=meta.get("pages", 1))
+        pdf = latex.compile_pdf(tex)
+        if pdf:
+            pdfs.append(pdf)
+            (d / "resume.typ").unlink(missing_ok=True)  # the LaTeX PDF is the resume
+        else:
+            note.write_text("No LaTeX engine is installed, so resume.pdf is the Typst fallback "
+                            "(used for checks). Compile resume.tex on Overleaf, or install "
+                            "tectonic / texlive, then re-run the packet.\n")
     for name in ("resume.typ", "cover_letter.typ"):
         if (d / name).exists():
             try:
@@ -348,7 +395,9 @@ def build(conn, job_id: str, feedback: list[str] | None = None, version: int = 1
     content = enforce(packet, profile, job_id, parsed.get("must_have", []),
                       job["raw_text"] + " " + " ".join(parsed.get("keywords", [])))
     content["cover_letter"] = unslop(content["cover_letter"], profile)
-    d = write_packet(job, content, profile, version)
+    pages, why = decide_pages(job, parsed, profile)
+    d = write_packet(job, content, profile, version, pages, why)
     render(d)
-    core.log_decision("tailor", job_id, f"packet_v{version}", content["rationale"][:300])
+    core.log_decision("tailor", job_id, f"packet_v{version}",
+                      f"{pages} page(s): {why}. {content['rationale'][:250]}")
     return d

@@ -45,3 +45,14 @@ def job(env):
     conn.execute("UPDATE jobs SET parsed_json=? WHERE id=?", (core.dumps(parsed), jid))
     conn.commit()
     return core.get_job(conn, jid)
+
+
+@pytest.fixture
+def packet(job):
+    from agents import tailor
+    from tests.test_checks import good_packet
+    profile = core.load_profile()
+    content = tailor.enforce(good_packet(), profile, job["id"], ["ROS 2"])
+    d = tailor.write_packet(job, content, profile, version=1)
+    tailor.render(d)
+    return d

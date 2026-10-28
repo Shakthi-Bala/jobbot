@@ -1,4 +1,5 @@
 """Resume page count and cover letter / outreach word counts are within limits."""
+import json
 import sys
 from pathlib import Path
 
@@ -20,7 +21,10 @@ def check(d: Path) -> list[str]:
     bad = []
     pdf = d / "resume.pdf"
     if pdf.exists():
-        pages, limit = pdf_pages(pdf), prefs.get("resume_pages", 1)
+        meta = json.loads((d / "meta.json").read_text()) if (d / "meta.json").exists() else {}
+        limit = meta.get("pages") or prefs.get("resume_pages", 1)
+        limit = 1 if str(limit) == "auto" else int(limit)
+        pages = pdf_pages(pdf)
         if pages > limit:
             bad.append(f"resume is {pages} pages; limit {limit}")
     cl = d / "cover_letter.md"
