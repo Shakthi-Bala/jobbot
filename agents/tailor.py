@@ -138,11 +138,13 @@ def select_skills(chosen: list[str], profile: dict, must_have: list[str],
     from . import ats
     required = " ".join(must_have)
     picked = {c.lower() for c in chosen}
+    auto_add = profile.get("preferences", {}).get("resume_auto_add_skills", True)
     out = []
     for s in profile.get("skills", []):
         if not s.get("evidence"):
             continue
-        wanted = s["skill"].lower() in picked or (posting_text and ats.mentions(s["skill"], posting_text))
+        wanted = s["skill"].lower() in picked or (
+            auto_add and posting_text and ats.mentions(s["skill"], posting_text))
         if not wanted:
             continue
         if s.get("level") in ("strong", "working"):
@@ -264,7 +266,12 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
         if e.get("coursework") and i == 0:  # coursework only for the current degree
             details.append("Relevant coursework: " + ", ".join(e["coursework"][:6]))
         lines += [f"- {x} [{e['id']}]" for x in details]
-        edu_json.append({"degree": e["degree"], "school": e["school"], "dates": dates(e),
+        shown_dates = dates(e)
+        if profile.get("preferences", {}).get("resume_graduation_only") and e.get("end"):
+            shown_dates = fmt_month(e["end"])
+            if str(e["end"]) > core.today():
+                shown_dates = "Expected " + shown_dates
+        edu_json.append({"degree": e["degree"], "school": e["school"], "dates": shown_dates,
                          "location": e.get("location", ""), "gpa": str(e.get("gpa") or ""),
                          "details": details})
 
@@ -298,6 +305,8 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
     (d / "resume.tagged.md").write_text("\n".join(lines) + "\n")
 
     resume_json = {
+        "layout": {"font_family": profile.get("preferences", {}).get("resume_font", "charter"),
+                   "skills_last": bool(profile.get("preferences", {}).get("resume_skills_last", False))},
         "person": {k: person.get(k, "") for k in ("name", "email", "phone", "location")}
         | {"links": person.get("links", {}) or {}},
         "summary": summary["text"] if summary else "",
@@ -387,7 +396,9 @@ def render(d: Path) -> list[Path]:
             (d / "resume.typ").unlink(missing_ok=True)  # the LaTeX PDF is the resume
             data = json.loads((d / "resume.json").read_text())
             ctx = latex.context(data)
-            data["sections"] = ["education", "skills", "experience", "projects"]
+            data["sections"] = (["education", "experience", "projects", "skills"]
+                                if data.get("layout", {}).get("skills_last") else
+                                ["education", "skills", "experience", "projects"])
             if show_summary and data.get("summary"):
                 data["sections"].insert(0, "summary")
             data["section_headings"] = {"experience": ctx["experience_title"]}

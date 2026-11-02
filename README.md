@@ -728,6 +728,10 @@ preferences:
   resume_coursework: false   # omit course lists when stronger project evidence fills the page
   panel_min_score: 9.0       # every panel reader must reach this score
   panel_strict_rubric: true  # require evidence-based components and exact score arithmetic
+  resume_font: sans         # LaTeX: sans or charter
+  resume_skills_last: true  # show demonstrated experience/projects before skills
+  resume_graduation_only: true
+  resume_auto_add_skills: false  # keep the writer’s selected skills instead of adding every posting match
 ```
 
 Inspect the rendered page before approving it. Technical checks establish provenance, parsing and completeness; recruiter-style scores are subjective editorial assessments, not an employer's ATS result or interview probability. An AI review must not be described as a human review.

@@ -73,6 +73,10 @@ def _env() -> jinja2.Environment:
 def context(resume: dict, pages: int = 1, show_summary: bool = False) -> dict:
     """Map resume.json onto the template's fields."""
     person = resume["person"]
+    layout = resume.get("layout", {})
+    font_family = layout.get("font_family", "charter")
+    if font_family not in ("charter", "sans"):
+        raise core.JobbotError("resume_font must be 'charter' or 'sans'")
     contact = [x for x in (person.get("location"), person.get("email"), person.get("phone")) if x]
     for key, url in (person.get("links") or {}).items():
         if isinstance(url, str) and url.startswith("http"):
@@ -92,6 +96,8 @@ def context(resume: dict, pages: int = 1, show_summary: bool = False) -> dict:
         "name": person["name"],
         "contact": contact,
         "margin_cm": 1.8,
+        "font_family": font_family,
+        "skills_last": bool(layout.get("skills_last", False)),
         "summary": resume.get("summary") if show_summary else "",
         "education": [{"school": e["school"], "degree": e["degree"], "dates": e["dates"],
                        "gpa": e.get("gpa")} for e in resume.get("education", [])],

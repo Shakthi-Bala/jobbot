@@ -27,10 +27,24 @@
     \usepackage[T1]{fontenc}
     \usepackage[utf8]{inputenc}
     \usepackage{lmodern}
+((* if font_family == 'sans' *))
+    \usepackage{tgheros}
+    \renewcommand{\familydefault}{\sfdefault}
+((* else *))
     \usepackage{charter}
+((* endif *))
 \else
     % Unicode engines require the OpenType Charter faces, including bold/italic.
     \usepackage{fontspec}
+((* if font_family == 'sans' *))
+    \setmainfont{texgyreheros}[
+        Extension=.otf,
+        UprightFont=*-regular,
+        BoldFont=*-bold,
+        ItalicFont=*-italic,
+        BoldItalicFont=*-bolditalic
+    ]
+((* else *))
     \setmainfont{XCharter}[
         Extension=.otf,
         UprightFont=*-Roman,
@@ -38,6 +52,7 @@
         ItalicFont=*-Italic,
         BoldItalicFont=*-BoldItalic
     ]
+((* endif *))
 \fi
 
 \hypersetup{pdftitle={((( name ))) - Resume}, pdfauthor={((( name )))}}
@@ -109,6 +124,7 @@
         \textbf{((( e.school )))}, ((( e.degree )))((* if e.gpa *)), \textbf{GPA:} ((( e.gpa )))((* endif *))\end{twocolentry}
 ((* endfor *))
 
+((* if not skills_last *))
     \section{SKILLS}
 ((* for g in skills *))
     \textbf{((( g.category ))):} ((( g.names | join(', ') )))\par
@@ -116,13 +132,14 @@
 ((* if courses *))
     \textbf{Courses:} ((( courses | join(', ') )))\par
 ((* endif *))
+((* endif *))
 
 ((* if experience *))
     \section{((( experience_title )))}
 ((* for x in experience *))
+    \begin{onecolentry}\textbf{((( x.org )))}\end{onecolentry}
     \begin{twocolentry}{((( x.dates )))}
-        \textbf{((( x.title )))}\end{twocolentry}
-    \begin{onecolentry}\textit{((( x.org )))}\end{onecolentry}
+        \textit{((( x.title )))}\end{twocolentry}
 ((* if x.focus *))
     \place{Research Focus: ((( x.focus )))}
 ((* endif *))
@@ -154,6 +171,16 @@
     \end{onecolentry}
     \vspace{4pt}
 ((* endfor *))
+((* endif *))
+
+((* if skills_last *))
+    \section{SKILLS}
+((* for g in skills *))
+    \textbf{((( g.category ))):} ((( g.names | join(', ') )))\par
+((* endfor *))
+((* if courses *))
+    \textbf{Courses:} ((( courses | join(', ') )))\par
+((* endif *))
 ((* endif *))
 
 \end{document}

@@ -97,3 +97,20 @@ def test_optional_summary_matches_pdf_metadata(packet, monkeypatch):
     rendered = json.loads(data_path.read_text())
     assert rendered['summary'] == data['summary']
     assert rendered['sections'][0] == 'summary'
+
+
+def test_industry_layout_keeps_experience_before_skills_and_uses_unicode_sans(tmp_path):
+    import copy
+    data=copy.deepcopy(RESUME)
+    data['layout']={'font_family':'sans','skills_last':True}
+    tex=latex.render_tex(data,tmp_path/'resume.tex').read_text()
+    assert tex.index(r'\section{RESEARCH EXPERIENCE}') < tex.index(r'\section{PROJECTS}') < tex.index(r'\section{SKILLS}')
+    assert r'\setmainfont{texgyreheros}' in tex
+    assert r'\usepackage{charter}' not in tex
+
+
+def test_skill_selection_can_avoid_automatic_keyword_additions(env):
+    profile=core.load_profile()
+    profile['preferences']['resume_auto_add_skills']=False
+    chosen=tailor.select_skills(['Python'],profile,[],posting_text='Python, ROS 2, PyTorch')
+    assert [s['skill'] for s in chosen]==['Python']
