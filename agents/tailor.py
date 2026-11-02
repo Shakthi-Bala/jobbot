@@ -133,12 +133,12 @@ def unslop(paragraphs: list[dict], profile: dict) -> list[dict]:
 
 def select_skills(chosen: list[str], profile: dict, must_have: list[str],
                   posting_text: str = "") -> list[dict]:
-    """Writer's picks, plus every evidence-backed skill the posting mentions (so the
-    ATS always finds a keyword you can prove). Familiar skills only if required."""
+    """Evidence-backed writer picks, with optional automatic posting matches.
+    Familiar skills are included only when required."""
     from . import ats
     required = " ".join(must_have)
     picked = {c.lower() for c in chosen}
-    auto_add = profile.get("preferences", {}).get("resume_auto_add_skills", True)
+    auto_add = profile.get("preferences", {}).get("resume_auto_add_skills", False)
     out = []
     for s in profile.get("skills", []):
         if not s.get("evidence"):
@@ -287,6 +287,8 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
             lines.extend(f"- {b['text']} {tags(b['fact_ids'])}" for b in item["bullets"])
             out.append({"heading": heading, "title": src.get("title", src.get("name", "")),
                         "org": src.get("org", ""), "location": src.get("location", ""),
+                        "employer": src.get("employer", src.get("org", "")),
+                        "team": src.get("team", ""),
                         "dates": dates(src), "links": src.get("links", {}) or {},
                         "focus": src.get("focus"), "tools": src.get("tools") or [],
                         "bullets": [b["text"] for b in item["bullets"]]})

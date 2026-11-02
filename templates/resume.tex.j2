@@ -138,9 +138,11 @@
 ((* if experience *))
     \section{((( experience_title )))}
 ((* for x in experience *))
-    \begin{onecolentry}\textbf{((( x.org )))}\end{onecolentry}
+((* if x.show_employer *))
+    \begin{onecolentry}\textbf{((( x.employer )))}\end{onecolentry}
+((* endif *))
     \begin{twocolentry}{((( x.dates )))}
-        \textit{((( x.title )))}\end{twocolentry}
+        ((* if x.team *))\textbf{((( x.team )))} | ((* endif *))\textit{((( x.title )))}\end{twocolentry}
 ((* if x.focus *))
     \place{Research Focus: ((( x.focus )))}
 ((* endif *))

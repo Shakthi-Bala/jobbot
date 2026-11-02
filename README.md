@@ -739,3 +739,9 @@ Inspect the rendered page before approving it. Technical checks establish proven
 When `panel_min_score` is set, the panel requires every registered reader to meet it, the ATS persona to pass the packet, and the hiring-manager persona to choose an interview. A high average or the editor’s “bulletproof” flag cannot override a lower individual score. Panel reports record the reviewed PDF hash and the lowest reader score. These remain AI assessments, not employer decisions.
 
 Strict scoring uses ownership/engineering depth (30), visible impact/validation (30), role focus (20), and communication (20). Truthfulness and parsing are prerequisite gates, not bonus points. A ready-to-submit resume may score below 9. Confidential metrics remain private; planned journal submissions are not publications. See [the review workflow](docs/resume-review-loop.md) for calibration and public writing benchmarks.
+
+### Grouping multiple roles at one employer
+
+In the private profile, set `employer` to the shared institution/company and `team` to the distinct lab/team for each experience entry. Keep the original `org`, title and dates. The LaTeX renderer groups consecutive entries with the same explicit employer and preserves every team's title and dates; it does not infer shared employers from similar names.
+
+Skills are writer-selected by default. `resume_auto_add_skills: true` opts into adding every supported posting match; leave it false for a concise list. General C++ requirements recognize standard labels such as C++17 and C++20 without requiring duplicate spellings.

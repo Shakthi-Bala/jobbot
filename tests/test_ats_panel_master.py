@@ -9,7 +9,9 @@ from agents.schemas import InterviewDecision, PersonaReview, RevisionPlan, Scree
 # ------------------------------------------------------------------ ats
 
 def test_mentions_handles_symbols_and_variants():
-    assert ats.mentions("C++", "Strong C++17 and Python")          is False  # C++17 is a different token
+    assert ats.mentions("C++", "Strong C++17 and Python")
+    assert ats.mentions("C++", "Python and C++20")
+    assert not ats.mentions("C++", "C++17helper")
     assert ats.mentions("C++", "Python, C++, Rust")
     assert not ats.mentions("C++", "Python and C programming")
     assert ats.mentions("ROS 2", "built ROS2 nodes")

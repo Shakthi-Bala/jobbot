@@ -23,3 +23,5 @@ Before approving the copy, check these concrete failure modes:
 - The same evidence is repeated in skills, experience and projects without adding information.
 
 Prioritize structural and sentence-level revisions over score polishing. Judge the rendered page, not merely whether checks pass. Respect the fixed 11-point, single-spaced body. A reviewer who only sees extracted text must not claim to have inspected visual layout.
+
+Inspect the actual render for isolated trailing words, awkward wraps and uneven space allocation. Repair the wording before changing font size or line spacing.

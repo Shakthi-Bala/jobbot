@@ -55,6 +55,11 @@ def mentions(keyword: str, text: str, equivalents: bool = False) -> bool:
     if not kw:
         return False
     if re.search(r"[+#]", kw):  # "C++" would normalize to "c" and match everything
+        if kw.casefold() == "c++":
+            # A language standard is evidence of C++; avoid forcing awkward
+            # duplicate spellings such as "C++ (C++17)" into the resume.
+            return re.search(r"(?<![\w+#])c\+\+(?:98|03|11|14|17|20|23|26)?(?![\w+#])",
+                             text.lower()) is not None
         return re.search(rf"(?<![\w+#]){re.escape(kw.lower())}(?![\w+#])", text.lower()) is not None
     hay = _norm(text)
     hay_compact = hay.replace(" ", "")

@@ -88,9 +88,15 @@ def context(resume: dict, pages: int = 1, show_summary: bool = False) -> dict:
                 return _href(url, LINK_LABELS.get(key, "Link"))
         return None
 
-    experience = [{"title": x["title"], "org": x["org"], "dates": x["dates"],
-                   "focus": x.get("focus"), "bullets": x["bullets"]}
-                  for x in resume.get("experience", [])]
+    experience = []
+    previous_employer = None
+    for x in resume.get("experience", []):
+        employer = x.get("employer") or x["org"]
+        experience.append({"title": x["title"], "org": x["org"], "employer": employer,
+                           "team": x.get("team", ""), "dates": x["dates"],
+                           "show_employer": employer != previous_employer,
+                           "focus": x.get("focus"), "bullets": x["bullets"]})
+        previous_employer = employer
     research = experience and all("research" in x["title"].lower() for x in experience)
     return {
         "name": person["name"],

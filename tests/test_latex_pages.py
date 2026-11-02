@@ -114,3 +114,28 @@ def test_skill_selection_can_avoid_automatic_keyword_additions(env):
     profile['preferences']['resume_auto_add_skills']=False
     chosen=tailor.select_skills(['Python'],profile,[],posting_text='Python, ROS 2, PyTorch')
     assert [s['skill'] for s in chosen]==['Python']
+
+
+def test_employer_grouping_preserves_distinct_team_titles_and_dates(tmp_path):
+    import copy
+    data=copy.deepcopy(RESUME)
+    first=data['experience'][0]
+    first.update(employer='Example University',team='Perception Lab',org='Example University, Perception Lab')
+    second=copy.deepcopy(first)
+    second.update(team='Grasping Lab',org='Example University, Grasping Lab',dates='Aug 2025 – Dec 2025')
+    data['experience'].append(second)
+    tex=latex.render_tex(data,tmp_path/'resume.tex').read_text()
+    assert tex.count(r'\textbf{Example University}')==1
+    assert r'\textbf{Perception Lab}' in tex and r'\textbf{Grasping Lab}' in tex
+    assert tex.count(r'\textit{Student Researcher}')==2
+    assert r'Aug 2025 \textendash{} Dec 2025' in tex
+
+
+def test_distinct_employers_are_not_grouped_by_similar_names(tmp_path):
+    import copy
+    data=copy.deepcopy(RESUME)
+    second=copy.deepcopy(data['experience'][0])
+    second['org']='Example Labs Incorporated'
+    data['experience'].append(second)
+    ctx=latex.context(data)
+    assert all(entry['show_employer'] for entry in ctx['experience'])
