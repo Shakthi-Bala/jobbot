@@ -715,3 +715,17 @@ Each step works on its own.
 ---
 
 *Structure inspired by [pstack](https://github.com/cursor/plugins/tree/main/pstack) (MIT): single-purpose skills, playbooks, principles as files, rules as code, and multi-model adversarial review.*
+
+### Resume presentation and review
+
+LaTeX output uses an 11-point body, clear role/employer hierarchy, and fonts that preserve boldface across supported engines. A font-substitution or missing-character warning blocks rendering; PDF extraction alone cannot establish visual quality.
+
+Optional preferences in your private profile:
+
+```yaml
+preferences:
+  resume_summary: false      # include a short summary when it adds useful context
+  resume_coursework: false   # omit course lists when stronger project evidence fills the page
+```
+
+Inspect the rendered page before approving it. Technical checks establish provenance, parsing and completeness; recruiter-style scores are subjective editorial assessments, not an employer's ATS result or interview probability. An AI review must not be described as a human review.

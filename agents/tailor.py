@@ -243,7 +243,8 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
     meta = {"job_id": job["id"], "company": job["company"], "title": job["title"],
             "req_id": job["req_id"], "url": job["url"], "location": job["location"],
             "version": version, "created_at": core.now(),
-            "pages": pages, "pages_reason": pages_reason, "format": resume_format(profile)}
+            "pages": pages, "pages_reason": pages_reason, "format": resume_format(profile),
+            "show_summary": bool(profile.get("preferences", {}).get("resume_summary", False))}
     (d / "meta.json").write_text(core.dumps(meta))
 
     # --- resume: tagged markdown (for checks) + json (for Typst) ----------
@@ -300,7 +301,8 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
         "person": {k: person.get(k, "") for k in ("name", "email", "phone", "location")}
         | {"links": person.get("links", {}) or {}},
         "summary": summary["text"] if summary else "",
-        "courses": (profile.get("education") or [{}])[0].get("coursework", []) or [],
+        "courses": ((profile.get("education") or [{}])[0].get("coursework", []) or [])
+        if profile.get("preferences", {}).get("resume_coursework", True) else [],
         "sections": ["summary", "skills", "experience", "projects", "education"],
         "education": edu_json, "experience": exp_json, "projects": proj_json,
         "skills": [{"category": c, "items": [sk["skill"] for sk in items]}
@@ -376,8 +378,9 @@ def render(d: Path) -> list[Path]:
         (d / name).unlink(missing_ok=True)
     if meta.get("format") == "latex" and (d / "resume.json").exists():
         from . import latex
+        show_summary = meta.get("show_summary", False)
         tex = latex.render_tex(json.loads((d / "resume.json").read_text()), d / "resume.tex",
-                               pages=meta.get("pages", 1))
+                               pages=meta.get("pages", 1), show_summary=show_summary)
         pdf = latex.compile_pdf(tex)
         if pdf:
             pdfs.append(pdf)
@@ -385,9 +388,12 @@ def render(d: Path) -> list[Path]:
             data = json.loads((d / "resume.json").read_text())
             ctx = latex.context(data)
             data["sections"] = ["education", "skills", "experience", "projects"]
+            if show_summary and data.get("summary"):
+                data["sections"].insert(0, "summary")
             data["section_headings"] = {"experience": ctx["experience_title"]}
-            # The LaTeX style intentionally omits the summary and education details.
-            data["summary"] = ""
+            # Keep the render description in sync with what the PDF includes.
+            if not show_summary:
+                data["summary"] = ""
             for e in data["education"]:
                 e["details"] = []
             (d / "resume.json").write_text(core.dumps(data))

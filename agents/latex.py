@@ -29,6 +29,9 @@ LINK_LABELS = {"github": "GitHub", "linkedin": "LinkedIn", "site": "Portfolio",
 _SPECIAL = {"&": r"\&", "%": r"\%", "$": r"\$", "#": r"\#", "_": r"\_", "{": r"\{",
             "}": r"\}", "~": r"\textasciitilde{}", "^": r"\textasciicircum{}",
             "\\": r"\textbackslash{}", "×": r"$\times$", "→": r"$\rightarrow$",
+            "–": r"\textendash{}", "—": r"\textemdash{}",
+            "’": r"\textquoteright{}", "‘": r"\textquoteleft{}",
+            "“": r"\textquotedblleft{}", "”": r"\textquotedblright{}",
             "≈": r"$\approx$", "±": r"$\pm$", "≤": r"$\leq$", "≥": r"$\geq$", "°": r"$^\circ$"}
 _SPECIAL_RE = re.compile("|".join(re.escape(k) for k in _SPECIAL))
 # Metrics are bold in main.tex ("by \textbf{7\%}"); do the same for percentages.
@@ -88,7 +91,7 @@ def context(resume: dict, pages: int = 1, show_summary: bool = False) -> dict:
     return {
         "name": person["name"],
         "contact": contact,
-        "margin_cm": 2.0 if pages == 1 else 1.8,
+        "margin_cm": 1.8,
         "summary": resume.get("summary") if show_summary else "",
         "education": [{"school": e["school"], "degree": e["degree"], "dates": e["dates"],
                        "gpa": e.get("gpa")} for e in resume.get("education", [])],
@@ -138,4 +141,9 @@ def compile_pdf(tex: Path) -> Path | None:
     pdf = tex.with_suffix(".pdf")
     if r.returncode != 0 or not pdf.exists():
         raise core.JobbotError(f"LaTeX failed on {tex.name}:\n{(r.stdout + r.stderr)[-1500:]}")
+    log = tex.with_suffix(".log")
+    if log.exists() and re.search(r"Font shape [^\n]*undefined|Missing character:",
+                                  log.read_text(errors="replace")):
+        raise core.JobbotError(
+            f"LaTeX substituted a font or lost characters in {tex.name}; inspect the font setup")
     return pdf

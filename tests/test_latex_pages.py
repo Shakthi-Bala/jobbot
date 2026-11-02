@@ -7,6 +7,7 @@ def test_escape_specials_and_bold_percentages():
     assert latex.escape("R&D at 50% on C# _x_") == r"R\&D at \textbf{50\%} on C\# \_x\_"
     assert latex.escape("11×11 mask → depth") == r"11$\times$11 mask $\rightarrow$ depth"
     assert latex.escape(latex.Raw(r"\href{u}{x}")) == r"\href{u}{x}"
+    assert latex.escape("2025–2027 — present") == r"2025\textendash{}2027 \textemdash{} present"
 
 
 RESUME = {
@@ -62,3 +63,37 @@ def test_length_limit_follows_packet_pages(packet):  # noqa: D103
     meta["pages"] = 2
     (packet / "meta.json").write_text(json.dumps(meta))
     assert not any("resume is" in p for p in length_limits.check(packet))
+
+
+def test_compiler_rejects_silent_font_substitution(tmp_path, monkeypatch):
+    import subprocess
+    import pytest
+    tex = tmp_path / 'resume.tex'
+    tex.write_text('source')
+    monkeypatch.setattr(latex, 'engine', lambda: '/tools/tectonic')
+    def compile_with_missing_font(*args, **kwargs):
+        tex.with_suffix('.pdf').write_bytes(b'pdf')
+        tex.with_suffix('.log').write_text("LaTeX Font Warning: Font shape `TU/bch/b/n' undefined")
+        return subprocess.CompletedProcess(args[0], 0, stdout='', stderr='')
+    monkeypatch.setattr(latex.subprocess, 'run', compile_with_missing_font)
+    with pytest.raises(core.JobbotError, match='substituted a font'):
+        latex.compile_pdf(tex)
+
+
+def test_optional_summary_matches_pdf_metadata(packet, monkeypatch):
+    import typst
+    data_path = packet / 'resume.json'
+    data = json.loads(data_path.read_text())
+    meta_path = packet / 'meta.json'
+    meta = json.loads(meta_path.read_text())
+    meta.update(format='latex', show_summary=True)
+    meta_path.write_text(json.dumps(meta))
+    def compile_pdf(tex):
+        path = tex.with_suffix('.pdf')
+        typst.compile(b'= SUMMARY\nReal summary\n= EDUCATION\nSchool\n= SKILLS\nSkills', output=str(path))
+        return path
+    monkeypatch.setattr(latex, 'compile_pdf', compile_pdf)
+    tailor.render(packet)
+    rendered = json.loads(data_path.read_text())
+    assert rendered['summary'] == data['summary']
+    assert rendered['sections'][0] == 'summary'
