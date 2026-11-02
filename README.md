@@ -726,6 +726,9 @@ Optional preferences in your private profile:
 preferences:
   resume_summary: false      # include a short summary when it adds useful context
   resume_coursework: false   # omit course lists when stronger project evidence fills the page
+  panel_min_score: 9.0       # every panel reader must reach this score
 ```
 
 Inspect the rendered page before approving it. Technical checks establish provenance, parsing and completeness; recruiter-style scores are subjective editorial assessments, not an employer's ATS result or interview probability. An AI review must not be described as a human review.
+
+When `panel_min_score` is set, the panel requires every registered reader to meet it, the ATS persona to pass the packet, and the hiring-manager persona to choose an interview. A high average or the editor’s “bulletproof” flag cannot override a lower individual score. Panel reports record the reviewed PDF hash and the lowest reader score. These remain AI assessments, not employer decisions.

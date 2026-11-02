@@ -16,6 +16,7 @@ bulletproof or the round limit is hit. Every round is saved in panel.json / pane
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -66,7 +67,9 @@ def run(conn, job_id: str, d: Path, round_no: int) -> dict:
     resume, letter = _documents(d)
     keywords = ats.score_packet(conn, job_id, d)
     role = f"Role: {job['title']} at {job['company']}"
-    docs = f"## Resume (text as parsed from the PDF)\n{resume}\n\n## Cover letter\n{letter}"
+    digest = core.sha256_file(d / "resume.pdf")
+    docs = (f"## Resume artifact SHA-256\n{digest}\n\n"
+            f"## Resume (text as parsed from the PDF)\n{resume}\n\n## Cover letter\n{letter}")
     posting = core.untrusted("posting", job["raw_text"])
 
     calls = {
@@ -90,7 +93,9 @@ def run(conn, job_id: str, d: Path, round_no: int) -> dict:
         "## Panel reviews\n" + core.dumps({k: v.model_dump() for k, v in reviews.items()}),
         RevisionPlan)
 
-    result = summarize(reviews, plan, keywords, round_no)
+    target = core.load_profile().get("preferences", {}).get("panel_min_score")
+    result = summarize(reviews, plan, keywords, round_no, min_score=target)
+    result["resume_sha256"] = digest
     save(d, result)
     core.log_decision("panel", job_id, f"round_{round_no}",
                       f"gate={result['gate']} hm={result['hiring_manager']} "
@@ -99,16 +104,31 @@ def run(conn, job_id: str, d: Path, round_no: int) -> dict:
     return result
 
 
-def summarize(reviews: dict, plan: RevisionPlan, keywords: dict, round_no: int) -> dict:
+def summarize(reviews: dict, plan: RevisionPlan, keywords: dict, round_no: int,
+              min_score: float | None = None) -> dict:
     readers = {k: reviews[k] for k in READERS if k in reviews}
     avg = round(sum(r.score for r in readers.values()) / max(1, len(readers)), 1)
     gate, hm = reviews["ats_gate"], reviews["hiring_manager"]
     done = plan.bulletproof or not plan.revisions or (
         gate.decision == "pass_to_human" and hm.decision == "interview" and avg >= 8)
+    lowest = min((r.score for r in readers.values()), default=0)
+    if min_score is not None:
+        try:
+            min_score = float(min_score)
+        except (TypeError, ValueError) as e:
+            raise core.JobbotError("preferences.panel_min_score must be a number from 1 to 10") from e
+        if not math.isfinite(min_score) or not 1 <= min_score <= 10:
+            raise core.JobbotError("preferences.panel_min_score must be a number from 1 to 10")
+        if any(not 1 <= r.score <= 10 for r in readers.values()):
+            raise core.JobbotError("Panel reader score outside the 1-10 scale")
+        # A high average or an editor flag cannot waive the candidate's target.
+        done = (set(readers) == set(READERS) and lowest >= min_score
+                and gate.decision == "pass_to_human" and hm.decision == "interview")
     return {
         "round": round_no, "gate": gate.decision, "gate_score": gate.score,
         "hiring_manager": hm.decision, "reader_avg": avg, "ats_keyword_score": keywords["score"],
         "ats_max_score": keywords["max_score"], "done": done,
+        "reader_min": lowest, "reader_target": min_score,
         "revisions": [f"{r.instruction} (raised by {', '.join(r.raised_by)}; facts {', '.join(r.fact_ids) or '-'})"
                       for r in plan.revisions],
         "reviews": {k: v.model_dump() for k, v in reviews.items()},
@@ -133,6 +153,9 @@ def render_md(history: list[dict]) -> str:
                      f"(max {h['ats_max_score']}%) | {h['hiring_manager']} | {h['reader_avg']} | "
                      f"{len(h['revisions'])} |")
     last = history[-1]
+    if last.get("reader_target") is not None:
+        lines += ["", f"**Reader target:** every reader >= {last['reader_target']:g}/10; "
+                  f"lowest = {last['reader_min']:g}/10. Target met: {'yes' if last['done'] else 'no'}."]
     r = last["reviews"]
     lines += ["", f"## Latest round ({last['round']})", "",
               f"**ATS gate: {r['ats_gate']['decision']}** ({r['ats_gate']['score']}). {r['ats_gate']['reason']}"]

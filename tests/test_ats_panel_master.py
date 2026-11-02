@@ -112,3 +112,25 @@ def test_geometry_and_estimation_are_profile_equivalents_not_literal_resume_matc
     # Evidence permits precise rewording; it does not pretend an absent literal
     # keyword is already present in the rendered resume.
     assert result['in_resume'] == []
+
+
+def test_requested_score_cannot_be_waived_by_editor_or_average():
+    kw = {'score': 87, 'max_score': 87}
+    reviews = _reviews(score=10)
+    reviews['recruiter'] = reviews['recruiter'].model_copy(update={'score': 8})
+    result = panel.summarize(reviews, _plan(bulletproof=True), kw, 1, min_score=9)
+    assert result['reader_avg'] > 9 and result['reader_min'] == 8
+    assert not result['done']
+    assert not panel.summarize(_reviews(hm='no', score=9), _plan(bulletproof=True), kw, 1, min_score=9)['done']
+    assert not panel.summarize(_reviews(gate='reject', score=9), _plan(revisions=0), kw, 1, min_score=9)['done']
+    assert panel.summarize(_reviews(score=9), _plan(), kw, 1, min_score=9)['done']
+    reviews = _reviews(score=9)
+    del reviews['recruiter']
+    assert not panel.summarize(reviews, _plan(), kw, 1, min_score=9)['done']
+
+
+def test_requested_score_must_be_finite_and_on_the_reader_scale():
+    import pytest
+    for target in ['invalid', float('nan'), float('inf'), 0, 11]:
+        with pytest.raises(core.JobbotError, match='panel_min_score'):
+            panel.summarize(_reviews(), _plan(), {'score': 87, 'max_score': 87}, 1, min_score=target)
