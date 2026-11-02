@@ -237,7 +237,7 @@ class SuggestedEdit(BaseModel):
 class PersonaReview(BaseModel):
     """One reader's honest reaction to the resume and cover letter alone."""
     verdict: Literal["advance", "maybe", "pass"]
-    score: int = Field(description="1-10")
+    score: float = Field(description="1-10; decimals permitted, judged against the advertised role")
     first_impression: str = Field(description="What registered in the first 10 seconds")
     strongest: str
     weakest: str

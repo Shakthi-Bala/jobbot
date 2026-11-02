@@ -134,3 +134,11 @@ def test_requested_score_must_be_finite_and_on_the_reader_scale():
     for target in ['invalid', float('nan'), float('inf'), 0, 11]:
         with pytest.raises(core.JobbotError, match='panel_min_score'):
             panel.summarize(_reviews(), _plan(), {'score': 87, 'max_score': 87}, 1, min_score=target)
+
+
+def test_fractional_scores_are_not_rounded_up_to_meet_target():
+    reviews = _reviews(score=9.3)
+    reviews['recruiter'] = reviews['recruiter'].model_copy(update={'score': 8.9})
+    result = panel.summarize(reviews, _plan(bulletproof=True), {'score':87,'max_score':87}, 1, min_score=9.0)
+    assert result['reader_min'] == 8.9 and not result['done']
+    assert PersonaReview.model_validate(reviews['team_lead'].model_dump()).score == 9.3
