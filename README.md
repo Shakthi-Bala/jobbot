@@ -4,6 +4,8 @@ A set of small AI agents and plain software that find relevant roles, check fit,
 
 The design takes its structure from [pstack](https://github.com/cursor/plugins/tree/main/pstack): single-purpose skills, fixed playbooks, rules enforced as code, multi-model adversarial review, and checks against the real artifact.
 
+**Code audit:** see [AUDIT.md](AUDIT.md) for verified defects, fixes, validation, and remaining limits.
+
 ---
 
 ## Table of contents

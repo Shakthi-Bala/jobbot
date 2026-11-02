@@ -9,9 +9,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from checks import (ats_parse, banned_phrases, consistency, contact_sources,  # noqa: E402
                     fact_ids, injection_scan, length_limits, numbers_match, req_match,
-                    restriction_quotes)
+                    restriction_quotes, required_content)
 
 PACKET = {
+    "required_content": required_content.check,
     "fact_ids": fact_ids.check,
     "numbers_match": numbers_match.check,
     "restriction_quotes": restriction_quotes.check,

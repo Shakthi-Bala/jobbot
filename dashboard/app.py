@@ -75,8 +75,8 @@ with tabs[1]:
     if statuses:
         jobs = jobs[jobs.status.isin(statuses)]
     if q:
-        mask = jobs.title.str.contains(q, case=False, na=False) | \
-            jobs.company.str.contains(q, case=False, na=False)
+        mask = jobs.title.str.contains(q, case=False, na=False, regex=False) | \
+            jobs.company.str.contains(q, case=False, na=False, regex=False)
         jobs = jobs[mask]
     st.dataframe(jobs, hide_index=True, width="stretch")
     st.caption(" · ".join(f"{k}: {v}" for k, v in tracker.pipeline_counts(conn).items()))
@@ -217,7 +217,7 @@ with tabs[LOG]:
             log = pd.DataFrame(list(csv.DictReader(f, delimiter="\t")))
         term = st.text_input("Search decisions")
         if term and not log.empty:
-            log = log[log.apply(lambda r: r.astype(str).str.contains(term, case=False).any(), axis=1)]
+            log = log[log.apply(lambda r: r.astype(str).str.contains(term, case=False, regex=False).any(), axis=1)]
         st.dataframe(log.iloc[::-1], hide_index=True, width="stretch")
     else:
         st.info("No decisions logged yet.")

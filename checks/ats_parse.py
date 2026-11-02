@@ -26,7 +26,9 @@ def check(d: Path) -> list[str]:
     positions = []
     for s in sections:
         # A heading is a line of its own ("SKILLS"), not the word inside a bullet.
-        m = re.search(rf"^\s*{s}\s*$", raw, re.I | re.M)
+        heading = data.get("section_headings", {}).get(s, s)
+        pattern = r"[ \t]+".join(re.escape(word) for word in heading.split())
+        m = re.search(rf"^[ \t]*{pattern}[ \t]*$", raw, re.I | re.M)
         pos = m.start() if m else -1
         if pos < 0:
             bad.append(f"section header missing in parsed PDF: {s}")

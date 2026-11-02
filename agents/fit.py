@@ -7,6 +7,7 @@ is computed from profile.authorization, never from the model's opinion.
 from __future__ import annotations
 
 import json
+import re
 
 from . import core
 from .schemas import FitResult, FitRestriction
@@ -24,15 +25,26 @@ def restriction_effect(r: FitRestriction, auth: dict) -> str:
     """'blocks' | 'question' | 'ok'. 'unsure' is never a block (unknown-is-not-no)."""
     t = r.type
     if t == "sponsorship":
+        # A sponsorship *mention* can describe support being available. Only a
+        # clear negative statement is a blocking restriction; ambiguous text asks.
+        denied = re.search(
+            r"(?:\bno\b|\bnot\b|cannot|can't|unable|without|unavailable|ineligible)"
+            r".{0,80}sponsor|sponsor.{0,80}(?:\bnot\b|unavailable|ineligible)",
+            r.quote, re.I)
+        if not denied:
+            return "question"
         if _yes(auth.get("needs_sponsorship_now")):
             return "blocks"
         if _yes(auth.get("needs_sponsorship_future")):
             # "will not sponsor" postings block future sponsorship needs too
             return "blocks" if "future" in r.quote.lower() or "now or in the future" \
                 in r.quote.lower() else "question"
-        return "ok"
+        return "ok" if _no(auth.get("needs_sponsorship_now")) and \
+            _no(auth.get("needs_sponsorship_future")) else "question"
     if t in ("citizenship", "export_control"):
-        v = auth.get("export_control_eligible")
+        # Citizenship and export-control eligibility are separate user answers.
+        key = "citizenship_eligible" if t == "citizenship" else "export_control_eligible"
+        v = auth.get(key)
         return "blocks" if _no(v) else "ok" if _yes(v) else "question"
     if t == "clearance":
         v = auth.get("clearance_eligible")
@@ -59,7 +71,7 @@ def score_job(conn, job_id: str, profile: dict | None = None) -> dict:
     if job["parsed_json"] is None:  # manual mode: discovery queued the parse as a task
         from . import discover
         parsed = discover.parse_posting(dict(job))
-        if not discover.apply_parse(conn, job_id, job["raw_text"], parsed, "",
+        if not discover.apply_parse(conn, job_id, job["raw_text"], parsed, job["raw_html"] or "",
                                     profile.get("targets", {})):
             return {"job_id": job_id, "score": 0, "decision": "skip", "blockers": [],
                     "pay": core.pay_band(job["comp_max"])}
@@ -79,10 +91,17 @@ def score_job(conn, job_id: str, profile: dict | None = None) -> dict:
     result = core.llm_json("fit", core.system_prompt("fit"), user, FitResult)
 
     # --- rules as code -------------------------------------------------
-    norm_posting = core.normalize(job["raw_text"])
     restrictions, blockers = [], []
-    for r in result.restrictions:
-        if core.normalize(r.quote) not in norm_posting:
+    parsed_restrictions = json.loads(job["parsed_json"] or "{}").get("restrictions", [])
+    candidates = list(result.restrictions) + [FitRestriction(**r, note="From posting parse")
+                                            for r in parsed_restrictions]
+    seen = set()
+    for r in candidates:
+        key = (r.type, " ".join(r.quote.split()).casefold())
+        if key in seen:
+            continue
+        seen.add(key)
+        if not core.quote_in_text(r.quote, job["raw_text"]):
             core.log_decision("fit", job_id, "dropped_restriction",
                               f"quote not verbatim in posting: {r.quote[:120]}")
             continue
@@ -119,7 +138,8 @@ def score_job(conn, job_id: str, profile: dict | None = None) -> dict:
          core.dumps(result.unknowns), core.dumps(result.questions), decision, core.now()),
     )
     conn.commit()
-    core.set_status(conn, job_id, status)
+    if job["status"] not in ("applied", "responded", "interview", "rejected", "offer", "closed"):
+        core.set_status(conn, job_id, status)
     reason = f"score {score} (threshold {threshold}); " + "; ".join(blockers + deal) \
         if blockers or deal else f"score {score} (threshold {threshold}). {result.summary}"
     core.log_decision("fit", job_id, decision, reason, [job["url"] or ""])

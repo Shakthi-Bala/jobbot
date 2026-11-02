@@ -15,13 +15,13 @@ def check(d: Path) -> list[str]:
     job = conn.execute("SELECT raw_text, parsed_json FROM jobs WHERE id=?", (job_id,)).fetchone()
     if not job:
         return [f"job {job_id} not in tracker"]
-    posting = core.normalize(job["raw_text"])
+    posting = job["raw_text"]
     quotes = [r["quote"] for r in json.loads(job["parsed_json"] or "{}").get("restrictions", [])]
     fit = conn.execute("SELECT restrictions_json FROM fit WHERE job_id=?", (job_id,)).fetchone()
     if fit:
         quotes += [r["quote"] for r in json.loads(fit["restrictions_json"] or "[]")]
     return [f"quote not in posting: \"{q[:150]}\"" for q in quotes
-            if core.normalize(q) not in posting]
+            if not core.quote_in_text(q, posting)]
 
 
 if __name__ == "__main__":

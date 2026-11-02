@@ -191,13 +191,20 @@ def enforce(packet: TailoredPacket, profile: dict, job_id: str,
 
     answers = []
     for a in packet.answers:
-        keys = [k for k in a.answer_bank_keys if _bank_get(bank, k) is not None]
+        keys = [k for k in a.answer_bank_keys
+                if isinstance(_bank_get(bank, k), (str, bool, int, float))]
         ids = [f for f in a.fact_ids if f in known]
-        if a.need_input or not (keys or ids):
+        invalid = len(keys) != len(a.answer_bank_keys) or len(ids) != len(a.fact_ids)
+        if a.need_input or invalid or not (keys or ids):
             answers.append({"question": a.question, "answer": "", "fact_ids": [],
                             "keys": [], "need_input": a.need_input or "no supporting fact"})
         else:
-            answers.append({"question": a.question, "answer": a.answer.strip(),
+            answer = a.answer.strip()
+            # An answer-bank citation is not permission to reverse the approved
+            # answer (especially self-identification). Use the stored value.
+            if keys and (not ids or any(k.startswith("self_identification.") for k in keys)):
+                answer = "\n".join(str(_bank_get(bank, k)) for k in keys)
+            answers.append({"question": a.question, "answer": answer,
                             "fact_ids": ids, "keys": keys, "need_input": None})
 
     return {
@@ -294,7 +301,6 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
         | {"links": person.get("links", {}) or {}},
         "summary": summary["text"] if summary else "",
         "courses": (profile.get("education") or [{}])[0].get("coursework", []) or [],
-        # Must match the section order in templates/resume.typ (checked by ats_parse).
         "sections": ["summary", "skills", "experience", "projects", "education"],
         "education": edu_json, "experience": exp_json, "projects": proj_json,
         "skills": [{"category": c, "items": [sk["skill"] for sk in items]}
@@ -365,6 +371,9 @@ def render(d: Path) -> list[Path]:
     meta = json.loads((d / "meta.json").read_text()) if (d / "meta.json").exists() else {}
     note = d / "LATEX_NOTE.md"
     note.unlink(missing_ok=True)
+    # A failed rebuild must never leave a previous version's PDF looking current.
+    for name in ("resume.pdf", "cover_letter.pdf"):
+        (d / name).unlink(missing_ok=True)
     if meta.get("format") == "latex" and (d / "resume.json").exists():
         from . import latex
         tex = latex.render_tex(json.loads((d / "resume.json").read_text()), d / "resume.tex",
@@ -373,6 +382,15 @@ def render(d: Path) -> list[Path]:
         if pdf:
             pdfs.append(pdf)
             (d / "resume.typ").unlink(missing_ok=True)  # the LaTeX PDF is the resume
+            data = json.loads((d / "resume.json").read_text())
+            ctx = latex.context(data)
+            data["sections"] = ["education", "skills", "experience", "projects"]
+            data["section_headings"] = {"experience": ctx["experience_title"]}
+            # The LaTeX style intentionally omits the summary and education details.
+            data["summary"] = ""
+            for e in data["education"]:
+                e["details"] = []
+            (d / "resume.json").write_text(core.dumps(data))
         else:
             note.write_text("No LaTeX engine is installed, so resume.pdf is the Typst fallback "
                             "(used for checks). Compile resume.tex on Overleaf, or install "

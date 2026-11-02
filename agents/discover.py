@@ -154,7 +154,7 @@ def fetch_board(ats: str, slug: str) -> list[dict]:
 
 def parse_ats_url(url: str) -> tuple[str, str, str] | None:
     for ats, pattern in ATS_URL_PATTERNS.items():
-        m = pattern.search(url)
+        m = pattern.match(url)
         if m:
             return ats, m.group(1), m.group(2)
     return None
@@ -234,10 +234,9 @@ def parse_posting(job: dict) -> ParsedPosting:
 
 def verify_quotes(parsed: ParsedPosting, raw_text: str) -> list[str]:
     """Drop restrictions whose quote isn't verbatim in the posting. Returns dropped quotes."""
-    norm = core.normalize(raw_text)
     kept, dropped = [], []
     for r in parsed.restrictions:
-        (kept if core.normalize(r.quote) in norm else dropped).append(r)
+        (kept if core.quote_in_text(r.quote, raw_text) else dropped).append(r)
     parsed.restrictions = kept
     return [r.quote for r in dropped]
 
@@ -267,6 +266,21 @@ def apply_parse(conn, job_id: str, raw_text: str, parsed: ParsedPosting, raw_htm
     return True
 
 
+def posting_id(conn, job: dict) -> str:
+    """Preserve legacy IDs while distinguishing new requisitions."""
+    req_id = str(job.get("req_id") or "").strip() or None
+    if req_id:
+        row = conn.execute("SELECT id FROM jobs WHERE company=? AND req_id=?",
+                           (job["company"], req_id)).fetchone()
+        if row:
+            return row["id"]
+    legacy = core.job_id_for(job["company"], job["title"], job.get("location", ""))
+    row = conn.execute("SELECT req_id FROM jobs WHERE id=?", (legacy,)).fetchone()
+    if row and (str(row["req_id"] or "").strip() or None) == req_id:
+        return legacy
+    return core.job_id_for(job["company"], job["title"], job.get("location", ""), req_id)
+
+
 def upsert_jobs(conn, jobs: Iterable[dict], targets: dict, parse: bool = True,
                 min_pay: int = 0) -> list[str]:
     """Insert new matching jobs, refresh known ones. Returns new job IDs.
@@ -276,16 +290,29 @@ def upsert_jobs(conn, jobs: Iterable[dict], targets: dict, parse: bool = True,
     """
     new_ids = []
     for job in jobs:
-        jid = core.job_id_for(job["company"], job["title"], job.get("location", ""))
+        jid = posting_id(conn, job)
         comp = (job.get("comp_min"), job.get("comp_max"), job.get("comp_currency"),
                 job.get("comp_text"), job.get("comp_source"))
-        if conn.execute("SELECT 1 FROM jobs WHERE id = ?", (jid,)).fetchone():
+        existing = conn.execute("SELECT * FROM jobs WHERE id=?", (jid,)).fetchone()
+        if existing:
+            changed = existing["raw_text"] != job["raw_text"]
             conn.execute(
                 "UPDATE jobs SET last_verified=?, active=1, url=COALESCE(?, url), "
+                "title=?, location=?, raw_text=?, raw_html=?, "
                 "comp_min=COALESCE(?, comp_min), comp_max=COALESCE(?, comp_max), "
                 "comp_currency=COALESCE(?, comp_currency), comp_text=COALESCE(?, comp_text), "
                 "comp_source=COALESCE(?, comp_source) WHERE id=?",
-                (core.now(), job.get("url"), *comp, jid))
+                (core.now(), job.get("url"), job["title"], job.get("location", ""),
+                 job["raw_text"], job.get("raw_html", ""), *comp, jid))
+            if changed:
+                conn.execute("UPDATE jobs SET parsed_json=NULL, deadline=? WHERE id=?",
+                             (job.get("deadline"), jid))
+                conn.execute("DELETE FROM fit WHERE job_id=?", (jid,))
+                if existing["status"] not in ("applied", "responded", "interview", "rejected",
+                                               "offer", "closed"):
+                    conn.execute("UPDATE jobs SET status='discovered' WHERE id=?", (jid,))
+                core.log_decision("discover", jid, "posting_changed",
+                                  "stored posting refreshed; requirements and fit invalidated")
             continue
         ok, reason = matches_targets(job, targets)
         if not ok:
@@ -297,12 +324,12 @@ def upsert_jobs(conn, jobs: Iterable[dict], targets: dict, parse: bool = True,
             continue
         conn.execute(
             "INSERT INTO jobs (id, company, title, location, req_id, url, source, posted_at, "
-            "deadline, first_seen, last_verified, active, raw_text, parsed_json, status, "
+            "deadline, first_seen, last_verified, active, raw_text, raw_html, parsed_json, status, "
             "comp_min, comp_max, comp_currency, comp_text, comp_source) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,NULL,'discovered',?,?,?,?,?)",
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,NULL,'discovered',?,?,?,?,?)",
             (jid, job["company"], job["title"], job.get("location", ""), job.get("req_id"),
              job.get("url"), job["source"], job.get("posted_at"), job.get("deadline"),
-             core.now(), core.now(), job["raw_text"], *comp),
+             core.now(), core.now(), job["raw_text"], job.get("raw_html", ""), *comp),
         )
         conn.commit()
         core.log_decision("discover", jid, "new_job",
@@ -351,7 +378,7 @@ def poll_boards(conn, targets: dict, min_pay: int = 0) -> list[str]:
         for j in jobs:
             j["company"] = name
         new_ids += upsert_jobs(conn, jobs, targets, min_pay=min_pay)
-        seen = {core.job_id_for(name, j["title"], j.get("location", "")) for j in jobs}
+        seen = {posting_id(conn, j) for j in jobs}
         mark_missing_inactive(conn, name, seen)
     return new_ids
 
@@ -487,7 +514,7 @@ def add_manual(company: str, title: str, text: str, location: str = "", url: str
     job = {"company": company, "title": title, "location": location, "url": url or None,
            "req_id": req_id or None, "source": "manual", "raw_text": text, "raw_html": ""}
     job |= _pay_from_text(text)
-    jid = core.job_id_for(company, title, location)
+    jid = posting_id(conn, job)
     if conn.execute("SELECT 1 FROM jobs WHERE id=?", (jid,)).fetchone():
         return jid
     ids = upsert_jobs(conn, [job], targets={}, parse=True)

@@ -74,7 +74,10 @@ def pdf_text(pdf: Path) -> str:
                               capture_output=True, text=True).stdout
     except (FileNotFoundError, subprocess.CalledProcessError):
         from pypdf import PdfReader
-        return "\n".join(p.extract_text() or "" for p in PdfReader(str(pdf)).pages)
+        # Layout extraction avoids spurious spaces from kerning ("PyT orch") and
+        # follows the same convention as pdftotext -layout above.
+        return "\n".join(p.extract_text(extraction_mode="layout") or ""
+                         for p in PdfReader(str(pdf)).pages)
 
 
 def pdf_pages(pdf: Path) -> int:

@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   posted_at TEXT, deadline TEXT, first_seen TEXT, last_verified TEXT,
   active INTEGER DEFAULT 1,
   raw_text TEXT,                     -- stored posting (untrusted data)
+  raw_html TEXT,                     -- retained for hidden-text injection checks
   parsed_json TEXT,                  -- must_have, nice_to_have, restrictions...
   status TEXT DEFAULT 'discovered',  -- pipeline status, see README section 9
   comp_min INTEGER, comp_max INTEGER,-- annual base pay in USD, from the posting

@@ -23,6 +23,8 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(core, "OUT", out)
     monkeypatch.setattr(core, "DB_PATH", data / "tracker.db")
     monkeypatch.setattr(core, "DECISIONS_PATH", data / "decisions.tsv")
+    from agents import master
+    monkeypatch.setattr(master, "PATH", data / "master_resume.yaml")
     return tmp_path
 
 

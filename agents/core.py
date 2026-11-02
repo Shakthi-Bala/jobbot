@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import sqlite3
 import sys
 from datetime import date, datetime, timezone
@@ -201,7 +202,7 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
 # Columns added after the first schema; older tracker.db files get them on connect.
 _JOB_COLUMNS = {
     "comp_min": "INTEGER", "comp_max": "INTEGER", "comp_currency": "TEXT",
-    "comp_text": "TEXT", "comp_source": "TEXT",
+    "comp_text": "TEXT", "comp_source": "TEXT", "raw_html": "TEXT",
 }
 
 
@@ -281,16 +282,23 @@ def record_action(conn, job_id: str, actor: str, action: str, detail: str = "",
 
 def record_document(conn, job_id: str, kind: str, path: Path) -> int:
     digest = sha256_file(path)
-    rel = str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else str(path)
+    # Keep the bytes behind every historical hash. Draft paths are overwritten
+    # during revisions and cannot serve as an application record.
+    archived = OUT / "documents" / job_id / kind / f"{digest}{path.suffix}"
+    archived.parent.mkdir(parents=True, exist_ok=True)
+    if not archived.exists():
+        shutil.copyfile(path, archived)
+    elif sha256_file(archived) != digest:
+        raise JobbotError(f"Document archive is damaged: {archived.name}")
+    rel = str(archived.relative_to(ROOT)) if archived.is_relative_to(ROOT) else str(archived)
     last = conn.execute(
-        "SELECT version, sha256 FROM documents WHERE job_id=? AND kind=? AND path=? "
-        "ORDER BY version DESC LIMIT 1", (job_id, kind, rel),
+        "SELECT id, version, sha256 FROM documents WHERE job_id=? AND kind=? "
+        "ORDER BY version DESC, id DESC LIMIT 1", (job_id, kind),
     ).fetchone()
     if last and last["sha256"] == digest:
-        return conn.execute(
-            "SELECT id FROM documents WHERE job_id=? AND kind=? AND path=? AND version=?",
-            (job_id, kind, rel, last["version"]),
-        ).fetchone()["id"]
+        conn.execute("UPDATE documents SET path=? WHERE id=?", (rel, last["id"]))
+        conn.commit()
+        return last["id"]
     version = (last["version"] + 1) if last else 1
     cur = conn.execute(
         "INSERT INTO documents (job_id, kind, path, sha256, version, review_status, created_at) "
@@ -315,9 +323,18 @@ def normalize(text: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", (text or "").lower())).strip()
 
 
-def job_id_for(company: str, title: str, location: str) -> str:
-    key = "|".join(normalize(x) for x in (company, title, location))
+def job_id_for(company: str, title: str, location: str, req_id: str | None = None) -> str:
+    # A requisition remains the same job when its title changes; two requisitions
+    # with the same title/location must remain separate applications.
+    key = (f"{normalize(company)}|req|{str(req_id).strip()}" if req_id else
+           "|".join(normalize(x) for x in (company, title, location)))
     return hashlib.sha256(key.encode()).hexdigest()[:12]
+
+
+def quote_in_text(quote: str, text: str) -> bool:
+    """Verbatim except for whitespace/case; empty quotations are never evidence."""
+    q = " ".join(quote.split()).casefold()
+    return bool(q) and q in " ".join(text.split()).casefold()
 
 
 def slugify(text: str) -> str:
@@ -342,11 +359,18 @@ def job_dir(job_id: str, conn: sqlite3.Connection | None = None) -> Path:
         return OUT / job_id
     d = OUT / f"{readable_name(row['company'], 30)}_{readable_name(row['title'])}"
     meta = d / "meta.json"
-    if meta.exists() and json.loads(meta.read_text()).get("job_id") != job_id:
+    owner = d / ".job_id"
+    existing_id = (json.loads(meta.read_text()).get("job_id") if meta.exists() else
+                   owner.read_text().strip() if owner.exists() else None)
+    if existing_id and existing_id != job_id:
         d = d.with_name(f"{d.name}_{job_id[:6]}")
     legacy = OUT / job_id
     if legacy.is_dir() and not d.exists():
         legacy.rename(d)
+    # Gap reports and outreach may exist before meta.json. Reserve their folder
+    # as well, so a second requisition cannot overwrite those artifacts.
+    d.mkdir(parents=True, exist_ok=True)
+    (d / ".job_id").write_text(job_id + "\n")
     return d
 
 

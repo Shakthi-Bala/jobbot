@@ -33,7 +33,7 @@ def main(argv=None) -> None:
         conn = core.connect()
         top = conn.execute(
             "SELECT j.id FROM jobs j JOIN fit f ON f.job_id=j.id "
-            "WHERE j.status='shortlisted' AND j.active=1 "
+            "WHERE j.status IN ('shortlisted','packet_drafted','reviewed') AND j.active=1 "
             f"ORDER BY {core.PAY_ORDER_SQL}, f.score DESC LIMIT ?", (a.top,)).fetchall()
         for row in top:
             try:

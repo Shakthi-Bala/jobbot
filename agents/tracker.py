@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 from datetime import date, timedelta
+from pathlib import Path
 
 from . import core
 from .schemas import Rewrite
@@ -16,16 +17,32 @@ OUTCOMES = ("applied", "responded", "interview", "rejected", "offer", "closed")
 def mark_applied(job_id: str) -> int | None:
     """Record exactly which resume version you sent (by hash)."""
     conn = core.connect()
+    core.get_job(conn, job_id)
+    existing = conn.execute("SELECT doc_id FROM actions WHERE job_id=? AND action='applied' "
+                            "ORDER BY id LIMIT 1", (job_id,)).fetchone()
+    if existing:
+        return existing["doc_id"]
     doc = conn.execute(
-        "SELECT * FROM documents WHERE job_id=? AND kind='resume' ORDER BY version DESC LIMIT 1",
+        "SELECT * FROM documents WHERE job_id=? AND kind='resume' ORDER BY version DESC, id DESC LIMIT 1",
         (job_id,)).fetchone()
+    if doc:
+        path = Path(doc["path"])
+        if not path.is_absolute():
+            path = core.ROOT / path
+        if not path.exists() or core.sha256_file(path) != doc["sha256"]:
+            raise core.JobbotError("Recorded resume bytes are missing or changed; record the submitted file first")
+        draft = core.job_dir(job_id, conn) / "resume.pdf"
+        if draft.exists() and core.sha256_file(draft) != doc["sha256"]:
+            raise core.JobbotError("Current resume differs from the recorded version; finish the packet before marking applied")
     detail = f"resume v{doc['version']} sha256={doc['sha256'][:16]}" if doc else "no resume on file"
-    core.record_action(conn, job_id, "me", "applied", detail, doc["id"] if doc else None)
-    core.set_status(conn, job_id, "applied")
     due = (date.today() + timedelta(days=10)).isoformat()
-    conn.execute("INSERT INTO followups (job_id, due, note) VALUES (?,?,?)",
-                 (job_id, due, "Check application status / nudge recruiter"))
-    conn.commit()
+    with conn:
+        conn.execute("INSERT INTO actions (job_id, actor, action, detail, doc_id, at) "
+                     "VALUES (?, 'me', 'applied', ?, ?, ?)",
+                     (job_id, detail, doc["id"] if doc else None, core.now()))
+        conn.execute("UPDATE jobs SET status='applied' WHERE id=?", (job_id,))
+        conn.execute("INSERT INTO followups (job_id, due, note) VALUES (?,?,?)",
+                     (job_id, due, "Check application status / nudge recruiter"))
     return doc["id"] if doc else None
 
 
@@ -33,8 +50,12 @@ def record_outcome(job_id: str, outcome: str, note: str = "") -> None:
     if outcome not in OUTCOMES:
         raise core.JobbotError(f"outcome must be one of {OUTCOMES}")
     conn = core.connect()
+    core.get_job(conn, job_id)
     core.record_action(conn, job_id, "me", outcome, note)
     core.set_status(conn, job_id, outcome)
+    if outcome in ("rejected", "closed"):
+        conn.execute("UPDATE followups SET done=1 WHERE job_id=?", (job_id,))
+        conn.commit()
     core.log_decision("me", job_id, outcome, note)
 
 

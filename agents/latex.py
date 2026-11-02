@@ -12,6 +12,7 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
+from urllib.parse import quote, urlsplit
 
 import jinja2
 
@@ -48,7 +49,11 @@ def escape(value) -> str:
 
 
 def _href(url: str, label: str) -> Raw:
-    safe_url = url.replace("%", r"\%").replace("#", r"\#")
+    parsed = urlsplit(url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise core.JobbotError("Resume links must be absolute HTTP(S) URLs")
+    # Braces/backslashes in a data URL must never become TeX commands.
+    safe_url = quote(url, safe=":/?&=+#@._~%-").replace("%", r"\%").replace("#", r"\#")
     return Raw(rf"\href{{{safe_url}}}{{{escape(label)}}}")
 
 
@@ -119,12 +124,17 @@ def compile_pdf(tex: Path) -> Path | None:
     if not exe:
         return None
     name = Path(exe).name
-    cmd = {"tectonic": [exe, "--keep-logs", tex.name],
-           "latexmk": [exe, "-pdf", "-interaction=nonstopmode", tex.name]}.get(
-        name, [exe, "-interaction=nonstopmode", tex.name])
+    cmd = {"tectonic": [exe, "--untrusted", "--keep-logs", tex.name],
+           "latexmk": [exe, "-pdf", "-no-shell-escape", "-interaction=nonstopmode", tex.name]}.get(
+        name, [exe, "-no-shell-escape", "-interaction=nonstopmode", tex.name])
     runs = 1 if name in ("tectonic", "latexmk") else 2  # pdflatex: twice for paracol
     for _ in range(runs):
-        r = subprocess.run(cmd, cwd=tex.parent, capture_output=True, text=True)
+        try:
+            r = subprocess.run(cmd, cwd=tex.parent, capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired as e:
+            raise core.JobbotError(f"LaTeX timed out on {tex.name}") from e
+        if r.returncode:
+            break
     pdf = tex.with_suffix(".pdf")
     if r.returncode != 0 or not pdf.exists():
         raise core.JobbotError(f"LaTeX failed on {tex.name}:\n{(r.stdout + r.stderr)[-1500:]}")

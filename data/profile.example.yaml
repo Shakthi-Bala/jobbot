@@ -14,6 +14,7 @@ authorization:
   needs_sponsorship_now: false
   needs_sponsorship_future: true
   export_control_eligible: unsure     # yes | no | unsure
+  citizenship_eligible: unsure        # separate answer; review the exact citizenship restriction
   clearance_eligible: unsure
   start_date: "2027-01"
   relocation: ["Boston", "Bay Area", "remote"]

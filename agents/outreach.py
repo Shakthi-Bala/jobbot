@@ -179,6 +179,8 @@ def mark_sent(contact_id: int, followup_days: int = 7) -> None:
     c = conn.execute("SELECT * FROM contacts WHERE id=?", (contact_id,)).fetchone()
     if not c:
         raise core.JobbotError(f"Unknown contact {contact_id}")
+    if c["sent_at"]:
+        return  # repeated CLI calls must not duplicate the send or its follow-up
     due = (date.today() + timedelta(days=followup_days)).isoformat()
     conn.execute("UPDATE contacts SET status='sent', sent_at=?, next_followup=? WHERE id=?",
                  (core.now(), due, contact_id))

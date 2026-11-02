@@ -14,7 +14,7 @@ DISALLOWED = ("linkedin.com", "glassdoor.com", "dice.com")
 
 
 def domain(url: str) -> str:
-    host = urlparse(url).netloc.lower()
+    host = (urlparse(url).hostname or "").lower()
     parts = host.split(".")
     return ".".join(parts[-2:]) if len(parts) >= 2 else host
 
@@ -27,15 +27,17 @@ def page_confirms(url: str, name: str, company: str) -> bool:
     except httpx.HTTPError:
         return False
     text = core.normalize(html_to_text(r.text))
-    last = core.normalize(name).split()[-1] if name.split() else ""
-    return core.normalize(name) in text or (last and last in text
-                                              and core.normalize(company) in text)
+    person, employer = core.normalize(name), core.normalize(company)
+    return bool(person and employer and person in text and employer in text)
 
 
 def verified_sources(sources: list[str], name: str, company: str) -> list[str]:
     """Sources that are allowed, on distinct domains, and actually mention the person."""
     seen, ok = set(), []
     for url in sources:
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https") or not parsed.hostname:
+            continue
         dom = domain(url)
         if dom in seen or any(dom.endswith(x) for x in DISALLOWED):
             continue
@@ -48,6 +50,8 @@ def verified_sources(sources: list[str], name: str, company: str) -> list[str]:
 def check(d: Path) -> list[str]:
     bad = []
     for p in sorted(d.glob("outreach/*.json")):
+        if p.name == "checks.json":
+            continue
         c = json.loads(p.read_text())
         ok = verified_sources(c.get("sources", []), c["name"], c["company"])
         if len(ok) < 2:
