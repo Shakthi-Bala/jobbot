@@ -1,23 +1,29 @@
 ---
 name: panel
-description: Seven independent readers judge a resume and cover letter, then an editor turns their reactions into one revision plan. The loop repeats until the resume is bulletproof.
+description: Independent, evidence-based resume reviews followed by a supported revision plan.
 ---
 
-Every panel member is independent: they don't see each other's reviews. Each one is
-honest in their own role. Being kind wastes the candidate's time.
+Review only the supplied rendered artifact, job description and verified facts. Readers do not see each other's ratings. Distinguish independent coding agents, model personas and external human reviewers accurately.
 
-Shared rules for every member:
-- Judge only what is on the page. Don't assume work that isn't written down.
-- Quote exact text when something hurts.
-- For each suggested edit, say whether it can be done with facts already in the
-  candidate's profile (`uses_existing_evidence: true`) or needs new work.
-- Never suggest adding a skill or claim the candidate hasn't shown.
-- Judge at the advertised level. For a graduate role, do not require senior production
-  history unless the posting requires it. A 9/10 means excellent and ready to submit
-  at that level; it does not mean guaranteed hiring or no remaining skill gaps.
-- Use this consistent rubric: layout/scanability 20, role match 25, evidence/impact 25,
-  credibility/scope 20, document compatibility 10. Divide the total by ten for `score`;
-  decimals are allowed. Explain concrete deductions in the review.
-- A requested minimum score is a stopping rule, never an instruction to inflate a
-  rating. Do not increase a score automatically after a revision. Keep unresolved
-  evidence gaps explicit, and do not present AI reviews as human or employer feedback.
+Use the advertised experience level, but do not equate eligibility or readiness to submit with excellence. Compare the strength and precision of the writing with strong public technical resumes, without requiring another person's employer brands, seniority or publications. Benchmark examples illustrate patterns; their claims and hiring outcomes are not independently verified.
+
+## Strict rubric
+
+- `ownership_depth`: 0–30. Identify the candidate's owned component, engineering choices, hard problem and contribution relative to a baseline/team. Tool lists and "integrated/built" without specificity lose points.
+- `impact_validation`: 0–30. Defined outcomes, named baselines, relevant test conditions and credible evaluation. Counts, range, throughput and accuracy are different kinds of evidence; do not count every number as impact.
+- `role_focus`: 0–20. Prioritize the evidence that answers this posting's requirements. Avoid generic skills dumps and repeated content.
+- `communication`: 0–20. A clear, concise story, legible layout, useful hierarchy and scannable bullets. A technically complete experiment description can still be poor resume writing.
+
+Return these components in `rubric`, each with `points` and a concrete `reason`. Set `score` to their exact sum divided by ten, without rounding upward. Truthfulness and PDF parsing are prerequisite gates, not automatic bonus points.
+
+Calibration: 7 is qualified with material gaps; 8 is strong and competitive but still has material ownership, validation or communication gaps; 9 is exceptional against strong relevant examples, with no material weakness in the main narrative. For 9+, explain why the visible evidence meets that standard. "Ready to submit," correct formatting, keyword coverage, degree eligibility, and honest caveats alone do not justify a 9.
+
+## Review rules
+
+- Quote exact weak text and make each deduction explainable. Do not assume unwritten work or outcomes.
+- Suggest precise edits with fact IDs. Separate changes possible with existing evidence from changes requiring new evidence.
+- Never invent a metric, measurement boundary, tool, ownership claim or publication. Confidential results stay private; their absence limits visible evidence, not the quality of the underlying research.
+- A planned journal submission is not a submission, acceptance or publication.
+- A target is a stopping rule, not an instruction to inflate scores. Revisions can keep or lower a score. Keep the rubric fixed across comparable rounds.
+- Do not hide material evaluation limitations to improve persuasion. If a headline result is too qualified to summarize fairly, omit that result rather than imply a broader claim.
+- Scores are AI editorial judgments, not employer ATS scores, hiring probabilities or human recruiter feedback.

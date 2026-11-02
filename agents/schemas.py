@@ -234,6 +234,18 @@ class SuggestedEdit(BaseModel):
     fact_ids: list[str]
 
 
+class RubricComponent(BaseModel):
+    points: float
+    reason: str = Field(description="Concrete evidence and deductions; quote weak text when relevant")
+
+
+class ResumeRubric(BaseModel):
+    ownership_depth: RubricComponent
+    impact_validation: RubricComponent
+    role_focus: RubricComponent
+    communication: RubricComponent
+
+
 class PersonaReview(BaseModel):
     """One reader's honest reaction to the resume and cover letter alone."""
     verdict: Literal["advance", "maybe", "pass"]
@@ -243,6 +255,8 @@ class PersonaReview(BaseModel):
     weakest: str
     lines_that_hurt: list[LineCritique]
     edits: list[SuggestedEdit]
+    rubric: Optional[ResumeRubric] = Field(default=None, description=
+        "Strict rubric: ownership/depth 30, impact/validation 30, role focus 20, communication 20")
 
 
 class Revision(BaseModel):

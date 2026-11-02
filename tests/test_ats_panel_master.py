@@ -142,3 +142,32 @@ def test_fractional_scores_are_not_rounded_up_to_meet_target():
     result = panel.summarize(reviews, _plan(bulletproof=True), {'score':87,'max_score':87}, 1, min_score=9.0)
     assert result['reader_min'] == 8.9 and not result['done']
     assert PersonaReview.model_validate(reviews['team_lead'].model_dump()).score == 9.3
+
+
+def _strict_reviews(score=8.0):
+    from agents.schemas import ResumeRubric
+    rubric = ResumeRubric.model_validate({
+        'ownership_depth': {'points':24, 'reason':'Owned components described, some attribution unclear'},
+        'impact_validation': {'points':20, 'reason':'Material validation details not visible'},
+        'role_focus': {'points':18, 'reason':'Strong match to the posting'},
+        'communication': {'points':18, 'reason':'Readable with minor density issues'}})
+    return {k:(v.model_copy(update={'rubric':rubric}) if k in panel.READERS else v)
+            for k,v in _reviews(score=score).items()}
+
+
+def test_strict_rubric_does_not_reward_eligibility_or_editor_approval():
+    result=panel.summarize(_strict_reviews(),_plan(bulletproof=True),{'score':87,'max_score':87},1,
+                           min_score=9,strict_rubric=True)
+    assert result['reader_min']==8 and not result['done'] and result['rubric_version']==2
+
+
+def test_strict_rubric_rejects_unsubstantiated_scores_and_missing_breakdown():
+    import pytest
+    with pytest.raises(core.JobbotError,match='rubric components'):
+        panel.summarize(_reviews(score=9),_plan(),{'score':87,'max_score':87},1,strict_rubric=True)
+    with pytest.raises(core.JobbotError,match='does not match rubric'):
+        panel.summarize(_strict_reviews(score=9.3),_plan(),{'score':87,'max_score':87},1,strict_rubric=True)
+    reviews=_strict_reviews()
+    reviews['recruiter'].rubric.impact_validation.points=31
+    with pytest.raises(core.JobbotError,match='rubric component'):
+        panel.summarize(reviews,_plan(),{'score':87,'max_score':87},1,strict_rubric=True)

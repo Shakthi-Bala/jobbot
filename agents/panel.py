@@ -33,6 +33,8 @@ READERS = {
 LABELS = {"ats_gate": "ATS gate", "hiring_manager": "Hiring manager", "team_lead": "Team lead",
           "competing_applicant": "Competing applicant", "ceo": "CEO",
           "senior_engineer": "Senior engineer", "recruiter": "Recruiter"}
+RUBRIC_WEIGHTS = {"ownership_depth": 30, "impact_validation": 30,
+                  "role_focus": 20, "communication": 20}
 
 
 def persona_prompt(file: str) -> str:
@@ -93,8 +95,10 @@ def run(conn, job_id: str, d: Path, round_no: int) -> dict:
         "## Panel reviews\n" + core.dumps({k: v.model_dump() for k, v in reviews.items()}),
         RevisionPlan)
 
-    target = core.load_profile().get("preferences", {}).get("panel_min_score")
-    result = summarize(reviews, plan, keywords, round_no, min_score=target)
+    prefs = core.load_profile().get("preferences", {})
+    target = prefs.get("panel_min_score")
+    result = summarize(reviews, plan, keywords, round_no, min_score=target,
+                       strict_rubric=prefs.get("panel_strict_rubric", False))
     result["resume_sha256"] = digest
     save(d, result)
     core.log_decision("panel", job_id, f"round_{round_no}",
@@ -105,13 +109,27 @@ def run(conn, job_id: str, d: Path, round_no: int) -> dict:
 
 
 def summarize(reviews: dict, plan: RevisionPlan, keywords: dict, round_no: int,
-              min_score: float | None = None) -> dict:
+              min_score: float | None = None, strict_rubric: bool = False) -> dict:
     readers = {k: reviews[k] for k in READERS if k in reviews}
-    avg = round(sum(r.score for r in readers.values()) / max(1, len(readers)), 1)
+    scores = {k: r.score for k, r in readers.items()}
+    if strict_rubric:
+        for name, reader in readers.items():
+            if reader.rubric is None:
+                raise core.JobbotError(f"{name}: strict review requires rubric components")
+            total = 0.0
+            for key, maximum in RUBRIC_WEIGHTS.items():
+                part = getattr(reader.rubric, key)
+                if not math.isfinite(part.points) or not 0 <= part.points <= maximum or not part.reason.strip():
+                    raise core.JobbotError(f"{name}: invalid or unexplained rubric component {key}")
+                total += part.points
+            scores[name] = total / 10
+            if not math.isclose(reader.score, scores[name], abs_tol=0.001):
+                raise core.JobbotError(f"{name}: score does not match rubric total; do not round to reach a target")
+    avg = round(sum(scores.values()) / max(1, len(scores)), 1)
     gate, hm = reviews["ats_gate"], reviews["hiring_manager"]
     done = plan.bulletproof or not plan.revisions or (
         gate.decision == "pass_to_human" and hm.decision == "interview" and avg >= 8)
-    lowest = min((r.score for r in readers.values()), default=0)
+    lowest = min(scores.values(), default=0)
     if min_score is not None:
         try:
             min_score = float(min_score)
@@ -129,6 +147,7 @@ def summarize(reviews: dict, plan: RevisionPlan, keywords: dict, round_no: int,
         "hiring_manager": hm.decision, "reader_avg": avg, "ats_keyword_score": keywords["score"],
         "ats_max_score": keywords["max_score"], "done": done,
         "reader_min": lowest, "reader_target": min_score,
+        "rubric_version": 2 if strict_rubric else 1,
         "revisions": [f"{r.instruction} (raised by {', '.join(r.raised_by)}; facts {', '.join(r.fact_ids) or '-'})"
                       for r in plan.revisions],
         "reviews": {k: v.model_dump() for k, v in reviews.items()},
