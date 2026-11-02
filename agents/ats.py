@@ -30,6 +30,10 @@ EQUIVALENTS = {
     "isaac sim": ["isaac lab"],          # Isaac Lab is built on Isaac Sim
     "computer vision": ["cv"],
     "machine learning": ["ml"],
+    "state estimation": ["visual-inertial odometry", "visual inertial odometry", "ukf"],
+    "visual odometry": ["visual-inertial odometry", "visual inertial odometry", "stereo vio"],
+    "3d reconstruction": ["structure from motion", "geometric reconstruction"],
+    "3d geometry": ["camera geometry", "triangulation", "pnp"],
     "3d vision": ["3d perception", "depth estimation", "3d localization"],
     "reward shaping": ["reward design"],
     "parallel rollouts": ["parallel training", "massively parallel simulation", "parallel environments"],

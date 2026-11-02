@@ -60,7 +60,10 @@ def claim_lines(path: Path):
 
 def numbers(text: str) -> set[float]:
     out = set()
-    for m in NUMBER_RE.findall(text or ""):
+    # Dimensional labels name a technical domain, not a measured result.
+    # Keep quantities such as 45 FPS or 2 days subject to numerical provenance.
+    text = re.sub(r"\b[234][dD]\b", "", text or "")
+    for m in NUMBER_RE.findall(text):
         try:
             out.add(float(m.replace(",", "")))
         except ValueError:

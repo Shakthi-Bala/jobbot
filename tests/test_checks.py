@@ -157,3 +157,13 @@ def test_sheet_keeps_your_edits_and_records_applied(packet, tmp_path):
     assert ws.cell(sheet.FIRST_ROW, sheet.COL["notes"]).value == "Referral from alum"
     assert ws.cell(sheet.FIRST_ROW, sheet.COL["applied"]).value == "Yes"
     assert sheet.build(path)["recorded_applied"] == []     # recorded once, not twice
+
+
+def test_dimensional_labels_do_not_hide_unsupported_performance_numbers(packet):
+    from checks._lib import numbers
+    assert numbers('3D reconstruction at 45FPS, evaluated over 2 days') == {45, 2}
+    path = packet / 'resume.tagged.md'
+    path.write_text(path.read_text() + '- Ran 3D reconstruction at 45 FPS [F003]\n')
+    problems = numbers_match.check(packet)
+    assert any('(45)' in p for p in problems)
+    assert not any('(3,' in p or '(3)' in p for p in problems)

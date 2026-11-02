@@ -101,3 +101,14 @@ def test_master_renders_one_page_and_passes_checks(env, monkeypatch):
     data = json.loads((r["dir"] / "resume.json").read_text())
     assert data["summary"].startswith("Robotics M.S.")
     assert data["sections"][0] == "summary"
+
+
+def test_geometry_and_estimation_are_profile_equivalents_not_literal_resume_matches():
+    profile = {'facts': [{'text': 'Visual-inertial odometry with camera geometry and structure from motion'}]}
+    keywords = ['state estimation', 'visual odometry', '3D reconstruction', '3D geometry', 'LiDAR']
+    result = ats.classify(keywords, profile, resume_text='Visual-inertial odometry and structure from motion')
+    assert result['fixable'] == keywords[:4]
+    assert result['gap'] == ['LiDAR']
+    # Evidence permits precise rewording; it does not pretend an absent literal
+    # keyword is already present in the rendered resume.
+    assert result['in_resume'] == []
