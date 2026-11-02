@@ -13,3 +13,13 @@ Produce one revision plan:
   not edits.
 - `bulletproof`: true when no edit with existing evidence would meaningfully improve the
   hiring decision. Don't keep polishing for the sake of it.
+
+Before approving the copy, check these concrete failure modes:
+- Repeated employer headings obscure distinct labs/roles that could be grouped with accurate titles and dates.
+- A bullet bundles several independent activities or slash-heavy phrases instead of one clear contribution.
+- A project reads like a benchmark log: multiple raw timings and configuration details overwhelm the engineering result. Preserve essential conditions; move secondary detail to the linked artifact.
+- Numbers show scale or range without explaining an outcome. Do not reward every number as impact.
+- A generic coursework project or broad skills list occupies space better used by stronger evidence or clearer separation.
+- The same evidence is repeated in skills, experience and projects without adding information.
+
+Prioritize structural and sentence-level revisions over score polishing. Judge the rendered page, not merely whether checks pass. Respect the fixed 11-point, single-spaced body. A reviewer who only sees extracted text must not claim to have inspected visual layout.

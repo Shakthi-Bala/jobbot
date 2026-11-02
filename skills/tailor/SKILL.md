@@ -6,38 +6,28 @@ description: Select, order and reword verified facts into a tailored resume, cov
 You tailor application materials for one job. Tailoring means **choosing well** from
 the profile, not adding to it.
 
-Brief from the candidate:
-1. Act as a senior recruiter and add exact keywords for ATS qualification, aiming for a
-   keyword score of 90+.
-2. Start from the master resume (when given) so tailoring is instant.
+Write a persuasive, concise technical resume from verified evidence. Keyword coverage and numerical ratings are diagnostics, not writing goals. Start from approved master bullets when available, but edit them instead of copying weak wording.
 
-Keywords come from the "profile proves" list in the input, spelled exactly as the posting
-spells them. Keywords in the "no evidence" list are gaps: never claim them.
+## Editorial rules
 
-## Summary
-Two lines (about 40 words) at the top: who you are for *this* role (degree, school,
-graduation), the posting's top 3-4 keywords you can prove, one or two hard numbers.
-Cite every fact it uses in `fact_ids`.
+- Pick the strongest relevant entries. A generic project listing standard algorithms does not earn space merely because it matches a keyword. Omit it unless an owned implementation, difficult problem or supported result makes it useful.
+- Use one main contribution per bullet, normally one or two rendered lines. Avoid chains combining data collection, calibration, augmentation and validation in one sentence.
+- Prefer the delivered capability or engineering change first, followed by the method and a supported result. Distinguish dataset/test counts, sensing range, throughput and accuracy; a number alone does not establish impact.
+- For a one-page project, normally use at most three bullets: implementation/contribution, scoped evaluation, and an important performance result. Merge a useful implementation detail into the first bullet where readable.
+- Preserve material benchmark limitations and comparator identity. Put secondary raw timings, configuration identifiers and experiment minutiae in linked project documentation when the resume already communicates the result fairly. Do not omit caveats to imply generalization or broader safety.
+- Group consecutive roles at the same employer using explicit employer/team metadata. Keep each lab, actual title and dates distinct. Never invent an official title or merge unrelated organizations by guessing from their names.
+- Select compact, demonstrated tools and languages. Avoid repeating broad subject labels already shown by the work. Prefer conventional display such as C++17 over C++ (C++17). Do not add every posting term automatically.
+- Keep the candidate's body font and spacing fixed: 11 points and 1.0 single spacing. Edit content and allocation instead of shrinking type or adding filler to fill the page.
+- Confidential results remain private. A planned submission is not a submission, acceptance or publication. If an outcome cannot be disclosed, describe the supported engineering contribution without inventing a substitute metric.
 
-## Resume
-- `experience` and `projects`: pick the entries (by `ref_id`) and bullets that best
-  serve this job's must-haves. Order entries by relevance; keep the candidate's
-  strongest evidence first.
-- Each bullet rewords one or more facts **of that same entry** and lists their IDs in
-  `fact_ids`. A bullet may only use IDs from the `facts` list of the entry it sits under.
-- Rewording: action + method + result. Use the posting's vocabulary where the fact
-  genuinely supports it (if the fact says "visual-inertial odometry" and the posting says
-  "VIO", say VIO). Never add a tool, method, scope, team size or outcome the fact
-  doesn't state.
-- Numbers: copy them exactly from the fact's text or non-null metrics. If a metric is
-  null, describe the work without a number.
-- Fit `preferences.resume_pages`. Roughly 3-5 bullets per recent entry for one page.
-  Drop weak or irrelevant bullets rather than cramming.
-- `skills`: names exactly as in `profile.skills`. Strong and working levels only, plus a
-  familiar skill only when the posting requires it. Code also adds every evidence-backed
-  skill the posting mentions, so focus your picks on the ones that matter for the role.
-- Bullets: strong verb + what + how (tools as keywords) + result. About 25 words max.
-  Put the posting's exact terms in the first bullet of each entry.
+## Evidence and structure
+
+- Each bullet cites fact IDs belonging to its own experience/project entry. Never add tools, methods, scope, team size, ownership or outcomes absent from those facts.
+- Copy numbers exactly from supported text or non-null metrics. Null means no number.
+- Use the posting's terminology where it naturally and accurately describes the work; do not force exact keywords into every first bullet.
+- Order experience chronologically within relevant sections. Allocate detail to the strongest contributions, not equally to every entry.
+- If resume_summary is disabled, return an empty summary paragraph. Otherwise write a brief specific summary only if it adds context beyond education and experience.
+- Skills use names from profile.skills. Strong/working levels only, with a familiar skill included only when required and supported. Automatic additions are optional, not a reason for a tools dump.
 
 ## Cover letter
 Write one only if the posting requests it, or it clearly helps (e.g. a career change
