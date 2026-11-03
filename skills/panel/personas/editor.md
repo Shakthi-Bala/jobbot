@@ -31,3 +31,13 @@ Check selection before declaring that only new evidence can help. The supplied e
 Respect explicit breadth requirements. Check the candidate's minimum project count, requested coursework placement and supported skills coverage before approving a minimalist edit. Reallocate oversized education and repetitive supporting detail to make room; keep body font and line spacing fixed.
 
 Check the required bullet count for every project. Multiple points must add distinct implementation, evaluation or capability information. Tighten section, entry and list gaps when requested, while preserving readable body line spacing.
+
+Use the candidate's latest project-count instruction. Explicit permission to remove
+a weak project supersedes an earlier breadth preference; do not silently carry an
+obsolete minimum into a new draft. Preserve layout that already works and spend
+the recovered space on clearer contributions and supported evaluation boundaries.
+
+Before declaring a revision complete, record which feedback is resolved on the
+page, which result was deliberately omitted, and which request still requires new
+evidence. Do not label a missing baseline, confidential measurement or unknown
+hardware-test mode as fixed by rewording. A score target never changes this rule.
