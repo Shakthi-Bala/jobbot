@@ -14,6 +14,7 @@ def test_measurement_units_stay_with_their_values():
     assert latex.escape('24 g sensor; 0.156 m error; 18 Hz; 2 s history') == '24~g sensor; 0.156~m error; 18~Hz; 2~s history'
     assert latex.escape('3 methods and 2 scenes') == '3 methods and 2 scenes'
     assert latex.escape('ROS 2 and ROS 1') == 'ROS~2 and ROS~1'
+    assert latex.escape('0.120 px reprojection; 25.795 dB PSNR') == '0.120~px reprojection; 25.795~dB PSNR'
 
 
 RESUME = {

@@ -36,7 +36,7 @@ _SPECIAL = {"&": r"\&", "%": r"\%", "$": r"\$", "#": r"\#", "_": r"\_", "{": r"\
 _SPECIAL_RE = re.compile("|".join(re.escape(k) for k in _SPECIAL))
 # Metrics are bold in main.tex ("by \textbf{7\%}"); do the same for percentages.
 _PERCENT_RE = re.compile(r"(\d+(?:\.\d+)?\\%)")
-_UNIT_RE = re.compile(r"(?<![\w.])(\d+(?:\.\d+)?) (m|cm|mm|g|kg|Hz|ms|s|FPS)\b")
+_UNIT_RE = re.compile(r"(?<![\w.])(\d+(?:\.\d+)?) (m|cm|mm|g|kg|Hz|ms|s|FPS|px|dB)\b")
 
 
 class Raw(str):
