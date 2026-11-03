@@ -13,6 +13,7 @@ def test_escape_specials_and_bold_percentages():
 def test_measurement_units_stay_with_their_values():
     assert latex.escape('24 g sensor; 0.156 m error; 18 Hz; 2 s history') == '24~g sensor; 0.156~m error; 18~Hz; 2~s history'
     assert latex.escape('3 methods and 2 scenes') == '3 methods and 2 scenes'
+    assert latex.escape('ROS 2 and ROS 1') == 'ROS~2 and ROS~1'
 
 
 RESUME = {
@@ -37,7 +38,7 @@ def test_tex_has_their_structure_and_escapes(tmp_path):
     assert r"\section{RESEARCH EXPERIENCE}" in tex          # every role is a research role
     assert r"\place{Research Focus: Thermal + ultrasound depth}" in tex
     assert r"\textbf{Tools: C++, Eigen.}" in tex                 # per-project tools line
-    assert r"\textbf{Tools:} ROS 2, C++" in tex             # "Project tools" -> "Tools"
+    assert r"\textbf{Tools:} ROS~2, C++" in tex             # "Project tools" -> "Tools"
     assert r"\href{https://github.com/alex}{GitHub}" in tex
     assert r"vio\_\#1" not in tex and r"vio_\#1" in tex       # URL keeps '_', escapes '#'
     assert r"Cut error by \textbf{30\%}" in tex

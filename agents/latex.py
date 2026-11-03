@@ -50,6 +50,7 @@ def escape(value) -> str:
         return str(value)
     text = _SPECIAL_RE.sub(lambda m: _SPECIAL[m.group(0)], str(value))
     text = _PERCENT_RE.sub(r"\\textbf{\1}", text)
+    text = re.sub(r"\bROS ([12])\b", r"ROS~\1", text)
     return _UNIT_RE.sub(r"\1~\2", text)
 
 
