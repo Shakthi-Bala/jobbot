@@ -77,6 +77,10 @@ def _editing_inventory(profile: dict) -> dict:
                  for key, wanted in fields.items()}
     inventory["disclosure_constraints"] = profile.get("preferences", {}).get(
         "resume_disclosure_constraints", [])
+    prefs = profile.get('preferences', {})
+    inventory['presentation_requirements'] = {key: prefs[key] for key in (
+        'resume_min_projects', 'resume_min_project_bullets', 'resume_compact_education',
+        'resume_coursework', 'resume_coursework_in_education') if key in prefs}
     return inventory
 
 

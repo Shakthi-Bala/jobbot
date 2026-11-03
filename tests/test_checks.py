@@ -106,6 +106,25 @@ def test_candidate_minimum_projects_rejects_duplicates_and_empty_entries(packet)
     assert not required_content.check(packet)
 
 
+def test_project_bullet_minimum_rejects_blank_and_repeated_points(packet):
+    from checks import required_content
+    meta_path = packet / 'meta.json'
+    meta = json.loads(meta_path.read_text())
+    meta['min_project_bullets'] = 2
+    meta_path.write_text(core.dumps(meta))
+    path = packet / 'resume.json'
+    data = json.loads(path.read_text())
+    for project in data['projects']:
+        first = project['bullets'][0]
+        project['bullets'] = [first, '  ', first]
+    path.write_text(core.dumps(data))
+    assert len(required_content.check(packet)) == len(data['projects'])
+    for project in data['projects']:
+        project['bullets'].append('A separate supported capability')
+    path.write_text(core.dumps(data))
+    assert not required_content.check(packet)
+
+
 def test_length_limits(packet):
     (packet / "cover_letter.md").write_text("word " * 400)
     assert any("cover letter" in p for p in length_limits.check(packet))

@@ -733,6 +733,7 @@ preferences:
   resume_compact_education: true # one row per degree where it fits
   resume_coursework_in_education: true # requires resume_coursework: true; omit courses from skills
   resume_min_projects: 4     # optional minimum distinct, nonempty project entries; checked before approval
+  resume_min_project_bullets: 2 # minimum distinct nonempty bullets in each project
   resume_skills_last: true  # show demonstrated experience/projects before skills
   resume_graduation_only: true
   resume_auto_add_skills: false  # keep the writer’s selected skills instead of adding every posting match

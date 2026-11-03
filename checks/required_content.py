@@ -8,14 +8,15 @@ from checks._lib import cli, core, db, meta  # noqa: E402
 
 
 def check(d: Path) -> list[str]:
-    job_id = meta(d).get('job_id')
+    info = meta(d)
+    job_id = info.get('job_id')
     job = db().execute('SELECT parsed_json FROM jobs WHERE id=?', (job_id,)).fetchone()
     if job is None:
         return ['job missing from tracker']
     parsed = json.loads(job['parsed_json'] or '{}')
     bad = []
-    minimum = max(int(meta(d).get('min_projects', 0)),
-                  int(core.load_profile().get('preferences', {}).get('resume_min_projects', 0)))
+    prefs = core.load_profile().get('preferences', {})
+    minimum = max(int(info.get('min_projects', 0)), int(prefs.get('resume_min_projects', 0)))
     if minimum:
         path = d / 'resume.json'
         resume = json.loads(path.read_text()) if path.exists() else {}
@@ -23,6 +24,15 @@ def check(d: Path) -> list[str]:
                     if p.get('bullets') and (p.get('ref_id') or p.get('heading'))}
         if len(projects) < minimum:
             bad.append(f'resume has {len(projects)} distinct projects; candidate requires at least {minimum}')
+    minimum_bullets = max(int(info.get('min_project_bullets', 0)), int(prefs.get('resume_min_project_bullets', 0)))
+    if minimum_bullets:
+        path = d / 'resume.json'
+        resume = json.loads(path.read_text()) if path.exists() else {}
+        for project in resume.get('projects', []):
+            bullets = {b.strip() for b in project.get('bullets', []) if isinstance(b, str) and b.strip()}
+            if len(bullets) < minimum_bullets:
+                label = project.get('heading') or project.get('ref_id') or 'unnamed project'
+                bad.append(f'{label} has {len(bullets)} distinct bullets; candidate requires at least {minimum_bullets}')
     letter = d / 'cover_letter.md'
     if parsed.get('cover_letter_requested') and (not letter.exists() or not letter.read_text().strip()):
         bad.append('posting requests a cover letter, but the packet has none')

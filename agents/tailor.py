@@ -94,6 +94,10 @@ def draft(conn, job_id: str, feedback: list[str] | None = None) -> TailoredPacke
                 if pages == 1 else
                 "Use the room for depth: more research entries, projects and results, "
                 "but every line must still earn its place."))
+    if prefs.get('resume_min_project_bullets'):
+        user += (f"\nEach selected project requires at least {prefs['resume_min_project_bullets']} "
+                 "distinct, substantive bullets supported by that project's facts. "
+                 "Use implementation and evaluation/capability points; do not pad or repeat a sentence.")
     kw = ats.classify(ats.posting_keywords(job), profile, None)
     user += ("\n\n## Supported posting terminology (diagnostic, not a coverage target)\n"
              "Use a term only where it accurately explains a selected contribution. "
@@ -254,6 +258,7 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
             "pages": pages, "pages_reason": pages_reason, "format": resume_format(profile),
             "show_summary": bool(profile.get("preferences", {}).get("resume_summary", False))}
     meta['min_projects'] = int(profile.get('preferences', {}).get('resume_min_projects', 0))
+    meta['min_project_bullets'] = int(profile.get('preferences', {}).get('resume_min_project_bullets', 0))
     (d / "meta.json").write_text(core.dumps(meta))
 
     # --- resume: tagged markdown (for checks) + json (for Typst) ----------

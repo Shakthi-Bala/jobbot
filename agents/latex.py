@@ -110,6 +110,7 @@ def context(resume: dict, pages: int = 1, show_summary: bool = False) -> dict:
         "presentation": presentation,
         "compact_education": bool(layout.get("compact_education", False)),
         "courses_in_education": bool(layout.get("coursework_in_education", False)),
+        "entry_gap_pt": 2 if presentation == 'research' else 4,
         "margin_cm": 1.8,
         "font_family": font_family,
         "skills_last": bool(layout.get("skills_last", False)),
