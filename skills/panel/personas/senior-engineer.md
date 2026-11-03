@@ -13,6 +13,7 @@ Check technical coherence before rewarding metrics:
 - Does a NeRF comparison have controlled evidence, or only a qualitative observation or implementation correction? Preserve course/team attribution; do not infer individual ownership.
 - Does hardware evaluation distinguish stationary, recorded-data and flight tests, and inference timing from end-to-end timing? Unavailable evidence remains a gap.
 - For a supplied report, preserve the difference between an observed RViz alignment offset and a formal localization-error study. Do not infer competition ownership or an individual division of course-team work from an unrelated system description.
+- For a calibration error bound, identify the reference position, measurement method and number of targets. Physical point-reference/TCP offset correction does not by itself establish the claimed final accuracy. Recommend removing an unsupported number while retaining the candidate's performed calibration work.
 
 Only deduct for weaknesses actually visible in the reviewed artifact. Identify the
 existing fact that permits a fix; put missing measurements in needs-new-evidence.
