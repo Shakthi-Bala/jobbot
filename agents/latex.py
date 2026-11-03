@@ -74,6 +74,9 @@ def context(resume: dict, pages: int = 1, show_summary: bool = False) -> dict:
     """Map resume.json onto the template's fields."""
     person = resume["person"]
     layout = resume.get("layout", {})
+    presentation = layout.get("presentation", "classic")
+    if presentation not in ("classic", "research"):
+        raise core.JobbotError("resume_presentation must be 'classic' or 'research'")
     font_family = layout.get("font_family", "charter")
     if font_family not in ("charter", "sans"):
         raise core.JobbotError("resume_font must be 'charter' or 'sans'")
@@ -101,6 +104,7 @@ def context(resume: dict, pages: int = 1, show_summary: bool = False) -> dict:
     return {
         "name": person["name"],
         "contact": contact,
+        "presentation": presentation,
         "margin_cm": 1.8,
         "font_family": font_family,
         "skills_last": bool(layout.get("skills_last", False)),
@@ -110,7 +114,12 @@ def context(resume: dict, pages: int = 1, show_summary: bool = False) -> dict:
         "skills": [{"category": CATEGORY_LABELS.get(g["category"], g["category"]), "names": g["items"]}
                    for g in resume.get("skills", [])],
         "courses": resume.get("courses", []),
-        "experience_title": "RESEARCH EXPERIENCE" if research else "EXPERIENCE",
+        "experience_title": (("Research Experience" if research else "Experience")
+                             if presentation == "research" else
+                             ("RESEARCH EXPERIENCE" if research else "EXPERIENCE")),
+        "education_title": "Education" if presentation == "research" else "EDUCATION",
+        "projects_title": "Selected Projects" if presentation == "research" else "PROJECTS",
+        "skills_title": "Technical Skills" if presentation == "research" else "SKILLS",
         "experience": experience,
         "projects": [{"heading": p["heading"], "dates": p.get("dates", ""), "bullets": p["bullets"],
                       "tools": p.get("tools") or [], "link": first_link(p.get("links", {}))}

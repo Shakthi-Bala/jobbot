@@ -139,3 +139,45 @@ def test_distinct_employers_are_not_grouped_by_similar_names(tmp_path):
     data['experience'].append(second)
     ctx=latex.context(data)
     assert all(entry['show_employer'] for entry in ctx['experience'])
+
+
+def test_research_presentation_keeps_complete_education_and_project_links(tmp_path):
+    import copy
+    data = copy.deepcopy(RESUME)
+    data['layout'] = {'presentation': 'research', 'font_family': 'charter', 'skills_last': True}
+    tex = latex.render_tex(data, tmp_path / 'resume.tex').read_text()
+    assert r'\section{Education}' in tex and r'\section{Selected Projects}' in tex
+    assert r'\section{Technical Skills}' in tex
+    assert r'WPI}\hfill Aug 2025' in tex
+    assert r'M.S. Robotics\hfill GPA: 4.0' in tex
+    assert r'\textbf{Stereo VIO}\enspace' in tex
+    assert r'\documentclass[11pt' in tex and r'\linespread{1.0}' in tex
+    assert 'github.com/alex/vio_' in tex
+
+
+def test_unknown_presentation_fails_explicitly():
+    import copy
+    import pytest
+    data = copy.deepcopy(RESUME)
+    data['layout'] = {'presentation': 'unknown'}
+    with pytest.raises(core.JobbotError, match='resume_presentation'):
+        latex.context(data)
+
+
+def test_research_pdf_renders_with_correct_reading_order(packet):
+    import pytest
+    from checks import ats_parse, length_limits
+    if not latex.engine():
+        pytest.skip('LaTeX compiler not installed')
+    path = packet / 'resume.json'
+    data = json.loads(path.read_text())
+    data['layout'] = {'presentation': 'research', 'font_family': 'charter', 'skills_last': True}
+    path.write_text(core.dumps(data))
+    meta = json.loads((packet / 'meta.json').read_text())
+    meta.update(format='latex', show_summary=False)
+    (packet / 'meta.json').write_text(core.dumps(meta))
+    tailor.render(packet)
+    assert not (packet / 'LATEX_NOTE.md').exists()
+    assert not ats_parse.check(packet)
+    assert not length_limits.check(packet)
+    assert json.loads(path.read_text())['section_headings']['projects'] == 'Selected Projects'

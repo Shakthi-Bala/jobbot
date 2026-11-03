@@ -68,12 +68,21 @@
 \setlength{\parskip}{0pt}
 \pagenumbering{gobble}
 
+((* if presentation == 'research' *))
+\titleformat{\section}{\needspace{4\baselineskip}\bfseries\fontsize{12}{14}\selectfont}{}{0pt}{}[\vspace{2pt}\titlerule]
+\titlespacing{\section}{0pt}{10pt}{5pt}
+((* else *))
 \titleformat{\section}{\needspace{4\baselineskip}\bfseries\large}{}{0pt}{}[\vspace{1pt}\titlerule]
 \titlespacing{\section}{0pt}{0.25 cm}{0.14 cm}
+((* endif *))
 
 \renewcommand\labelitemi{$\vcenter{\hbox{\small$\bullet$}}$}
 \newenvironment{highlights}{
+((* if presentation == 'research' *))
+    \begin{itemize}[topsep=3pt, parsep=0pt, partopsep=0pt, itemsep=2pt, leftmargin=13pt]
+((* else *))
     \begin{itemize}[topsep=2pt, parsep=0pt, partopsep=0pt, itemsep=1.2pt, leftmargin=12pt]
+((* endif *))
 }{
     \end{itemize}
 }
@@ -105,6 +114,11 @@
     \newsavebox\ANDbox
     \sbox\ANDbox{$|$}
 
+((* if presentation == 'research' *))
+    {\fontsize{23}{26}\selectfont\bfseries ((( name )))}\par
+    \vspace{4pt}
+    ((* for item in contact *))((( item )))((* if not loop.last *))\enspace{}\textbar{}\enspace{}((* endif *))((* endfor *))\par
+((* else *))
     \begin{header}
         \fontsize{22 pt}{24 pt}\selectfont ((( name )))
 
@@ -113,20 +127,31 @@
         \normalsize
         ((* for item in contact *))((( item )))((* if not loop.last *))\kern 5.0 pt\AND\kern 5.0 pt((* endif *))((* endfor *))
     \end{header}
+((* endif *))
 
 ((* if summary *))
     \section{SUMMARY}
     \begin{onecolentry}((( summary )))\end{onecolentry}
 ((* endif *))
 
-    \section{EDUCATION}
+    \section{((( education_title )))}
 ((* for e in education *))
+((* if presentation == 'research' *))
+    \begin{onecolentry}
+        \textbf{((( e.school )))}\hfill ((( e.dates )))\par
+        ((( e.degree )))((* if e.gpa *))\hfill GPA: ((( e.gpa )))((* endif *))\par
+    \end{onecolentry}
+((* if not loop.last *))
+    \vspace{4pt}
+((* endif *))
+((* else *))
     \begin{twocolentry}{((( e.dates )))}
         \textbf{((( e.school )))}, ((( e.degree )))((* if e.gpa *)), \textbf{GPA:} ((( e.gpa )))((* endif *))\end{twocolentry}
+((* endif *))
 ((* endfor *))
 
 ((* if not skills_last *))
-    \section{SKILLS}
+    \section{((( skills_title )))}
 ((* for g in skills *))
     \textbf{((( g.category ))):} ((( g.names | join(', ') )))\par
 ((* endfor *))
@@ -158,10 +183,16 @@
 ((* endif *))
 
 ((* if projects *))
-    \section{PROJECTS}
+    \section{((( projects_title )))}
 ((* for p in projects *))
+((* if presentation == 'research' *))
+    \begin{onecolentry}
+        \textbf{((( p.heading )))}((* if p.link *))\enspace{}\textbar{}\enspace{}((( p.link )))((* endif *))((* if p.dates *))\hfill ((( p.dates )))((* endif *))\par
+    \end{onecolentry}
+((* else *))
     \begin{twocolentry}{((( p.dates )))}
         \textbf{((( p.heading ))):}((* if p.link *)) ((( p.link )))((* endif *))\end{twocolentry}
+((* endif *))
     \begin{onecolentry}
         \begin{highlights}
 ((* for b in p.bullets *))
@@ -177,7 +208,7 @@
 ((* endif *))
 
 ((* if skills_last *))
-    \section{SKILLS}
+    \section{((( skills_title )))}
 ((* for g in skills *))
     \textbf{((( g.category ))):} ((( g.names | join(', ') )))\par
 ((* endfor *))

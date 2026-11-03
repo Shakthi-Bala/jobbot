@@ -92,15 +92,18 @@ def draft(conn, job_id: str, feedback: list[str] | None = None) -> TailoredPacke
                 "Use the room for depth: more research entries, projects and results, "
                 "but every line must still earn its place."))
     kw = ats.classify(ats.posting_keywords(job), profile, None)
-    user += ("\n\n## ATS keywords from this posting that your profile proves "
-             "(use these EXACT spellings in the summary, skills and bullets)\n"
+    user += ("\n\n## Supported posting terminology (diagnostic, not a coverage target)\n"
+             "Use a term only where it accurately explains a selected contribution. "
+             "Do not force exact spellings into every section, add a disabled summary, "
+             "or replace distinctive engineering context with keyword lists.\n"
              + ", ".join(kw["fixable"])
              + "\n\n## Posting keywords with NO evidence in the profile (never claim these)\n"
              + (", ".join(kw["gap"]) or "none"))
     m = master.load()
     if m:
-        user += ("\n\n## Master resume: approved, recruiter-grade bullets. Start from these; "
-                 "reorder and adjust wording to the posting, keep fact IDs and numbers exact.\n"
+        user += ("\n\n## Master resume: candidate-approved source material, not a quality verdict. "
+                 "Reassess selection and wording against the facts and posting. Restore useful "
+                 "problem context or differentiators omitted by earlier drafts; keep evidence exact.\n"
                  + core.dumps(m))
     if feedback:
         user += ("\n\n## Fix these problems from the previous draft\n"
@@ -308,6 +311,7 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
 
     resume_json = {
         "layout": {"font_family": profile.get("preferences", {}).get("resume_font", "charter"),
+                   "presentation": profile.get("preferences", {}).get("resume_presentation", "classic"),
                    "skills_last": bool(profile.get("preferences", {}).get("resume_skills_last", False))},
         "person": {k: person.get(k, "") for k in ("name", "email", "phone", "location")}
         | {"links": person.get("links", {}) or {}},
@@ -403,7 +407,8 @@ def render(d: Path) -> list[Path]:
                                 ["education", "skills", "experience", "projects"])
             if show_summary and data.get("summary"):
                 data["sections"].insert(0, "summary")
-            data["section_headings"] = {"experience": ctx["experience_title"]}
+            data["section_headings"] = {name: ctx[f"{name}_title"]
+                                        for name in ("education", "experience", "projects", "skills")}
             # Keep the render description in sync with what the PDF includes.
             if not show_summary:
                 data["summary"] = ""

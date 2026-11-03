@@ -173,3 +173,53 @@ def test_strict_rubric_rejects_unsubstantiated_scores_and_missing_breakdown():
     reviews['recruiter'].rubric.impact_validation.points=31
     with pytest.raises(core.JobbotError,match='rubric component'):
         panel.summarize(reviews,_plan(),{'score':87,'max_score':87},1,strict_rubric=True)
+
+
+def test_editor_inventory_excludes_private_administration():
+    inventory = panel._editing_inventory({
+        'person': {'email': 'private-contact'},
+        'facts': [{'id': 'F099', 'text': 'Built a small sensing package',
+                   'evidence': '/private/report', 'metrics': {'restricted': 123}}],
+        'experience': [{'id': 'X009', 'title': 'Student Researcher', 'facts': ['F099'],
+                        'verifier': 'private-referee'}],
+        'preferences': {'resume_disclosure_constraints': ['Keep unpublished metrics private']},
+    })
+    text = core.dumps(inventory)
+    assert 'small sensing package' in text and 'unpublished metrics' in text
+    for private in ['private-contact', '/private/report', 'private-referee', 'restricted']:
+        assert private not in text
+
+
+def test_panel_receives_job_and_editor_fact_text_and_declares_text_only(packet, monkeypatch):
+    prompts = []
+    reviews = _reviews()
+    def answer(role, system, user, schema, **kwargs):
+        prompts.append((schema, user))
+        if schema is RevisionPlan:
+            return _plan(bulletproof=True)
+        if schema is ScreenDecision:
+            return reviews['ats_gate']
+        if schema is InterviewDecision:
+            return reviews['hiring_manager']
+        return reviews['recruiter']
+    monkeypatch.setattr(core, 'llm_json', answer)
+    jid = json.loads((packet / 'meta.json').read_text())['job_id']
+    result = panel.run(core.connect(), jid, packet, 1)
+    assert all('applicants must be' in user for _, user in prompts)
+    assert all('no rendered page images' in user for _, user in prompts)
+    editor_prompt = next(user for schema, user in prompts if schema is RevisionPlan)
+    assert core.load_profile()['facts'][0]['text'] in editor_prompt
+    assert result['review_inputs']['page_images'] is False
+
+
+def test_writer_keyword_guidance_does_not_override_editorial_selection(job, monkeypatch):
+    from agents import tailor
+    from tests.test_checks import good_packet
+    monkeypatch.setattr(master, 'load', lambda: MASTER)
+    def answer(role, system, user, schema, **kwargs):
+        assert 'diagnostic, not a coverage target' in user
+        assert 'use these EXACT spellings' not in user
+        assert 'candidate-approved source material, not a quality verdict' in user
+        return good_packet()
+    monkeypatch.setattr(core, 'llm_json', answer)
+    tailor.draft(core.connect(), job['id'])

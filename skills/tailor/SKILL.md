@@ -11,12 +11,14 @@ Write a persuasive, concise technical resume from verified evidence. Keyword cov
 ## Editorial rules
 
 - Pick the strongest relevant entries. A generic project listing standard algorithms does not earn space merely because it matches a keyword. Omit it unless an owned implementation, difficult problem or supported result makes it useful.
-- Use one main contribution per bullet, normally one or two rendered lines. Avoid chains combining data collection, calibration, augmentation and validation in one sentence.
+- Use one main contribution per bullet, normally one or two rendered lines. Related engineering steps can explain a coherent contribution; do not fragment one research system into isolated chores. A calibration rig and its data-collection purpose belong together when supported.
+- Before polishing sentences, identify each entry's research problem, built system, candidate contribution and visible evidence. Preserve distinctive constraints such as payload, sensing conditions, deployed robot or resource budget. Do not leave a research entry as an unexplained method name followed by task counts.
+- Compare the full fact inventory with the previous draft. Recover relevant omitted evidence such as hardware deployment, a named system or a team competition result; preserve team attribution and distinguish simulated results from physical deployment. Do not assume the old draft selected the best evidence.
 - Prefer the delivered capability or engineering change first, followed by the method and a supported result. Distinguish dataset/test counts, sensing range, throughput and accuracy; a number alone does not establish impact.
 - For a one-page project, normally use at most three bullets: implementation/contribution, scoped evaluation, and an important performance result. Merge a useful implementation detail into the first bullet where readable.
 - Preserve material benchmark limitations and comparator identity. Put secondary raw timings, configuration identifiers and experiment minutiae in linked project documentation when the resume already communicates the result fairly. Do not omit caveats to imply generalization or broader safety.
 - Group consecutive roles at the same employer using explicit employer/team metadata. Keep each lab, actual title and dates distinct. Never invent an official title or merge unrelated organizations by guessing from their names.
-- Select compact, demonstrated tools and languages. Avoid repeating broad subject labels already shown by the work. Prefer conventional display such as C++17 over C++ (C++17). Do not add every posting term automatically.
+- Select compact, demonstrated tools and languages. Avoid repeating broad subject labels already shown by the work. Prefer conventional display such as C++17 over C++ (C++17). Do not add every posting term automatically. Concision does not mean stripping away useful, evidenced engineering tools merely to minimize the skill count.
 - Keep the candidate's body font and spacing fixed: 11 points and 1.0 single spacing. Edit content and allocation instead of shrinking type or adding filler to fill the page.
 - Confidential results remain private. A planned submission is not a submission, acceptance or publication. If an outcome cannot be disclosed, describe the supported engineering contribution without inventing a substitute metric.
 

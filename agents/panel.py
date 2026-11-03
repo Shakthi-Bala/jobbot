@@ -64,13 +64,31 @@ def _gather(calls: dict) -> dict:
     return out
 
 
+def _editing_inventory(profile: dict) -> dict:
+    """Useful source facts without contact details, referees or local evidence paths."""
+    fields = {
+        "education": ("id", "school", "degree", "start", "end", "gpa"),
+        "experience": ("id", "title", "org", "start", "end", "facts"),
+        "projects": ("id", "name", "start", "end", "facts"),
+        "facts": ("id", "text"),
+    }
+    inventory = {key: [{field: entry[field] for field in wanted if field in entry}
+                       for entry in profile.get(key, [])]
+                 for key, wanted in fields.items()}
+    inventory["disclosure_constraints"] = profile.get("preferences", {}).get(
+        "resume_disclosure_constraints", [])
+    return inventory
+
+
 def run(conn, job_id: str, d: Path, round_no: int) -> dict:
     job = core.get_job(conn, job_id)
     resume, letter = _documents(d)
     keywords = ats.score_packet(conn, job_id, d)
     role = f"Role: {job['title']} at {job['company']}"
     digest = core.sha256_file(d / "resume.pdf")
-    docs = (f"## Resume artifact SHA-256\n{digest}\n\n"
+    docs = ("## Review modality\nText-only review: no rendered page images are supplied. "
+            "Assess wording and reading order; do not claim visual inspection or approve typography.\n\n"
+            f"## Resume artifact SHA-256\n{digest}\n\n"
             f"## Resume (text as parsed from the PDF)\n{resume}\n\n## Cover letter\n{letter}")
     posting = core.untrusted("posting", job["raw_text"])
 
@@ -85,21 +103,26 @@ def run(conn, job_id: str, d: Path, round_no: int) -> dict:
     }
     for name, file in READERS.items():
         calls[name] = (lambda f=file: core.llm_json(
-            "review_lead", persona_prompt(f), f"{role}\n\n{docs}", PersonaReview))
+            "review_lead", persona_prompt(f), f"{role}\n\n{docs}\n\n{posting}", PersonaReview))
     reviews = _gather(calls)
 
-    profile_ids = sorted(core.profile_ids(core.load_profile()))
+    profile = core.load_profile()
     plan = core.llm_json(
         "review_lead", persona_prompt("editor.md"),
-        f"{role}\nRound {round_no}.\n\nFact IDs available: {', '.join(profile_ids)}\n\n{docs}\n\n"
+        f"{role}\nRound {round_no}.\n\n{docs}\n\n{posting}\n\n"
+        "## Candidate-supplied editing inventory\nUse these facts to identify supported edits, "
+        "including useful omissions. They do not count as visible evidence on the current resume. "
+        "Respect disclosure constraints.\n" + core.dumps(_editing_inventory(profile)) + "\n\n"
         "## Panel reviews\n" + core.dumps({k: v.model_dump() for k, v in reviews.items()}),
         RevisionPlan)
 
-    prefs = core.load_profile().get("preferences", {})
+    prefs = profile.get("preferences", {})
     target = prefs.get("panel_min_score")
     result = summarize(reviews, plan, keywords, round_no, min_score=target,
                        strict_rubric=prefs.get("panel_strict_rubric", False))
     result["resume_sha256"] = digest
+    result["review_inputs"] = {"resume_text": True, "posting": True,
+                              "editor_fact_text": True, "page_images": False}
     save(d, result)
     core.log_decision("panel", job_id, f"round_{round_no}",
                       f"gate={result['gate']} hm={result['hiring_manager']} "

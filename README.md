@@ -729,6 +729,7 @@ preferences:
   panel_min_score: 9.0       # every panel reader must reach this score
   panel_strict_rubric: true  # require evidence-based components and exact score arithmetic
   resume_font: sans         # LaTeX: sans or charter
+  resume_presentation: research  # optional two-row education and quieter headings; default classic
   resume_skills_last: true  # show demonstrated experience/projects before skills
   resume_graduation_only: true
   resume_auto_add_skills: false  # keep the writer’s selected skills instead of adding every posting match
@@ -745,3 +746,5 @@ Strict scoring uses ownership/engineering depth (30), visible impact/validation 
 In the private profile, set `employer` to the shared institution/company and `team` to the distinct lab/team for each experience entry. Keep the original `org`, title and dates. The LaTeX renderer groups consecutive entries with the same explicit employer and preserves every team's title and dates; it does not infer shared employers from similar names.
 
 Skills are writer-selected by default. `resume_auto_add_skills: true` opts into adding every supported posting match; leave it false for a concise list. General C++ requirements recognize standard labels such as C++17 and C++20 without requiring duplicate spellings.
+
+The writer treats posting terminology as a diagnostic, and reassesses master bullets against the source facts. The panel editor receives fact text and entry associations so it can recover useful omitted evidence. Readers receive the posting. Built-in panel calls currently receive extracted PDF text without page images; their reports record this limitation. Inspect the actual rendered page separately before accepting its visual layout.
