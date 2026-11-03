@@ -752,4 +752,6 @@ Skills are writer-selected by default. `resume_auto_add_skills: true` opts into 
 
 The writer treats posting terminology as a diagnostic, and reassesses master bullets against the source facts. The panel editor receives fact text and entry associations so it can recover useful omitted evidence. Readers receive the posting. Built-in panel calls currently receive extracted PDF text without page images; their reports record this limitation. Inspect the actual rendered page separately before accepting its visual layout.
 
+Optional `resume_skill_groups` maps display category names to lists of selected skill names. It changes grouping without adding skills or rewriting canonical profile categories used by master-resume families.
+
 The master writer groups related evidence into coherent contributions and respects disclosure constraints; it has no numerical keyword target. The screening persona evaluates explicit requirements and distinguishes them from bonuses and alternatives. Its decision and the lexical percentages are simulations and diagnostics, not the employer's screening outcome.

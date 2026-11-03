@@ -304,8 +304,11 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
     exp_json = section("Experience", content["experience"], "experience")
     proj_json = section("Projects", content["projects"], "project")
     groups: dict[str, list[dict]] = {}
+    display_groups = profile.get('preferences', {}).get('resume_skill_groups', {})
+    category_for_skill = {name: category for category, names in display_groups.items() for name in names}
     for sk in content["skills"]:
-        groups.setdefault(sk.get("category", "Skills"), []).append(sk)
+        category = category_for_skill.get(sk['skill'], sk.get('category', 'Skills'))
+        groups.setdefault(category, []).append(sk)
     if groups:
         lines.extend(["", "## Skills"])
         for cat, items in groups.items():

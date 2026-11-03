@@ -122,6 +122,19 @@ def test_skill_selection_can_avoid_automatic_keyword_additions(env):
     assert [s['skill'] for s in chosen]==['Python']
 
 
+def test_display_skill_groups_preserve_selected_skills_and_source_categories(job):
+    from tests.test_checks import good_packet
+    profile = core.load_profile()
+    original_categories = [s.get('category') for s in profile['skills']]
+    profile['preferences']['resume_skill_groups'] = {'Learning': ['PyTorch', 'Fortran'], 'Robotics': ['ROS 2']}
+    content = tailor.enforce(good_packet(), profile, job['id'], ['ROS 2'])
+    out = tailor.write_packet(job, content, profile, version=1)
+    groups = json.loads((out / 'resume.json').read_text())['skills']
+    assert next(g for g in groups if g['category'] == 'Learning')['items'] == ['PyTorch']
+    assert not any('Fortran' in g['items'] for g in groups)
+    assert [s.get('category') for s in profile['skills']] == original_categories
+
+
 def test_employer_grouping_preserves_distinct_team_titles_and_dates(tmp_path):
     import copy
     data=copy.deepcopy(RESUME)
