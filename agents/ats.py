@@ -1,12 +1,15 @@
-"""ATS keyword scoring, as code (no AI).
+"""Literal posting-terminology diagnostic, as code (no AI).
 
 Each posting keyword lands in one of three buckets:
-  in_resume        the rendered PDF contains it (what an ATS matches on)
-  fixable          your profile proves it, but the resume doesn't say it -> add it
-  gap              nothing in your profile backs it -> a real gap, never claimed
+  in_resume        the rendered PDF contains the term or a recognized variant
+  fixable          profile wording supports it, but literal resume wording omits it
+  gap              this matcher found no support; assess the source before claiming it
 
-score     = in_resume / total            (what this resume scores now)
-max_score = (in_resume + fixable) / total (the honest ceiling with your evidence)
+score     = in_resume / total
+max_score = (in_resume + fixable) / total
+
+These are matcher-specific fractions, not an employer's score or cutoff. Missing
+terminology is not necessarily missing capability; do not add terms mechanically.
 """
 from __future__ import annotations
 
@@ -15,14 +18,14 @@ import re
 
 from . import core
 
-# Spelling variants an ATS treats as the same token (used everywhere).
+# Spelling variants recognized by this matcher (used everywhere).
 FORMAT_VARIANTS = {
     "sim to real": ["sim2real", "sim-to-real"],
     "isaac lab": ["isaaclab"],
     "ros 2": ["ros2"],
 }
 # Same skill, different words. Used only to decide whether the PROFILE proves a keyword;
-# the resume must then use the posting's own spelling, because an ATS matches literally.
+# the resume-side diagnostic deliberately counts only literal/format variants.
 EQUIVALENTS = {
     "sim to real": ["simulation to real"],
     "reinforcement learning": ["rl"],

@@ -1,4 +1,4 @@
-"""Master resume: every fact written once as a recruiter-grade bullet, tagged by role family.
+"""Master resume: candidate source material grouped into bullets and tagged by role family.
 
     python jobbot.py master --draft          (re)write data/master_resume.yaml (one AI step)
     python jobbot.py master                  full master resume, all bullets (multi-page)

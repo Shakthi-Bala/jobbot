@@ -10,6 +10,11 @@ def test_escape_specials_and_bold_percentages():
     assert latex.escape("2025–2027 — present") == r"2025\textendash{}2027 \textemdash{} present"
 
 
+def test_measurement_units_stay_with_their_values():
+    assert latex.escape('24 g sensor; 0.156 m error; 18 Hz; 2 s history') == '24~g sensor; 0.156~m error; 18~Hz; 2~s history'
+    assert latex.escape('3 methods and 2 scenes') == '3 methods and 2 scenes'
+
+
 RESUME = {
     "person": {"name": "Alex Example", "email": "a@x.com", "phone": "", "location": "Boston, MA",
                "links": {"github": "https://github.com/alex", "scholar": ""}},

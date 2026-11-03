@@ -36,6 +36,7 @@ _SPECIAL = {"&": r"\&", "%": r"\%", "$": r"\$", "#": r"\#", "_": r"\_", "{": r"\
 _SPECIAL_RE = re.compile("|".join(re.escape(k) for k in _SPECIAL))
 # Metrics are bold in main.tex ("by \textbf{7\%}"); do the same for percentages.
 _PERCENT_RE = re.compile(r"(\d+(?:\.\d+)?\\%)")
+_UNIT_RE = re.compile(r"(?<![\w.])(\d+(?:\.\d+)?) (m|cm|mm|g|kg|Hz|ms|s|FPS)\b")
 
 
 class Raw(str):
@@ -48,7 +49,8 @@ def escape(value) -> str:
     if isinstance(value, Raw):
         return str(value)
     text = _SPECIAL_RE.sub(lambda m: _SPECIAL[m.group(0)], str(value))
-    return _PERCENT_RE.sub(r"\\textbf{\1}", text)
+    text = _PERCENT_RE.sub(r"\\textbf{\1}", text)
+    return _UNIT_RE.sub(r"\1~\2", text)
 
 
 def _href(url: str, label: str) -> Raw:

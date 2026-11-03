@@ -142,13 +142,13 @@ curl -s "https://api.ashbyhq.com/posting-api/job-board/COMPANY?includeCompensati
 ### 4.5b Review panel (resume loop)
 | | |
 |---|---|
-| **Readers** | **ATS gate** (automated screen: does a human see it?), **hiring manager** (interview / maybe / no), and five readers who see only the resume and cover letter: **team lead**, **competing applicant**, **CEO**, **senior engineer**, **recruiter** |
+| **Readers** | **ATS gate** (simulated requirements/readability screen), **hiring manager** (interview / maybe / no), and five readers assessing the resume and cover letter against the posting: **team lead**, **competing applicant**, **CEO**, **senior engineer**, **recruiter** |
 | **Then** | An **editor** merges their reactions into one revision plan; the writer rewrites; the panel reads again. Up to 3 rounds, until the editor calls it bulletproof |
 | **Produces** | `panel.md` / `panel.json` per packet, `ats.json` (code-computed keyword score: now vs the max your evidence allows) |
 | **Guardrails** | Edits that need new evidence become gaps, never claims. Persona prompts live in `skills/panel/personas/` |
 
 ### 4.5c Master resume
-`data/master_resume.yaml` (gitignored) holds every fact as a recruiter-grade bullet tagged by role family. `python jobbot.py master --family rl` renders a one-page resume instantly with no AI step; the writing agent also starts from these bullets.
+`data/master_resume.yaml` (gitignored) holds evidence-backed source bullets tagged by role family. `python jobbot.py master --family rl` renders a one-page resume instantly with no AI step; the writing agent reassesses these bullets when tailoring to a posting. Master text is source material, not an independent quality endorsement.
 
 ### 4.6 Gap coach
 | | |
@@ -748,3 +748,5 @@ In the private profile, set `employer` to the shared institution/company and `te
 Skills are writer-selected by default. `resume_auto_add_skills: true` opts into adding every supported posting match; leave it false for a concise list. General C++ requirements recognize standard labels such as C++17 and C++20 without requiring duplicate spellings.
 
 The writer treats posting terminology as a diagnostic, and reassesses master bullets against the source facts. The panel editor receives fact text and entry associations so it can recover useful omitted evidence. Readers receive the posting. Built-in panel calls currently receive extracted PDF text without page images; their reports record this limitation. Inspect the actual rendered page separately before accepting its visual layout.
+
+The master writer groups related evidence into coherent contributions and respects disclosure constraints; it has no numerical keyword target. The screening persona evaluates explicit requirements and distinguishes them from bonuses and alternatives. Its decision and the lexical percentages are simulations and diagnostics, not the employer's screening outcome.
