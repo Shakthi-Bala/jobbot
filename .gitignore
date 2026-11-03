@@ -13,6 +13,7 @@ data/credentials.json
 data/token.json
 data/uploads/
 my_resume/
+/Directed_research_mer_lab.pdf
 out/
 *.answer.json
 *.task.md
