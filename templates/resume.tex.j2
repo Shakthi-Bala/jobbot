@@ -136,7 +136,11 @@
 
     \section{((( education_title )))}
 ((* for e in education *))
-((* if presentation == 'research' *))
+((* if compact_education *))
+    \begin{onecolentry}
+        \textbf{((( e.school )))}, ((( e.degree )))((* if e.gpa *)); GPA: ((( e.gpa )))((* endif *))\hfill ((( e.dates )))\par
+    \end{onecolentry}
+((* elif presentation == 'research' *))
     \begin{onecolentry}
         \textbf{((( e.school )))}\hfill ((( e.dates )))\par
         ((( e.degree )))((* if e.gpa *))\hfill GPA: ((( e.gpa )))((* endif *))\par
@@ -149,13 +153,16 @@
         \textbf{((( e.school )))}, ((( e.degree )))((* if e.gpa *)), \textbf{GPA:} ((( e.gpa )))((* endif *))\end{twocolentry}
 ((* endif *))
 ((* endfor *))
+((* if courses_in_education and courses *))
+    \begin{onecolentry}\textbf{Coursework:} ((( courses | join(', ') )))\end{onecolentry}
+((* endif *))
 
 ((* if not skills_last *))
     \section{((( skills_title )))}
 ((* for g in skills *))
     \textbf{((( g.category ))):} ((( g.names | join(', ') )))\par
 ((* endfor *))
-((* if courses *))
+((* if courses and not courses_in_education *))
     \textbf{Courses:} ((( courses | join(', ') )))\par
 ((* endif *))
 ((* endif *))
@@ -178,7 +185,7 @@
 ((* endfor *))
         \end{highlights}
     \end{onecolentry}
-    \vspace{4pt}
+    \vspace{((* if compact_education *))3((* else *))4((* endif *))pt}
 ((* endfor *))
 ((* endif *))
 
@@ -203,7 +210,7 @@
 ((* endif *))
         \end{highlights}
     \end{onecolentry}
-    \vspace{4pt}
+    \vspace{((* if compact_education *))3((* else *))4((* endif *))pt}
 ((* endfor *))
 ((* endif *))
 
@@ -212,7 +219,7 @@
 ((* for g in skills *))
     \textbf{((( g.category ))):} ((( g.names | join(', ') )))\par
 ((* endfor *))
-((* if courses *))
+((* if courses and not courses_in_education *))
     \textbf{Courses:} ((( courses | join(', ') )))\par
 ((* endif *))
 ((* endif *))

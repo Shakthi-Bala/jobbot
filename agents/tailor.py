@@ -87,7 +87,10 @@ def draft(conn, job_id: str, feedback: list[str] | None = None) -> TailoredPacke
     from . import ats, master
     pages, why = decide_pages(job, parsed, profile)
     user += (f"\n\n## Page budget: {pages} page(s) ({why}). "
-             + ("Choose the 4-6 strongest entries and keep bullets to one or two lines."
+             + ((f"Include at least {prefs['resume_min_projects']} distinct relevant projects; "
+                 "balance their detail with experience and the requested skills/coursework."
+                 if prefs.get('resume_min_projects') else
+                 "Choose the strongest relevant entries and keep bullets to one or two lines.")
                 if pages == 1 else
                 "Use the room for depth: more research entries, projects and results, "
                 "but every line must still earn its place."))
@@ -250,6 +253,7 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
             "version": version, "created_at": core.now(),
             "pages": pages, "pages_reason": pages_reason, "format": resume_format(profile),
             "show_summary": bool(profile.get("preferences", {}).get("resume_summary", False))}
+    meta['min_projects'] = int(profile.get('preferences', {}).get('resume_min_projects', 0))
     (d / "meta.json").write_text(core.dumps(meta))
 
     # --- resume: tagged markdown (for checks) + json (for Typst) ----------
@@ -288,7 +292,7 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
                        else src["name"])
             lines.append(f"### {heading}, {dates(src)} [{src['id']}]")
             lines.extend(f"- {b['text']} {tags(b['fact_ids'])}" for b in item["bullets"])
-            out.append({"heading": heading, "title": src.get("title", src.get("name", "")),
+            out.append({"ref_id": item['ref_id'], "heading": heading, "title": src.get("title", src.get("name", "")),
                         "org": src.get("org", ""), "location": src.get("location", ""),
                         "employer": src.get("employer", src.get("org", "")),
                         "team": src.get("team", ""),
@@ -312,6 +316,8 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
     resume_json = {
         "layout": {"font_family": profile.get("preferences", {}).get("resume_font", "charter"),
                    "presentation": profile.get("preferences", {}).get("resume_presentation", "classic"),
+                   "compact_education": bool(profile.get("preferences", {}).get("resume_compact_education", False)),
+                   "coursework_in_education": bool(profile.get("preferences", {}).get("resume_coursework_in_education", False)),
                    "skills_last": bool(profile.get("preferences", {}).get("resume_skills_last", False))},
         "person": {k: person.get(k, "") for k in ("name", "email", "phone", "location")}
         | {"links": person.get("links", {}) or {}},

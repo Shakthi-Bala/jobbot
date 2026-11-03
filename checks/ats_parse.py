@@ -37,6 +37,14 @@ def check(d: Path) -> list[str]:
     if found != sorted(found):
         bad.append(f"sections out of reading order: {sections}")
 
+    if data.get('layout', {}).get('coursework_in_education') and data.get('courses'):
+        start = positions[sections.index('education')] if 'education' in sections else -1
+        end = next((p for p in positions if p > start), len(raw))
+        education_text = core.normalize(raw[start:end]) if start >= 0 else ''
+        for course in data['courses']:
+            if core.normalize(course) not in education_text:
+                bad.append(f'coursework missing from education in parsed PDF: {course}')
+
     person = data["person"]
     for field in ("name", "email"):
         if person.get(field) and core.normalize(person[field]) not in text:

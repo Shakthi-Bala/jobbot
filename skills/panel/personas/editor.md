@@ -27,3 +27,5 @@ Prioritize structural and sentence-level revisions over score polishing. Judge t
 Inspect the actual render for isolated trailing words, awkward wraps and uneven space allocation. Repair the wording before changing font size or line spacing.
 
 Check selection before declaring that only new evidence can help. The supplied editing inventory may contain a supported research motivation, hardware constraint, implemented component or team achievement that earlier drafts omitted. Restore useful context without borrowing unwritten evidence to raise the current artifact's score. A useful two-line contribution is stronger than several disconnected one-line chores. State when visual inspection is still pending; text-only review cannot approve typography.
+
+Respect explicit breadth requirements. Check the candidate's minimum project count, requested coursework placement and supported skills coverage before approving a minimalist edit. Reallocate oversized education and repetitive supporting detail to make room; keep body font and line spacing fixed.

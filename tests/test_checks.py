@@ -85,6 +85,27 @@ def test_ats_parse_reads_the_real_pdf(packet):
     assert ats_parse.check(packet) == ["resume.pdf missing: render failed or never ran"]
 
 
+def test_candidate_minimum_projects_rejects_duplicates_and_empty_entries(packet):
+    import copy
+    from checks import required_content
+    meta_path = packet / 'meta.json'
+    meta = json.loads(meta_path.read_text())
+    meta['min_projects'] = 4
+    meta_path.write_text(core.dumps(meta))
+    path = packet / 'resume.json'
+    data = json.loads(path.read_text())
+    data['projects'] += copy.deepcopy(data['projects'])
+    data['projects'].append({'ref_id': 'P-empty', 'heading': 'Empty', 'bullets': []})
+    path.write_text(core.dumps(data))
+    assert any('2 distinct projects' in p for p in required_content.check(packet))
+    for i in range(2):
+        entry = copy.deepcopy(data['projects'][i])
+        entry.update(ref_id=f'P-extra-{i}', heading=f'Another project {i}')
+        data['projects'].append(entry)
+    path.write_text(core.dumps(data))
+    assert not required_content.check(packet)
+
+
 def test_length_limits(packet):
     (packet / "cover_letter.md").write_text("word " * 400)
     assert any("cover letter" in p for p in length_limits.check(packet))

@@ -108,6 +108,8 @@ def context(resume: dict, pages: int = 1, show_summary: bool = False) -> dict:
         "name": person["name"],
         "contact": contact,
         "presentation": presentation,
+        "compact_education": bool(layout.get("compact_education", False)),
+        "courses_in_education": bool(layout.get("coursework_in_education", False)),
         "margin_cm": 1.8,
         "font_family": font_family,
         "skills_last": bool(layout.get("skills_last", False)),

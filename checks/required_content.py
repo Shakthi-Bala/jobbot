@@ -14,6 +14,15 @@ def check(d: Path) -> list[str]:
         return ['job missing from tracker']
     parsed = json.loads(job['parsed_json'] or '{}')
     bad = []
+    minimum = max(int(meta(d).get('min_projects', 0)),
+                  int(core.load_profile().get('preferences', {}).get('resume_min_projects', 0)))
+    if minimum:
+        path = d / 'resume.json'
+        resume = json.loads(path.read_text()) if path.exists() else {}
+        projects = {p.get('ref_id') or p.get('heading') for p in resume.get('projects', [])
+                    if p.get('bullets') and (p.get('ref_id') or p.get('heading'))}
+        if len(projects) < minimum:
+            bad.append(f'resume has {len(projects)} distinct projects; candidate requires at least {minimum}')
     letter = d / 'cover_letter.md'
     if parsed.get('cover_letter_requested') and (not letter.exists() or not letter.read_text().strip()):
         bad.append('posting requests a cover letter, but the packet has none')

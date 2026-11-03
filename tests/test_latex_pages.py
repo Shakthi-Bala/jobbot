@@ -177,7 +177,9 @@ def test_research_pdf_renders_with_correct_reading_order(packet):
         pytest.skip('LaTeX compiler not installed')
     path = packet / 'resume.json'
     data = json.loads(path.read_text())
-    data['layout'] = {'presentation': 'research', 'font_family': 'charter', 'skills_last': True}
+    data['layout'] = {'presentation': 'research', 'font_family': 'charter', 'skills_last': True,
+                      'compact_education': True, 'coursework_in_education': True}
+    data['courses'] = ['Computer Vision']
     path.write_text(core.dumps(data))
     meta = json.loads((packet / 'meta.json').read_text())
     meta.update(format='latex', show_summary=False)
@@ -187,3 +189,8 @@ def test_research_pdf_renders_with_correct_reading_order(packet):
     assert not ats_parse.check(packet)
     assert not length_limits.check(packet)
     assert json.loads(path.read_text())['section_headings']['projects'] == 'Selected Projects'
+    # The check must reject an education/course mismatch in the actual PDF.
+    data = json.loads(path.read_text())
+    data['courses'].append('Missing Course')
+    path.write_text(core.dumps(data))
+    assert any('coursework missing from education' in p for p in ats_parse.check(packet))
