@@ -90,7 +90,7 @@ def load_profile() -> dict:
     if not path.exists():
         raise JobbotError(
             "data/profile.yaml not found. Copy data/profile.example.yaml to "
-            "data/profile.yaml and fill it in (see README section 7)."
+            "data/profile.yaml and fill it in (see docs/configuration.md)."
         )
     profile = load_yaml(path)
     profile.setdefault("facts", [])

@@ -1,4 +1,4 @@
-"""Evaluate prompt/skill changes on saved job descriptions (README section 17).
+"""Evaluate prompt/skill changes on saved job descriptions (README: Development).
 
     data/evals/<case>/posting.txt   the job description
     data/evals/<case>/meta.yaml     company, title (location, req_id optional)

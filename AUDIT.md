@@ -1,6 +1,6 @@
 # Jobbot audit
 
-Reviewed discovery, eligibility, tailoring, rendering, checks, manual tasks, review/panel loops, tracking, the dashboard, and Discord delivery. Personal resume findings live separately in the ignored `out/audit/resume_findings.md`; no personal profile, resume, database, webhook, or demo is committed.
+Reviewed discovery, eligibility, tailoring, rendering, checks, manual tasks, review/panel loops, tracking, the dashboard, and Discord delivery. Personal resume findings live separately in the ignored `out/audit/resume_findings.md`; no personal profile, resume, database, webhook, or private recording is committed. The README animation uses synthetic example content.
 
 ## Verified failures and changes
 

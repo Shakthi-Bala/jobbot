@@ -7,5 +7,5 @@
    (`data/decisions.tsv`, `data/weekly_review.md`)?
 4. If yes, propose one change: a new or stricter check in `checks/` (preferred,
    see `encode-lessons-as-checks`) or a skill edit. Skill edits must pass the eval
-   loop in README section 17 before they're kept.
+   loop in the README's Development section before they're kept.
 5. Stop. You approve the change.
