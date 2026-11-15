@@ -71,7 +71,7 @@ def review(conn, job_id: str, d: Path, check_results: dict[str, list[str]],
 
     if core.is_manual():
         # No API: one reviewer (Claude in Claude Code) reviews and buckets in one step.
-        reports = [("R1:claude-code", None)]
+        reports = [("R1:manual-assistant", None)]
         judgment = core.llm_json(
             "review_lead",
             lead_system + "\n\nThere are no separate reviewer reports. Review the packet "

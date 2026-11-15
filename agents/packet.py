@@ -30,12 +30,15 @@ def _stop(conn, job_id: str, status: str, reason: str, d: Path | None = None) ->
 
 def _inputs(job, requested: Path, skip_review: bool, offline: bool, skip_panel: bool,
             force: bool = False) -> str:
-    """Invalidate checkpoints when evidence, instructions or build options change."""
+    """Invalidate checkpoints when evidence, instructions, code or options change."""
     paths = [core.DATA / n for n in ("profile.yaml", "answers_bank.yaml", "master_resume.yaml",
                                      "approved_bullets.yaml")]
     paths += [core.ROOT / "models.yaml", requested]
     for folder in (core.TEMPLATES, core.SKILLS, core.PRINCIPLES):
         paths += sorted(p for p in folder.rglob("*") if p.is_file())
+    for folder in (core.ROOT / "agents", core.ROOT / "checks"):
+        paths += sorted(folder.rglob("*.py"))
+    paths += [core.ROOT / "schema.sql", core.ROOT / "requirements.txt"]
     payload = {
         "checkpoint_version": 1,
         "job": {k: job[k] for k in ("id", "company", "title", "location", "req_id", "url",
@@ -167,6 +170,11 @@ def _build(conn, job_id: str, skip_review: bool, offline: bool, skip_panel: bool
             verdict = panel.run(conn, job_id, d, state["panel_round"])
             if verdict["done"]:
                 break
+            evidence_gaps = verdict.get("plan", {}).get("needs_new_evidence", [])
+            if not verdict["revisions"] and evidence_gaps:
+                state["blocking"] = ["Panel target unmet; new evidence required: " + gap
+                                     for gap in evidence_gaps]
+                break  # re-rendering identical claims cannot supply a missing experiment
             if state["panel_round"] >= MAX_PANEL_ROUNDS:
                 state["blocking"] = ["Review panel still requests revisions: " + r
                                      for r in verdict["revisions"]] or ["Review panel did not approve"]
@@ -180,8 +188,8 @@ def _build(conn, job_id: str, skip_review: bool, offline: bool, skip_panel: bool
     need_input = "[NEED INPUT" in (d / "answers.md").read_text()
     if blocking:
         (d / "open_issues.md").write_text(
-            "# Unresolved after automatic revisions\n\n" + "\n".join(f"- {f}" for f in blocking) + "\n")
-        result = _stop(conn, job_id, "needs_input", "Revision limit reached; see open_issues.md", d)
+            "# Unresolved packet issues\n\n" + "\n".join(f"- {f}" for f in blocking) + "\n")
+        result = _stop(conn, job_id, "needs_input", "Unresolved review issues; see open_issues.md", d)
     else:
         (d / "open_issues.md").unlink(missing_ok=True)
         requested.unlink(missing_ok=True)

@@ -33,6 +33,15 @@ Reviewed discovery, eligibility, tailoring, rendering, checks, manual tasks, rev
 7. **Manual mode still requires a person to answer tasks.** Slurm/cron can discover and queue work, but cannot complete an unanswered AI task. Offline/skip-review flags deliberately reduce verification and are logged. `ready_for_review` means the candidate should inspect the packet; unresolved form answers can still require input.
 8. **Existing history has limits.** New records preserve bytes; old overwritten files cannot be recovered by this change. The bot cannot establish which file a person actually uploaded outside it. Keep the submitted copy and record the application after checking that it matches.
 
+## Follow-up repository review
+
+- The privacy scanner now extracts account handles only from known account URL structures. A portfolio's ordinary path segments previously caused widespread false positives. Full personal links remain protected.
+- Greenhouse discovery now stores a public board URL even when the company supplies a branded career-page URL. This lets both packet creation and requisition checks actually re-fetch those postings; previously they logged that live verification was skipped.
+- Packet checkpoints now include the Python agent/check sources and dependency/schema files. A completed packet must be checked again after a writer or validation rule changes; previously unchanged documents could reuse an old completion result.
+- If the panel identifies only missing evidence and no supported edits, it stops with `needs_input` immediately. It preserves the scores and evidence gaps rather than re-rendering identical claims until the round limit. Manual accuracy reports identify their reviewer as a manual assistant rather than assuming a particular assistant product.
+
+These changes do not resolve the limits above. In particular, approved wording still needs semantic review when a fact changes under the same ID, and built-in panel calls remain text-only. Private job-search batches retain their live posting snapshots, factual reviews, rendered previews and validation reports under ignored `out/` directories.
+
 ## Validation
 
 Baseline: **46 passed, 2 failed**, both PDF extraction regressions. The expanded suite covers requisition separation and legacy IDs, changed postings, archived bytes, repeated recording, eligibility uncertainty, approved answers, required content, manual review/panel resumption, revision limits, stale PDFs, LaTeX headings, contact checks and Discord behavior.

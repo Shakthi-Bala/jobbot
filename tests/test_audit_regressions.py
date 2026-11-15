@@ -58,6 +58,52 @@ def test_ats_url_must_start_at_approved_host():
     assert discover.parse_ats_url('https://boards.greenhouse.io/acme/jobs/123') == ('greenhouse','acme','123')
 
 
+def test_branded_greenhouse_urls_retain_a_verifiable_board_identity(monkeypatch):
+    payload = {'id': 123, 'requisition_id': 'REQ-7', 'title': 'Robotics Engineer',
+               'absolute_url': 'https://careers.example.org/opening?gh_jid=123',
+               'location': {'name': 'Boston, MA'}, 'content': '<p>Required: Python.</p>'}
+    job = discover._greenhouse_job('acme', payload)
+    assert discover.parse_ats_url(job['url']) == ('greenhouse', 'acme', '123')
+    assert job['req_id'] == 'REQ-7'  # posting ID and requisition ID are different
+    seen = []
+
+    class Response:
+        def json(self):
+            return payload
+
+    def fetch(url, **params):
+        seen.append(url)
+        return Response()
+
+    monkeypatch.setattr(discover, '_get', fetch)
+    live = discover.fetch_by_url(job['url'])
+    assert seen == ['https://boards-api.greenhouse.io/v1/boards/acme/jobs/123']
+    assert live['req_id'] == job['req_id'] and live['raw_text'] == job['raw_text']
+
+
+def test_checkpoint_invalidates_on_writer_and_check_code_changes(job, env, monkeypatch):
+    monkeypatch.setattr(core, 'ROOT', env)
+    requested = env / 'requested_changes.md'
+    for folder in ('agents', 'checks'):
+        (env / folder).mkdir()
+    writer = env / 'agents' / 'tailor.py'
+    check = env / 'checks' / 'required_content.py'
+    writer.write_text('revision = 1\n')
+    check.write_text('revision = 1\n')
+    key = lambda: pipeline._inputs(job, requested, False, False, False)
+    before = key()
+    writer.write_text('revision = 2\n')
+    changed_writer = key()
+    assert changed_writer != before
+    check.write_text('revision = 2\n')
+    assert key() != changed_writer
+    stable = key()
+    cache = env / 'agents' / '__pycache__'
+    cache.mkdir()
+    (cache / 'tailor.pyc').write_bytes(b'compiled cache')
+    assert key() == stable
+
+
 def test_quotes_do_not_accept_empty_evidence(packet):
     conn = core.connect()
     jid = json.loads((packet / 'meta.json').read_text())['job_id']
@@ -172,6 +218,19 @@ def test_panel_revision_limit_requires_human_input(job, monkeypatch):
     result = pipeline.build(job['id'], offline=True)
     assert result['status'] == 'needs_input' and rounds == [1, 2, 3]
     assert 'Review panel still requests' in (core.job_dir(job['id']) / 'open_issues.md').read_text()
+
+
+def test_panel_stops_without_redrafting_when_only_new_evidence_can_meet_target(job, monkeypatch):
+    shortlist(job)
+    drafts = []
+    monkeypatch.setattr(tailor, 'draft', lambda *args: drafts.append(1) or good_packet())
+    monkeypatch.setattr(tailor, 'unslop', lambda paragraphs, profile: paragraphs)
+    monkeypatch.setattr(pipeline.review, 'review', lambda *a: type('J', (), {'findings': []})())
+    monkeypatch.setattr(pipeline.panel, 'run', lambda *a: {
+        'done': False, 'revisions': [], 'plan': {'needs_new_evidence': ['Held-out accuracy']}})
+    result = pipeline.build(job['id'], offline=True)
+    assert result['status'] == 'needs_input' and drafts == [1]
+    assert 'new evidence required: Held-out accuracy' in (core.job_dir(job['id']) / 'open_issues.md').read_text()
 
 
 def test_daily_run_resumes_drafted_and_reviewed_jobs(job, monkeypatch):

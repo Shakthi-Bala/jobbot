@@ -83,7 +83,10 @@ def _greenhouse_job(slug: str, j: dict) -> dict:
         "company": j.get("company_name") or slug, "title": j["title"],
         "location": (j.get("location") or {}).get("name", ""),
         "req_id": str(j.get("requisition_id") or j.get("internal_job_id") or j["id"]),
-        "url": j.get("absolute_url"), "source": "greenhouse",
+        # Branded career-page URLs cannot be re-fetched by our ATS adapter.
+        # Keep the public board identity available to packet/checks.
+        "url": f"https://job-boards.greenhouse.io/{slug}/jobs/{j['id']}",
+        "source": "greenhouse",
         "posted_at": j.get("first_published") or j.get("updated_at"),
         "raw_text": text, "raw_html": content,
     }
