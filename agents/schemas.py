@@ -81,11 +81,21 @@ class Answer(BaseModel):
         description="If the profile can't support an answer, what you need from the user")
 
 
+class SkillGroup(BaseModel):
+    category: str = Field(description="Short display label, e.g. 'Vision & Learning'")
+    skills: list[str] = Field(description="Names from the `skills` list, most relevant first")
+
+
 class TailoredPacket(BaseModel):
-    summary: Paragraph = Field(description="2-line professional summary, keyword-dense, every claim cited")
+    summary: Paragraph = Field(description="Empty text and IDs when resume_summary is disabled; "
+                                           "otherwise two specific lines, every claim cited")
     experience: list[ResumeEntry]
     projects: list[ResumeEntry]
     skills: list[str] = Field(description="Skill names from profile.skills only")
+    skill_groups: list[SkillGroup] = Field(
+        default_factory=list,
+        description="How the Skills section reads for THIS posting: at most four rows, the row "
+                    "the posting cares about most first. Empty list keeps the profile's grouping")
     cover_letter: list[Paragraph] = Field(description="Empty list if no cover letter")
     answers: list[Answer]
     rationale: str

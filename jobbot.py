@@ -5,7 +5,8 @@
     python jobbot.py discover [--no-web] [--no-alerts]
     python jobbot.py fit [JOB_ID ...]
     python jobbot.py add-jd FILE --company C --title T [--location L --url U --req-id R]
-    python jobbot.py packet JOB_ID [--skip-review] [--offline]
+    python jobbot.py packet JOB_ID [--skip-review] [--offline] [--force]
+    python jobbot.py approve JOB_ID            keep this packet's bullet wording for later jobs
     python jobbot.py checks JOB_ID [--offline] [--outreach]
     python jobbot.py outreach JOB_ID
     python jobbot.py mark-applied JOB_ID       you submitted it; records the resume hash
@@ -69,17 +70,20 @@ def cmd_add_jd(a):
     conn = core.connect()
     r = fit.score_job(conn, job_id)
     print(f"added {job_id}: fit {r['score']} -> {r['decision']}")
-    print(f"next: python jobbot.py packet {job_id}")
+    print(f"next: python jobbot.py packet {job_id}"
+          + ("" if r["decision"] == "shortlist" else " --force   (fit said "
+             f"{r['decision']}; --force builds it anyway unless it is blocked)"))
 
 
 def cmd_packet(a):
     from agents import packet
     r = packet.build(a.job_id, skip_review=a.skip_review, offline=a.offline,
-                     skip_panel=a.no_panel)
+                     skip_panel=a.no_panel, force=a.force)
     print(f"{r['job_id']}: {r['status']}" + (f" ({r['reason']})" if r.get("reason") else ""))
     if r.get("dir"):
-        print(f"review it in {r['dir']}/ (review.md first), then submit it yourself and run:")
-        print(f"  python jobbot.py mark-applied {r['job_id']}")
+        print(f"review it in {r['dir']}/ (wording.md and review.md first).")
+        print(f"happy with the wording?  python jobbot.py approve {r['job_id']}   (reused for later jobs)")
+        print(f"submitted it yourself?   python jobbot.py mark-applied {r['job_id']}")
 
 
 def cmd_checks(a):
@@ -103,9 +107,18 @@ def cmd_outreach(a):
         print("Send them yourself, then: python jobbot.py mark-sent CONTACT_ID")
 
 
+def cmd_approve(a):
+    from agents import bank
+    r = bank.promote(a.job_id)
+    print(f"{a.job_id}: {r['added']} bullet(s) added to {r['path'].relative_to(core.ROOT)}, "
+          f"{r['already_present']} already there. New drafts start from this wording.")
+
+
 def cmd_mark_applied(a):
-    from agents import tracker
+    from agents import bank, tracker
     tracker.mark_applied(a.job_id)
+    if (core.job_dir(a.job_id) / "resume.tagged.md").exists():
+        bank.promote(a.job_id)  # what you sent is wording you approved
     print(f"{a.job_id}: applied (follow-up scheduled in 10 days)")
 
 
@@ -259,6 +272,9 @@ def main(argv=None):
     s = sub.add_parser("packet"); s.set_defaults(fn=cmd_packet); s.add_argument("job_id")
     s.add_argument("--skip-review", action="store_true"); s.add_argument("--offline", action="store_true")
     s.add_argument("--no-panel", action="store_true", help="skip the 7-reader review panel")
+    s.add_argument("--force", action="store_true",
+                   help="build even if the fit agent said skip (never overrides a blocked posting)")
+    s = sub.add_parser("approve"); s.set_defaults(fn=cmd_approve); s.add_argument("job_id")
     s = sub.add_parser("checks"); s.set_defaults(fn=cmd_checks); s.add_argument("job_id")
     s.add_argument("--offline", action="store_true"); s.add_argument("--outreach", action="store_true")
     s = sub.add_parser("outreach"); s.set_defaults(fn=cmd_outreach); s.add_argument("job_id")

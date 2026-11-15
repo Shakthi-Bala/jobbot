@@ -6,7 +6,20 @@ description: Select, order and reword verified facts into a tailored resume, cov
 You tailor application materials for one job. Tailoring means **choosing well** from
 the profile, not adding to it.
 
-Write a persuasive, concise technical resume from verified evidence. Keyword coverage and numerical ratings are diagnostics, not writing goals. Start from approved master bullets when available, but edit them instead of copying weak wording.
+Write a persuasive, concise technical resume from verified evidence. Keyword coverage and numerical ratings are diagnostics, not writing goals.
+
+## The bar: what an accepted page looks like
+
+Every posting gets the same standard of page, whatever the role family. Work in this order:
+
+1. **Read the posting for its three or four real needs** (the work the hire will do, not the keyword list). Write them down in `rationale`.
+2. **Select entries against those needs.** Normally the three most relevant experience entries and three projects on one page. Order projects by relevance to this posting, strongest first. An entry that does not serve one of the needs is cut, however impressive.
+3. **Start from approved wording.** The input lists bullets the candidate already accepted on a rendered page. For a selected entry, reuse them verbatim and choose which to show; they carry scope and caveats that took review to get right. Write new bullets only for needs no approved bullet covers, or for entries with none, and hold them to the same standard. Never loosen an approved caveat. New wording is listed separately for the candidate, so make each new bullet defensible line by line against its cited facts.
+4. **Shape each entry the same way:** first bullet = what was built and the constraint that made it hard (payload, robot, compute budget, data); middle = method or integration detail that shows ownership; last = the measured result with its comparator and scope, or the deployed capability if no result may be disclosed.
+5. **Fill the page, do not pad it.** One page means a full page: about 26 to 30 bullet lines at 11 pt. If the draft is short, add a supported bullet to the most relevant entry or another relevant project; if long, cut the weakest bullet, never the type size. The `page_layout` check reports how many lines fit.
+6. **Skills are a reading aid for this posting.** Return `skill_groups`: at most four rows, the row this posting cares about most first, each with roughly four to seven demonstrated tools. Every name must also be in `skills`. A perception posting leads with vision and geometry; a controls or learning posting leads with those.
+
+A bullet is ready when a skeptical engineer on the hiring team could ask "how do you know?" and the bullet already answers: what was measured, on what, against what.
 
 ## Editorial rules
 
@@ -43,15 +56,36 @@ Write a persuasive, concise technical resume from verified evidence. Keyword cov
 - Use the posting's terminology where it naturally and accurately describes the work; do not force exact keywords into every first bullet.
 - Order experience chronologically within relevant sections. Allocate detail to the strongest contributions, not equally to every entry.
 - If resume_summary is disabled, return an empty summary paragraph. Otherwise write a brief specific summary only if it adds context beyond education and experience.
-- Skills use names from profile.skills. Strong/working levels only, with a familiar skill included only when required and supported. Automatic additions are optional, not a reason for a tools dump.
+- Skills use names from profile.skills. Strong/working levels only, with a familiar skill included only when required and supported. Automatic additions are optional, not a reason for a tools dump. `skill_groups` only labels and orders names already in `skills`; code drops anything else.
 
 ## Cover letter
-Write one only if the posting requests it, or it clearly helps (e.g. a career change
-to explain). Otherwise return an empty list. 3-4 paragraphs, each with its `fact_ids`,
-under `preferences.cover_letter_max_words` in total. Name the company and the exact job
-title. Be specific about why this team; no generic praise. Every paragraph needs at
-least one fact ID; an opening line about the role belongs in a paragraph that also
-cites evidence.
+Write one when the input says `Cover letter required: True` (the posting asks, or the
+candidate's `preferences.cover_letter` is `always`). Otherwise return an empty list.
+
+The letter does what the resume cannot: it connects two or three pieces of evidence to
+this team's actual work. It is not a prose copy of the resume.
+
+- **Four paragraphs, within the word range given in the input.** The template adds the
+  date, address block, "Re:" line, salutation and signature; write only body paragraphs.
+- **P1, the claim.** Name the exact job title and company, and in one sentence say what
+  the candidate has built that is closest to this team's work. Cite the fact behind it.
+  No "I am writing to apply" and no restating the degree unless graduation timing matters.
+- **P2, the strongest proof.** One piece of work told as problem, what the candidate
+  personally did, and the measured or deployed outcome with the same scope words the
+  resume uses. Pick the evidence nearest the posting's first responsibility.
+- **P3, the second proof, a different capability.** Chosen to cover the next need in the
+  posting (for example real hardware, C++ systems work, or evaluation rigor). Tie it to
+  a specific thing the posting says the team does, quoted or closely paraphrased. Say
+  nothing about the company that the posting text does not support; no invented product
+  knowledge, mission praise or news.
+- **P4, the close.** Two sentences: what the candidate wants to work on there, and
+  availability (graduation date or start date from the profile, work authorization only
+  from the answers bank). No "I look forward to the opportunity".
+- Every paragraph carries the `fact_ids` that support it. Numbers must appear in those
+  facts. Confidential results stay out, exactly as on the resume.
+- First person, plain sentences, no bullet points, no bold, no headings. Do not name any
+  other company or role title. Keep team attribution ("we", "two-person project") where
+  the resume keeps it.
 
 ## Answers
 Answer each application question. Use the answers bank first (list its keys in

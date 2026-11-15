@@ -19,6 +19,7 @@ import jinja2
 from . import core
 
 TEMPLATE = "resume.tex.j2"
+COVER_TEMPLATE = "cover_letter.tex.j2"
 ENGINES = ("tectonic", "latexmk", "pdflatex", "xelatex")
 # Category names that read badly on a page.
 CATEGORY_LABELS = {"Project tools": "Tools"}
@@ -43,13 +44,15 @@ class Raw(str):
     """Already-LaTeX text (links, commands): not escaped."""
 
 
-def escape(value) -> str:
+def escape(value, emphasis: bool = True) -> str:
+    """emphasis=False for letter prose, where bold percentages would look like a flyer."""
     if value is None:
         return ""
     if isinstance(value, Raw):
         return str(value)
     text = _SPECIAL_RE.sub(lambda m: _SPECIAL[m.group(0)], str(value))
-    text = _PERCENT_RE.sub(r"\\textbf{\1}", text)
+    if emphasis:
+        text = _PERCENT_RE.sub(r"\\textbf{\1}", text)
     text = re.sub(r"\bROS ([12])\b", r"ROS~\1", text)
     return _UNIT_RE.sub(r"\1~\2", text)
 
@@ -136,6 +139,34 @@ def context(resume: dict, pages: int = 1, show_summary: bool = False) -> dict:
 def render_tex(resume: dict, out: Path, pages: int = 1, show_summary: bool = False) -> Path:
     out.write_text(_env().get_template(TEMPLATE).render(**context(resume, pages, show_summary)))
     return out
+
+
+def render_cover_tex(letter: dict, out: Path) -> Path:
+    """cover_letter.json -> cover_letter.tex, with the resume's typeface and header."""
+    person = letter["person"]
+    layout = letter.get("layout", {})
+    font_family = layout.get("font_family", "charter")
+    if font_family not in ("charter", "sans"):
+        raise core.JobbotError("resume_font must be 'charter' or 'sans'")
+    contact = [x for x in (person.get("location"), person.get("email"), person.get("phone")) if x]
+    for key, url in (person.get("links") or {}).items():
+        if isinstance(url, str) and url.startswith("http"):
+            contact.append(_href(url, LINK_LABELS.get(key, key.title())))
+    out.write_text(_env().get_template(COVER_TEMPLATE).render(
+        name=person["name"], contact=contact, font_family=font_family,
+        date=_long_date(letter.get("date", "")), company=letter["company"],
+        location=letter.get("location", ""), title=letter["title"],
+        paragraphs=[Raw(escape(p, emphasis=False)) for p in letter["paragraphs"]]))
+    return out
+
+
+def _long_date(iso: str) -> str:
+    parts = str(iso).split("-")
+    if len(parts) == 3 and all(p.isdigit() for p in parts) and 1 <= int(parts[1]) <= 12:
+        month = ("January February March April May June July August September October "
+                 "November December").split()[int(parts[1]) - 1]
+        return f"{month} {int(parts[2])}, {parts[0]}"
+    return str(iso)
 
 
 def engine() -> str | None:

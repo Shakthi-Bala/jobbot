@@ -219,7 +219,7 @@ def test_writer_keyword_guidance_does_not_override_editorial_selection(job, monk
     def answer(role, system, user, schema, **kwargs):
         assert 'diagnostic, not a coverage target' in user
         assert 'use these EXACT spellings' not in user
-        assert 'candidate-approved source material, not a quality verdict' in user
+        assert 'source material, not a quality verdict' in user
         return good_packet()
     monkeypatch.setattr(core, 'llm_json', answer)
     tailor.draft(core.connect(), job['id'])

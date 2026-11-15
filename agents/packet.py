@@ -15,7 +15,7 @@ MAX_FIX_LOOPS = 2
 MAX_PANEL_ROUNDS = 3
 RECORDED_STATUSES = ("applied", "responded", "interview", "rejected", "offer", "closed")
 ARTIFACTS = ("meta.json", "resume.json", "resume.pdf", "resume.tagged.md",
-             "cover_letter.pdf", "cover_letter.md", "cover_letter.tagged.md",
+             "cover_letter.pdf", "cover_letter.md", "cover_letter.tagged.md", "cover_letter.json",
              "answers.md", "answers.tagged.md")
 
 
@@ -28,9 +28,11 @@ def _stop(conn, job_id: str, status: str, reason: str, d: Path | None = None) ->
     return result
 
 
-def _inputs(job, requested: Path, skip_review: bool, offline: bool, skip_panel: bool) -> str:
+def _inputs(job, requested: Path, skip_review: bool, offline: bool, skip_panel: bool,
+            force: bool = False) -> str:
     """Invalidate checkpoints when evidence, instructions or build options change."""
-    paths = [core.DATA / n for n in ("profile.yaml", "answers_bank.yaml", "master_resume.yaml")]
+    paths = [core.DATA / n for n in ("profile.yaml", "answers_bank.yaml", "master_resume.yaml",
+                                     "approved_bullets.yaml")]
     paths += [core.ROOT / "models.yaml", requested]
     for folder in (core.TEMPLATES, core.SKILLS, core.PRINCIPLES):
         paths += sorted(p for p in folder.rglob("*") if p.is_file())
@@ -39,7 +41,7 @@ def _inputs(job, requested: Path, skip_review: bool, offline: bool, skip_panel: 
         "job": {k: job[k] for k in ("id", "company", "title", "location", "req_id", "url",
                                    "raw_text", "parsed_json")},
         "files": [(str(p), core.sha256_file(p) if p.exists() else None) for p in paths],
-        "options": [skip_review, offline, skip_panel],
+        "options": [skip_review, offline, skip_panel] + ([True] if force else []),
     }
     return hashlib.sha256(core.dumps(payload).encode()).hexdigest()
 
@@ -56,15 +58,19 @@ def _save(path: Path, state: dict) -> None:
 
 
 def build(job_id: str, skip_review: bool = False, offline: bool = False,
-          skip_panel: bool = False) -> dict:
+          skip_panel: bool = False, force: bool = False) -> dict:
+    """force=True builds a packet for a posting the fit agent scored as `skip`: you
+    handed over the posting, so you decide. A `blocked` posting (a quoted restriction
+    you do not meet) is never forced."""
     conn = core.connect()
     try:
-        return _build(conn, job_id, skip_review, offline, skip_panel)
+        return _build(conn, job_id, skip_review, offline, skip_panel, force)
     finally:
         conn.close()
 
 
-def _build(conn, job_id: str, skip_review: bool, offline: bool, skip_panel: bool) -> dict:
+def _build(conn, job_id: str, skip_review: bool, offline: bool, skip_panel: bool,
+           force: bool = False) -> dict:
     job = core.get_job(conn, job_id)
     if job["status"] in RECORDED_STATUSES:
         raise core.JobbotError(f"Job {job_id} is already {job['status']}; its application history is retained")
@@ -98,12 +104,17 @@ def _build(conn, job_id: str, skip_review: bool, offline: bool, skip_panel: bool
     else:
         decision = fit["decision"]
     if decision != "shortlist":
-        status = "blocked" if decision == "blocked" else "skipped"
-        return _stop(conn, job_id, status, f"fit decision is {decision}")
+        if force and decision != "blocked":
+            core.log_decision("packet", job_id, "forced",
+                              f"fit decision is {decision}; the candidate asked for a packet anyway")
+        else:
+            status = "blocked" if decision == "blocked" else "skipped"
+            return _stop(conn, job_id, status, f"fit decision is {decision}"
+                         + ("" if decision == "blocked" else "; re-run with --force to build it anyway"))
 
     d = core.job_dir(job_id, conn)
     requested = d / "requested_changes.md"
-    key = _inputs(job, requested, skip_review, offline, skip_panel)
+    key = _inputs(job, requested, skip_review, offline, skip_panel, force)
     state_path = d / "packet_state.json"
     state = json.loads(state_path.read_text()) if state_path.exists() else {}
     if state.get("inputs") != key or state.get("manifest", {}) != _manifest(d):
@@ -180,7 +191,7 @@ def _build(conn, job_id: str, skip_review: bool, offline: bool, skip_panel: bool
                           f"live verification skipped={offline}; unanswered questions={need_input}")
         result = {"job_id": job_id, "status": "ready_for_review", "dir": str(d), "need_input": need_input}
     state.update(phase="complete", result=result, manifest=_manifest(d),
-                 inputs=_inputs(job, requested, skip_review, offline, skip_panel))
+                 inputs=_inputs(job, requested, skip_review, offline, skip_panel, force))
     _save(state_path, state)
     return result
 

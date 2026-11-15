@@ -8,8 +8,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from checks import (ats_parse, banned_phrases, consistency, contact_sources,  # noqa: E402
-                    fact_ids, injection_scan, length_limits, numbers_match, req_match,
-                    restriction_quotes, required_content)
+                    fact_ids, injection_scan, length_limits, numbers_match, page_layout,
+                    req_match, restriction_quotes, required_content)
 
 PACKET = {
     "required_content": required_content.check,
@@ -20,6 +20,7 @@ PACKET = {
     "ats_parse": ats_parse.check,
     "banned_phrases": banned_phrases.check,
     "length_limits": length_limits.check,
+    "page_layout": page_layout.check,
     "consistency": consistency.check,
     "injection_scan": injection_scan.check,
 }

@@ -32,6 +32,13 @@ def check(d: Path) -> list[str]:
         n, limit = words(cl.read_text()), prefs.get("cover_letter_max_words", 300)
         if n > limit:
             bad.append(f"cover letter is {n} words; limit {limit}")
+        floor = int(prefs.get("cover_letter_min_words", 0))
+        if n < floor:
+            bad.append(f"cover letter is {n} words; a letter under {floor} reads as a form note. "
+                       "Add a supported, posting-specific paragraph")
+        letter_pdf = d / "cover_letter.pdf"
+        if letter_pdf.exists() and pdf_pages(letter_pdf) > 1:
+            bad.append(f"cover letter is {pdf_pages(letter_pdf)} pages; limit 1")
     limit = prefs.get("outreach_max_words", 120)
     for p in sorted(d.glob("outreach/*.md")):
         if p.name.endswith(".tagged.md"):

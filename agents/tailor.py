@@ -55,6 +55,14 @@ def resume_format(profile: dict) -> str:
     return profile.get("preferences", {}).get("resume_format", "typst")
 
 
+def wants_cover_letter(parsed: dict, profile: dict) -> bool:
+    """preferences.cover_letter: always | requested (default)."""
+    mode = str(profile.get("preferences", {}).get("cover_letter", "requested")).lower()
+    if mode not in ("always", "requested"):
+        raise core.JobbotError("preferences.cover_letter must be 'always' or 'requested'")
+    return mode == "always" or bool(parsed.get("cover_letter_requested"))
+
+
 def packet_dir(job_id: str) -> Path:
     return core.job_dir(job_id)
 
@@ -80,8 +88,10 @@ def draft(conn, job_id: str, feedback: list[str] | None = None) -> TailoredPacke
         f"Req ID: {job['req_id']}\nParsed: {core.dumps(parsed)}\n"
         + (f"Fit analysis: strengths={fit['strengths_json']} gaps={fit['gaps_json']}\n"
            if fit else "")
-        + f"Cover letter requested: {parsed.get('cover_letter_requested', False)}\n"
-        f"Application questions: {core.dumps(parsed.get('application_questions', []))}\n\n"
+        + f"Cover letter required: {wants_cover_letter(parsed, profile)}"
+        + (f" ({prefs.get('cover_letter_min_words', 0)}-{prefs.get('cover_letter_max_words', 300)} words)\n"
+           if wants_cover_letter(parsed, profile) else "\n")
+        + f"Application questions: {core.dumps(parsed.get('application_questions', []))}\n\n"
         + core.untrusted("posting", job["raw_text"])
     )
     from . import ats, master
@@ -106,9 +116,21 @@ def draft(conn, job_id: str, feedback: list[str] | None = None) -> TailoredPacke
              + ", ".join(kw["fixable"])
              + "\n\n## Posting keywords with NO evidence in the profile (never claim these)\n"
              + (", ".join(kw["gap"]) or "none"))
+    from . import bank
+    approved = bank.load(profile)
+    if approved:
+        user += ("\n\n## Approved wording (the candidate accepted these bullets on a rendered page)\n"
+                 "This is the quality bar and the default text. When you select an entry, reuse its "
+                 "approved bullets verbatim; choose and order them for this posting. Write a new "
+                 "bullet only where the posting needs evidence that no approved bullet covers, or "
+                 "an entry has none; hold new bullets to the same scope, attribution and "
+                 "measurement boundaries. Never loosen a caveat an approved bullet carries.\n"
+                 + core.dumps({ref: [{"text": b["text"], "fact_ids": b["fact_ids"]} for b in bullets]
+                               for ref, bullets in approved.items()}))
     m = master.load()
     if m:
-        user += ("\n\n## Master resume: candidate-approved source material, not a quality verdict. "
+        user += ("\n\n## Master resume: earlier source material, not a quality verdict. "
+                 "Approved wording and disclosure constraints override it wherever they differ. "
                  "Reassess selection and wording against the facts and posting. Restore useful "
                  "problem context or differentiators omitted by earlier drafts; keep evidence exact.\n"
                  + core.dumps(m))
@@ -166,6 +188,23 @@ def select_skills(chosen: list[str], profile: dict, must_have: list[str],
     return out
 
 
+def group_skills(skills: list[dict], groups) -> list[dict]:
+    """The writer's Skills rows for this posting, limited to skills that survived
+    select_skills(). A group can order and label; it can never add a skill."""
+    by_name = {s["skill"].removesuffix(" (familiar)").lower(): s for s in skills}
+    used, out = set(), []
+    for g in groups or []:
+        names = []
+        for name in g.skills:
+            key = name.removesuffix(" (familiar)").lower()
+            if key in by_name and key not in used:
+                used.add(key)
+                names.append(by_name[key]["skill"])
+        if names and g.category.strip():
+            out.append({"category": g.category.strip(), "skills": names})
+    return out
+
+
 def enforce(packet: TailoredPacket, profile: dict, job_id: str,
             must_have: list[str], posting_text: str = "") -> dict:
     """Apply no-unsourced-claims in code. Returns a plain dict ready to render."""
@@ -190,6 +229,7 @@ def enforce(packet: TailoredPacket, profile: dict, job_id: str,
         return {"ref_id": entry.ref_id, "bullets": bullets} if bullets else None
 
     skills = select_skills(packet.skills, profile, must_have, posting_text)
+    skill_groups = group_skills(skills, packet.skill_groups)
 
     summary = None
     if packet.summary.fact_ids and set(packet.summary.fact_ids) <= known:
@@ -224,6 +264,7 @@ def enforce(packet: TailoredPacket, profile: dict, job_id: str,
         "experience": [e for e in map(keep_entry, packet.experience) if e],
         "projects": [e for e in map(keep_entry, packet.projects) if e],
         "skills": skills,
+        "skill_groups": skill_groups,
         "cover_letter": paragraphs,
         "answers": answers,
         "rationale": packet.rationale,
@@ -311,7 +352,16 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
     groups: dict[str, list[dict]] = {}
     display_groups = profile.get('preferences', {}).get('resume_skill_groups', {})
     category_for_skill = {name: category for category, names in display_groups.items() for name in names}
+    by_name = {sk["skill"]: sk for sk in content["skills"]}
+    placed = set()
+    for g in content.get("skill_groups") or []:      # the writer's rows for this posting
+        for name in g["skills"]:
+            if name in by_name:
+                groups.setdefault(g["category"], []).append(by_name[name])
+                placed.add(name)
     for sk in content["skills"]:
+        if sk["skill"] in placed:
+            continue
         category = category_for_skill.get(sk['skill'], sk.get('category', 'Skills'))
         groups.setdefault(category, []).append(sk)
     if groups:
@@ -342,7 +392,7 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
 
     # --- cover letter --------------------------------------------------
     for p in ("cover_letter.tagged.md", "cover_letter.md", "cover_letter.json",
-              "cover_letter.typ", "cover_letter.pdf"):
+              "cover_letter.typ", "cover_letter.tex", "cover_letter.pdf"):
         (d / p).unlink(missing_ok=True)
     if content["cover_letter"]:
         tagged = [f"# Cover letter: {job['title']}, {job['company']}", ""]
@@ -352,7 +402,8 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
         (d / "cover_letter.md").write_text("\n\n".join(clean) + "\n")
         (d / "cover_letter.json").write_text(core.dumps({
             "person": resume_json["person"], "company": job["company"],
-            "title": job["title"], "date": core.today(), "paragraphs": clean}))
+            "title": job["title"], "req_id": job["req_id"] or "", "location": job["location"] or "",
+            "date": core.today(), "layout": resume_json["layout"], "paragraphs": clean}))
         shutil.copy(core.TEMPLATES / "cover_letter.typ", d / "cover_letter.typ")
 
     # --- answers -------------------------------------------------------
@@ -383,6 +434,8 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
     diff = difflib.unified_diff(master, tailored, "master (profile.yaml)", "tailored", lineterm="")
     (d / "changes.diff").write_text("\n".join(diff) + "\n")
     (d / "rationale.md").write_text(content["rationale"] + "\n")
+    from . import bank
+    (d / "wording.md").write_text(bank.render_status(bank.status(content, bank.load(profile))))
     return d
 
 
@@ -433,6 +486,14 @@ def render(d: Path) -> list[Path]:
             note.write_text("No LaTeX engine is installed, so resume.pdf is the Typst fallback "
                             "(used for checks). Compile resume.tex on Overleaf, or install "
                             "tectonic / texlive, then re-run the packet.\n")
+    if meta.get("format") == "latex" and (d / "cover_letter.json").exists():
+        from . import latex
+        tex = latex.render_cover_tex(json.loads((d / "cover_letter.json").read_text()),
+                                     d / "cover_letter.tex")
+        pdf = latex.compile_pdf(tex)
+        if pdf:  # same typeface and header as the resume; Typst is only the fallback
+            pdfs.append(pdf)
+            (d / "cover_letter.typ").unlink(missing_ok=True)
     for name in ("resume.typ", "cover_letter.typ"):
         if (d / name).exists():
             try:
@@ -451,6 +512,8 @@ def build(conn, job_id: str, feedback: list[str] | None = None, version: int = 1
     content = enforce(packet, profile, job_id, parsed.get("must_have", []),
                       job["raw_text"] + " " + " ".join(parsed.get("keywords", [])))
     content["cover_letter"] = unslop(content["cover_letter"], profile)
+    if content["cover_letter"] and not wants_cover_letter(parsed, profile):
+        content["cover_letter"] = []  # not requested and not wanted: do not send one
     pages, why = decide_pages(job, parsed, profile)
     d = write_packet(job, content, profile, version, pages, why)
     render(d)

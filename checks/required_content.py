@@ -34,8 +34,14 @@ def check(d: Path) -> list[str]:
                 label = project.get('heading') or project.get('ref_id') or 'unnamed project'
                 bad.append(f'{label} has {len(bullets)} distinct bullets; candidate requires at least {minimum_bullets}')
     letter = d / 'cover_letter.md'
-    if parsed.get('cover_letter_requested') and (not letter.exists() or not letter.read_text().strip()):
-        bad.append('posting requests a cover letter, but the packet has none')
+    from agents.tailor import wants_cover_letter
+    if wants_cover_letter(parsed, {'preferences': prefs}) and (
+            not letter.exists() or not letter.read_text().strip()):
+        bad.append('a cover letter is required (posting request or preferences.cover_letter), '
+                   'but the packet has none')
+    if letter.exists() and info.get('company') and core.normalize(info['company']) not in core.normalize(
+            letter.read_text()):
+        bad.append(f"cover letter never names the company: {info['company']}")
     answers = d / 'answers.tagged.md'
     present = {core.normalize(line.removeprefix('## Q:').strip())
                for line in (answers.read_text().splitlines() if answers.exists() else [])
