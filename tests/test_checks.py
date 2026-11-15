@@ -22,7 +22,7 @@ def good_packet() -> TailoredPacket:
                 {"text": "Trained VIO networks (vision-only, IMU-only, fusion) on an HPC cluster",
                  "fact_ids": ["F002"]}]},
             {"ref_id": "P001", "bullets": [
-                {"text": "Designed a learned 11×11 coded aperture trained jointly with a CNN "
+                {"text": "Designed a learned 11×11 depth-refinement kernel trained jointly with a CNN "
                          "depth classifier", "fact_ids": ["F001"]},
                 {"text": "Smuggled claim from another entry", "fact_ids": ["F003"]}]}],
         "skills": ["PyTorch", "ROS 2", "CUDA", "Fortran"],

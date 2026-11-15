@@ -112,11 +112,11 @@ def test_latex_cover_letter_matches_resume_header_without_bold_metrics(tmp_path)
                          "links": {"github": "https://github.com/x"}},
               "company": "R&D Robotics", "title": "Perception Engineer", "location": "Boston, MA",
               "date": "2026-11-14", "layout": {"font_family": "charter"},
-              "paragraphs": ["Cut error by 41.92% on 4,519 windows.", "Second_paragraph."]}
+              "paragraphs": ["Cut error by 12.5% on 1,200 windows.", "Second_paragraph."]}
     tex = latex.render_cover_tex(letter, tmp_path / "cover_letter.tex").read_text()
     assert r"Dear R\&D Robotics Hiring Team," in tex
     assert "November 14, 2026" in tex and r"\textbf{Re: Perception Engineer}" in tex
-    assert r"41.92\%" in tex and r"\textbf{41.92\%}" not in tex
+    assert r"12.5\%" in tex and r"\textbf{12.5\%}" not in tex
     assert r"Second\_paragraph." in tex and r"\href{https://github.com/x}{GitHub}" in tex
     assert "XCharter" in tex
 
@@ -174,3 +174,9 @@ def test_skill_names_do_not_break_across_lines(tmp_path):
               "skills": [{"category": "Perception", "items": ["Grounding DINO", "ROS 2", "C++17"]}]}
     tex = latex.render_tex(resume, tmp_path / "resume.tex").read_text()
     assert r"\textbf{Perception:} Grounding~DINO, ROS~2, C++17\par" in tex
+
+
+def test_lone_present_is_not_shown_as_a_project_date():
+    assert tailor.dates({"start": None, "end": "present"}) == ""
+    assert tailor.dates({"start": "2026-01", "end": "present"}) == "Jan 2026 – Present"
+    assert tailor.dates({"start": None, "end": "2025"}) == "2025"

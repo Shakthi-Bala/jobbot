@@ -15,7 +15,7 @@ def test_mentions_handles_symbols_and_variants():
     assert ats.mentions("C++", "Python, C++, Rust")
     assert not ats.mentions("C++", "Python and C programming")
     assert ats.mentions("ROS 2", "built ROS2 nodes")
-    assert ats.mentions("Sim-to-Real", "sim to real transfer on a UR16e")
+    assert ats.mentions("Sim-to-Real", "sim to real transfer on a robot arm")
     assert ats.mentions("IsaacLab", "trained in NVIDIA Isaac Lab")
     assert not ats.mentions("RL", "real world data")
 
@@ -82,7 +82,7 @@ MASTER = {
                   "fact_ids": ["F003"], "families": ["rl", "perception"], "priority": 1}],
         "P002": [{"text": "Trained visual-inertial odometry networks on an HPC cluster",
                   "fact_ids": ["F002"], "families": ["rl"], "priority": 1}],
-        "P001": [{"text": "Designed a learned 11×11 coded aperture with a CNN depth classifier",
+        "P001": [{"text": "Designed a learned 11×11 depth-refinement kernel with a CNN depth classifier",
                   "fact_ids": ["F001"], "families": ["perception"], "priority": 1}],
     },
 }

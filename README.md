@@ -385,8 +385,8 @@ education:
 
 facts:                                # every claim the agents may use
   - id: F001
-    source: project:coded-aperture    # where it came from
-    text: "Designed a learned 11×11 coded aperture jointly trained with a CNN depth classifier"
+    source: project:mono-depth    # where it came from
+    text: "Designed a learned 11×11 depth-refinement kernel jointly trained with a CNN depth classifier"
     metrics: {}
     evidence: "repo link / figure / paper"
     can_demo: true
@@ -406,7 +406,7 @@ experience:
 
 projects:
   - id: P001
-    name: "Flapping-wing drone autonomy"
+    name: "Aerial robot autonomy"
     facts: [F010, F011]
     links: {repo: "...", video: "..."}
 
@@ -753,6 +753,10 @@ A page that passed review should not be re-derived from raw facts for the next j
 1. **Approved wording.** `python jobbot.py approve JOB_ID` (or `mark-applied`) copies that packet's bullets into `data/approved_bullets.yaml` (private, gitignored). Every later draft receives them as the default text for their entries; the writer selects and orders them, and writes new bullets only for needs they do not cover. A banked bullet is ignored as soon as its fact IDs stop belonging to its entry. Each packet's `wording.md` separates reused wording from new wording, so you read the new claims first.
 2. **Layout as code.** The LaTeX template, `resume_*` preferences and `page_layout` check fix the look: LaTeX build required, one full page, 11-point body. An overflowing or under-filled page fails with an estimate of the lines to cut or add, and the writer revises content, never type size. Install a LaTeX engine where `agents/latex.py` finds it (`~/.local/bin/tectonic` works without root).
 3. **Per-posting skills and letter.** The writer returns `skill_groups` (at most four rows, the posting's priority first); code only keeps names that are evidenced in the profile. The cover letter is rendered from `templates/cover_letter.tex.j2` with the resume's header and follows the four-paragraph structure in `skills/tailor/SKILL.md`.
+
+### Keeping personal details out of git
+
+`data/profile.yaml`, the approved-wording bank, `out/` and uploaded reports are gitignored. `python jobbot.py privacy` checks the other direction: it reads your private profile (name, email, phone, city, links and handles, schools, thesis titles, labs, employers, referees) and fails if any of it appears in a file git tracks, naming the file and line without echoing the value. `python jobbot.py privacy --install-hook` runs it before every `git push`. Examples and tests use invented people and numbers; keep them that way. The scan covers file contents, not commit author fields: set `git config user.email` to your host's no-reply address if you do not want your address in the history.
 
 The bank holds wording, not evidence. A role family whose projects are missing from `profile.yaml` still gets a thin page: add the project and its facts first.
 

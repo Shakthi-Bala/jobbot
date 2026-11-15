@@ -34,8 +34,8 @@ education:
 
 facts:
   - id: F001
-    source: project:coded-aperture
-    text: "Designed a learned 11×11 coded aperture jointly trained with a CNN depth classifier"
+    source: project:mono-depth
+    text: "Designed a learned 11×11 depth-refinement kernel jointly trained with a CNN depth classifier"
     metrics: {}
     evidence: "repo link / figure / paper"
     can_demo: true
@@ -64,7 +64,7 @@ experience:
 
 projects:
   - id: P001
-    name: "Coded-aperture depth estimation"
+    name: "Monocular depth estimation"
     start: "2025-09"
     end: "2026-05"
     facts: [F001]

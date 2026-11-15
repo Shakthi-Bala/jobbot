@@ -31,6 +31,8 @@ def fmt_month(value) -> str:
 
 def dates(entry: dict) -> str:
     start, end = fmt_month(entry.get("start")), fmt_month(entry.get("end"))
+    if not start and end.lower() == "present":
+        return ""  # a lone "Present" beside a heading says nothing and looks like an error
     return f"{start} – {end}" if start and end else start or end or str(entry.get("dates", ""))
 
 

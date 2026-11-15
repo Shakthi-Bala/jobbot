@@ -21,6 +21,7 @@
     python jobbot.py tasks [--check]           manual mode: AI steps waiting for Claude
     python jobbot.py master [--draft] [--family F]   master resume; F = perception|rl|robotics_swe|ml
     python jobbot.py sheet                     refresh data/applications.xlsx (keeps your Applied?/Notes)
+    python jobbot.py privacy [--install-hook]  refuse to push if tracked files contain your personal details
 
 Manual mode (models.yaml `mode: manual`) uses no API key: each AI step is written to
 out/tasks/<key>.task.md, Claude (in Claude Code) writes <key>.answer.json, and you
@@ -219,6 +220,18 @@ def cmd_sheet(_):
         print(f"  recorded as applied (from the sheet): {jid}")
 
 
+def cmd_privacy(a):
+    from agents import privacy
+    if a.install_hook:
+        print(f"installed {privacy.install_hook()}: every `git push` now runs the scan")
+    problems = privacy.run()
+    for p in problems:
+        print("  -", p)
+    print("no personal details in tracked files" if not problems
+          else f"{len(problems)} line(s) to clean before pushing")
+    sys.exit(1 if problems else 0)
+
+
 def cmd_tasks(a):
     from agents import schemas
     d = core.tasks_dir()
@@ -298,6 +311,8 @@ def main(argv=None):
     s.add_argument("--draft", action="store_true", help="(re)write data/master_resume.yaml")
     s.add_argument("--family", default="full",
                    choices=["full", "all", "perception", "rl", "robotics_swe", "ml"])
+    s = sub.add_parser("privacy"); s.set_defaults(fn=cmd_privacy)
+    s.add_argument("--install-hook", action="store_true", help="scan before every git push")
     s = sub.add_parser("tasks"); s.set_defaults(fn=cmd_tasks)
     s.add_argument("--check", action="store_true")
 
