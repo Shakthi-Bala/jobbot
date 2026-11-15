@@ -160,7 +160,7 @@
 ((* if not skills_last *))
     \section{((( skills_title )))}
 ((* for g in skills *))
-    \textbf{((( g.category ))):} ((( g.names | join(', ') )))\par
+    \textbf{((( g.category ))):} ((( g.names_tex )))\par
 ((* endfor *))
 ((* if courses and not courses_in_education *))
     \textbf{Courses:} ((( courses | join(', ') )))\par
@@ -217,7 +217,7 @@
 ((* if skills_last *))
     \section{((( skills_title )))}
 ((* for g in skills *))
-    \textbf{((( g.category ))):} ((( g.names | join(', ') )))\par
+    \textbf{((( g.category ))):} ((( g.names_tex )))\par
 ((* endfor *))
 ((* if courses and not courses_in_education *))
     \textbf{Courses:} ((( courses | join(', ') )))\par

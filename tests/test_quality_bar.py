@@ -159,3 +159,18 @@ def test_force_builds_a_skipped_posting_but_never_a_blocked_one(job, monkeypatch
     conn.commit()
     core.set_status(conn, job["id"], "scored")
     assert packet.build(job["id"], skip_review=True, offline=True, force=True)["status"] == "blocked"
+
+
+def test_cover_letter_address_uses_a_clean_city_or_nothing():
+    assert latex._city("Onsite- Salem, OR") == "Salem, OR"
+    assert latex._city("San Jose, CA") == "San Jose, CA"
+    assert latex._city("San Jose, CA; Boston, MA") == ""
+    assert latex._city("Remote") == "" and latex._city("") == ""
+
+
+def test_skill_names_do_not_break_across_lines(tmp_path):
+    resume = {"person": {"name": "A B", "email": "a@b.c", "phone": "", "location": "", "links": {}},
+              "education": [], "experience": [], "projects": [],
+              "skills": [{"category": "Perception", "items": ["Grounding DINO", "ROS 2", "C++17"]}]}
+    tex = latex.render_tex(resume, tmp_path / "resume.tex").read_text()
+    assert r"\textbf{Perception:} Grounding~DINO, ROS~2, C++17\par" in tex

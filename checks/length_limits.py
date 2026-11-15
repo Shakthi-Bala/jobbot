@@ -26,7 +26,12 @@ def check(d: Path) -> list[str]:
         limit = 1 if str(limit) == "auto" else int(limit)
         pages = pdf_pages(pdf)
         if pages > limit:
-            bad.append(f"resume is {pages} pages; limit {limit}")
+            from pypdf import PdfReader
+            spill = sum(1 for page in PdfReader(str(pdf)).pages[limit:]
+                        for line in (page.extract_text() or "").splitlines() if line.strip())
+            bad.append(f"resume is {pages} pages; limit {limit}. About {spill} line(s) spill past "
+                       f"page {limit}: cut at least that many rendered lines (shorten two-line "
+                       "bullets to one, drop the weakest bullet or a skills row); keep type size")
     cl = d / "cover_letter.md"
     if cl.exists():
         n, limit = words(cl.read_text()), prefs.get("cover_letter_max_words", 300)

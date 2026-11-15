@@ -120,7 +120,9 @@ def context(resume: dict, pages: int = 1, show_summary: bool = False) -> dict:
         "summary": resume.get("summary") if show_summary else "",
         "education": [{"school": e["school"], "degree": e["degree"], "dates": e["dates"],
                        "gpa": e.get("gpa")} for e in resume.get("education", [])],
-        "skills": [{"category": CATEGORY_LABELS.get(g["category"], g["category"]), "names": g["items"]}
+        # A skill name never breaks across lines ("Grounding / DINO").
+        "skills": [{"category": CATEGORY_LABELS.get(g["category"], g["category"]), "names": g["items"],
+                    "names_tex": Raw(", ".join(escape(n).replace(" ", "~") for n in g["items"]))}
                    for g in resume.get("skills", [])],
         "courses": resume.get("courses", []),
         "experience_title": (("Research Experience" if research else "Experience")
@@ -155,9 +157,24 @@ def render_cover_tex(letter: dict, out: Path) -> Path:
     out.write_text(_env().get_template(COVER_TEMPLATE).render(
         name=person["name"], contact=contact, font_family=font_family,
         date=_long_date(letter.get("date", "")), company=letter["company"],
-        location=letter.get("location", ""), title=letter["title"],
+        location=_city(letter.get("location", "")), title=letter["title"],
         paragraphs=[Raw(escape(p, emphasis=False)) for p in letter["paragraphs"]]))
     return out
+
+
+_CITY_RE = re.compile(r"(?:[A-Z][A-Za-z.'-]+ ?){1,3}, [A-Z]{2}\b")
+
+
+def _city(location: str) -> str:
+    """'Onsite- Salem, OR' -> 'Salem, OR'. Board-specific or multi-site text is left
+    out of the address block rather than printed raw."""
+    found = _CITY_RE.findall(location or "")
+    if len(found) != 1:
+        return ""
+    words = found[0].split()
+    while len(words) > 2 and words[0].rstrip("-").lower() in ("onsite", "hybrid", "remote", "location"):
+        words = words[1:]
+    return " ".join(words)
 
 
 def _long_date(iso: str) -> str:
