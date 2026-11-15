@@ -119,8 +119,8 @@ curl -s "https://api.ashbyhq.com/posting-api/job-board/COMPANY?includeCompensati
 | | |
 |---|---|
 | **Inputs** | A shortlisted job, its fit row, and `profile.yaml` |
-| **Does** | Selects and reorders resume bullets and rewords them to match the job's keywords. Drafts a cover letter only if the posting requests one or it clearly helps. Drafts answers to application questions |
-| **Produces** | `out/<Company>_<Role>/resume.pdf`, `resume.typ`, `cover_letter.md`, `answers.md`, and `changes.diff` (compared with the master) |
+| **Does** | Reads the posting for its real needs, selects entries against them, and starts from wording you already approved (`data/approved_bullets.yaml`); it writes new bullets only where no approved bullet covers a need. Chooses the Skills rows for this posting. Drafts a cover letter when the posting requests one or `preferences.cover_letter: always`. Drafts answers to application questions |
+| **Produces** | `out/<Company>_<Role>/resume.pdf` and `cover_letter.pdf` (same LaTeX typeface and header), `answers.md`, `wording.md` (approved vs new bullets), and `changes.diff` (compared with the master) |
 | **Guardrails** | Every line is tagged `[Fxxx]` until render. Unsupported answers become `[NEED INPUT: ...]`. One-page or two-page limit is set in your preferences |
 
 ### 4.4 Networking agent
@@ -233,7 +233,9 @@ Then fill in `data/profile.yaml`, `data/answers_bank.yaml` and `data/companies.y
 python jobbot.py add-jd jd.txt --company "Acme" --title "Perception Engineer"   # phase 1: paste a JD
 python jobbot.py packet JOB_ID          # tailor -> checks -> multi-model review -> ready_for_review
 python jobbot.py checks JOB_ID          # re-run the checks on a packet
-python jobbot.py mark-applied JOB_ID    # after YOU submit; records the resume hash
+python jobbot.py packet JOB_ID --force  # build even if fit said skip (never a blocked posting)
+python jobbot.py approve JOB_ID         # keep this packet's bullet wording as the default for later jobs
+python jobbot.py mark-applied JOB_ID    # after YOU submit; records the resume hash, also approves its wording
 python jobbot.py outreach JOB_ID        # contacts + drafts; then mark-sent CONTACT_ID after you send
 python jobbot.py followups --draft      # due follow-ups, with draft nudges
 python jobbot.py outcome JOB_ID interview --note "..."
@@ -568,7 +570,8 @@ Every check exits `0` on pass and `1` on fail, printing the offending lines.
 | `req_match.py` | Company, title, and req ID in documents match the live posting |
 | `ats_parse.py` | `pdftotext` output contains all section headers, contact info, and the top keywords in reading order |
 | `banned_phrases.py` | No phrase from `preferences.banned_phrases` |
-| `length_limits.py` | Page count and word counts are within limits |
+| `length_limits.py` | Page count and word counts are within limits; reports how many lines spill past the page; cover letter is one page and above `cover_letter_min_words` |
+| `page_layout.py` | The LaTeX build was used (not the Typst fallback), and a one-page resume fills its page (`resume_max_bottom_blank_in`) |
 | `consistency.py` | Dates, titles, and names match across resume, letter, and answers |
 | `injection_scan.py` | Flags posting text that addresses AI ("ignore previous instructions", hidden white text) |
 | `contact_sources.py` | Each contact has ≥2 sources that agree |
@@ -737,7 +740,21 @@ preferences:
   resume_skills_last: true  # show demonstrated experience/projects before skills
   resume_graduation_only: true
   resume_auto_add_skills: false  # keep the writer’s selected skills instead of adding every posting match
+  resume_max_bottom_blank_in: 1.6  # one-page resume may leave at most this much empty page at the bottom
+  cover_letter: always       # always | requested (default: only when the posting asks)
+  cover_letter_min_words: 200
+  cover_letter_max_words: 300
 ```
+
+### The same quality for every posting
+
+A page that passed review should not be re-derived from raw facts for the next job. Three mechanisms carry it over:
+
+1. **Approved wording.** `python jobbot.py approve JOB_ID` (or `mark-applied`) copies that packet's bullets into `data/approved_bullets.yaml` (private, gitignored). Every later draft receives them as the default text for their entries; the writer selects and orders them, and writes new bullets only for needs they do not cover. A banked bullet is ignored as soon as its fact IDs stop belonging to its entry. Each packet's `wording.md` separates reused wording from new wording, so you read the new claims first.
+2. **Layout as code.** The LaTeX template, `resume_*` preferences and `page_layout` check fix the look: LaTeX build required, one full page, 11-point body. An overflowing or under-filled page fails with an estimate of the lines to cut or add, and the writer revises content, never type size. Install a LaTeX engine where `agents/latex.py` finds it (`~/.local/bin/tectonic` works without root).
+3. **Per-posting skills and letter.** The writer returns `skill_groups` (at most four rows, the posting's priority first); code only keeps names that are evidenced in the profile. The cover letter is rendered from `templates/cover_letter.tex.j2` with the resume's header and follows the four-paragraph structure in `skills/tailor/SKILL.md`.
+
+The bank holds wording, not evidence. A role family whose projects are missing from `profile.yaml` still gets a thin page: add the project and its facts first.
 
 Inspect the rendered page before approving it. Technical checks establish provenance, parsing and completeness; recruiter-style scores are subjective editorial assessments, not an employer's ATS result or interview probability. An AI review must not be described as a human review.
 
