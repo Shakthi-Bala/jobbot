@@ -224,7 +224,8 @@ HOURS_PER_YEAR = 2080
 PAY_ORDER_SQL = "(j.comp_max IS NULL), j.comp_max DESC"   # unknown pay goes last
 
 _AMOUNT = r"\$\s?(\d[\d,]*(?:\.\d+)?)\s?([kK])?"
-_RANGE_RE = re.compile(_AMOUNT + r"\s*(?:USD)?\s*(?:-|–|—|to)\s*" + _AMOUNT)
+_RANGE_RE = re.compile(_AMOUNT + r"\s*(?:USD)?\s*(?:-|–|—|to)\s*"
+                       r"\$?\s?(\d[\d,]*(?:\.\d+)?)\s?([kK])?")
 
 
 def pay_band(comp_max: int | None) -> str:
@@ -248,6 +249,11 @@ def parse_pay_text(text: str) -> tuple[int, int] | None:
     lows, highs = [], []
     for m in _RANGE_RE.finditer(text or ""):
         lo, hi = _amount(m.group(1), m.group(2)), _amount(m.group(3), m.group(4))
+        # A shared K suffix/prefix applies to both small endpoints: $120-150K.
+        if m.group(4) and not m.group(2) and lo < 1000:
+            lo *= 1000
+        elif m.group(2) and not m.group(4) and hi < 1000:
+            hi *= 1000
         context = text[max(0, m.start() - 60): m.end() + 40].lower()
         if hi < 1000 and ("hour" in context or "/hr" in context or hi < 300):
             lo, hi = lo * HOURS_PER_YEAR, hi * HOURS_PER_YEAR

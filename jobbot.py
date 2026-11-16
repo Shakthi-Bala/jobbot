@@ -163,7 +163,11 @@ def _print_jobs(ids):
     for jid in ids:
         r = conn.execute("SELECT j.*, f.score FROM jobs j LEFT JOIN fit f ON f.job_id=j.id "
                          "WHERE j.id=?", (jid,)).fetchone()
-        pay = f"${r['comp_min'] // 1000}-{r['comp_max'] // 1000}K" if r["comp_max"] else "pay n/a"
+        if r['comp_max'] is not None:
+            pay = (f"${r['comp_min'] // 1000}-{r['comp_max'] // 1000}K"
+                   if r['comp_min'] is not None else f"up to ${r['comp_max'] // 1000}K")
+        else:
+            pay = "pay n/a"
         print(f"{r['id']}  {pay:<13} {r['status']:<16} {str(r['score'] or ''):>3}  "
               f"{r['title']}, {r['company']}")
 
