@@ -38,11 +38,13 @@ def edit_draft(job_id: str, *, changes: str | None = None) -> None:
 def mark_applied(job_id: str) -> int | None:
     """Record exactly which resume version you sent (by hash)."""
     conn = core.connect()
-    core.get_job(conn, job_id)
+    job = core.get_job(conn, job_id)
     existing = conn.execute("SELECT doc_id FROM actions WHERE job_id=? AND action='applied' "
                             "ORDER BY id LIMIT 1", (job_id,)).fetchone()
     if existing:
         return existing["doc_id"]
+    if job['status'] in ('responded', 'interview', 'rejected', 'offer', 'closed'):
+        raise core.JobbotError(f"Job is already {job['status']}; marking applied cannot overwrite that outcome")
     doc = conn.execute(
         "SELECT * FROM documents WHERE job_id=? AND kind='resume' ORDER BY version DESC, id DESC LIMIT 1",
         (job_id,)).fetchone()
