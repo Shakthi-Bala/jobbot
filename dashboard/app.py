@@ -28,7 +28,7 @@ GAPS, CONTACTS, FUNNEL, LOG = 3, 4, 5, 6
 
 pending = core.pending_tasks()
 if pending:
-    st.info(f"{len(pending)} AI step(s) waiting for Claude in out/tasks/ (manual mode).")
+    st.info(f"{len(pending)} AI step(s) waiting for your coding assistant in out/tasks/ (manual mode).")
 
 # ------------------------------------------------------------------ Today
 with tabs[0]:
