@@ -5,13 +5,13 @@ stack that lets them fly without GPS.
 
 Required:
 - B.S. or M.S. in Robotics, Computer Science, or related field
-- Experience with visual or visual-inertial odometry
+- Experience with camera processing, segmentation, or point-cloud processing
 - Strong Python and PyTorch
 - Experience with ROS 2
 
 Preferred:
-- Depth estimation from monocular cameras
-- Deploying models on embedded hardware
+- Camera calibration and reproducible sensor-log validation
+- Evaluating perception models on held-out data
 
 This position requires access to export-controlled information; applicants must be
 U.S. persons as defined by ITAR.

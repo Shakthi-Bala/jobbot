@@ -46,20 +46,20 @@ def test_writer_sees_approved_wording_and_packet_lists_new_wording(packet, job, 
     def fake(role, system, user, schema, max_tokens=0):
         seen["user"] = user
         p = good_packet()
-        p.experience[0].bullets[0].text = "Ran a ROS 2 perception pipeline at 30 FPS on a Raspberry Pi 5"
+        p.experience[0].bullets[0].text = "Ran a ROS 2 perception pipeline at 24 FPS on a laptop CPU"
         return p
 
     monkeypatch.setattr(core, "llm_json", fake)
     drafted = tailor.draft(core.connect(), job["id"])
     assert "## Approved wording" in seen["user"]
-    assert "Built a ROS 2 perception pipeline running at 30 FPS" in seen["user"]
+    assert "Built a ROS 2 perception pipeline running at 24 FPS" in seen["user"]
     profile = core.load_profile()
     content = tailor.enforce(drafted, profile, job["id"], ["ROS 2"])
     d = tailor.write_packet(job, content, profile, version=2)
     wording = (d / "wording.md").read_text()
     new, reused = wording.split("## Approved wording reused")
     assert "Ran a ROS 2 perception pipeline" in new
-    assert "Trained VIO networks" in reused and "Trained VIO networks" not in new
+    assert "Trained a PyTorch segmentation baseline" in reused and "Trained a PyTorch segmentation baseline" not in new
 
 
 def test_skill_groups_label_and_order_but_never_add(job):
@@ -103,7 +103,7 @@ def test_cover_letter_must_name_the_company_and_meet_the_word_floor(packet):
     assert length_limits.check(packet) == []
     _set_prefs(cover_letter_min_words=180)
     assert any("under 180" in p for p in length_limits.check(packet))
-    (packet / "cover_letter.md").write_text("I trained VIO networks on an HPC cluster.\n")
+    (packet / "cover_letter.md").write_text("I trained a PyTorch segmentation baseline on synthetic images.\n")
     assert any("never names the company" in p for p in required_content.check(packet))
 
 

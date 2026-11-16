@@ -267,7 +267,7 @@ PyTorch, ROS 2
 = RESEARCH  EXPERIENCE
 Research Assistant
 = PROJECTS
-VIO networks
+Camera processing
 ''', 'utf-8'), output=str(pdf))
         return pdf
     monkeypatch.setattr(latex, 'compile_pdf', compile_pdf)

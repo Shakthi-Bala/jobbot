@@ -8,7 +8,7 @@
 
 #set document(title: d.person.name + " - Resume", author: d.person.name)
 #set page(paper: "us-letter", margin: (x: 0.55in, top: 0.45in, bottom: 0.4in))
-#set text(font: ("Lato", "DejaVu Sans"), size: 9.8pt, lang: "en", ligatures: false)
+#set text(font: ("Lato", "DejaVu Sans"), size: 11pt, lang: "en", ligatures: false)
 #set par(justify: false, leading: 0.48em, spacing: 0.5em)
 #set list(indent: 0.35em, body-indent: 0.45em, spacing: 0.36em, marker: [•])
 

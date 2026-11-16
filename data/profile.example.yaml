@@ -1,3 +1,4 @@
+# Entirely fictional demonstration data; no achievement describes a real candidate.
 # Copy to data/profile.yaml (gitignored) and replace everything with YOUR verified facts.
 # Rules: every claim the agents may use is a fact with an ID. A metric of null means
 # "no number" and can never appear in output. Give evidence, not adjectives.
@@ -29,28 +30,63 @@ education:
     start: "2025-08"
     end: "2027-05"
     gpa: null
-    thesis: {title: "Compact networks for monocular depth", summary: "...", status: "in progress"}
+    thesis: {title: "Synthetic warehouse scene understanding", summary: "Illustrative coursework", status: "in progress"}
     coursework: ["Computer Vision", "Deep Learning", "Robot Dynamics", "Motion Planning"]
 
 facts:
   - id: F001
-    source: project:mono-depth
-    text: "Designed a learned 11×11 depth-refinement kernel jointly trained with a CNN depth classifier"
-    metrics: {}
-    evidence: "repo link / figure / paper"
+    source: project:point-cloud
+    text: "Implemented an Open3D point-cloud filter and evaluated it on 120 synthetic warehouse scenes"
+    metrics: {scenes: 120}
+    evidence: "Fictional demo report"
     can_demo: true
   - id: F002
-    source: project:vio
-    text: "Trained visual-inertial odometry networks (vision-only, IMU-only, fusion) on an HPC cluster"
-    metrics: {drift_reduction_pct: null}   # fill with a real number or leave null
-    evidence: "repo"
+    source: project:segmentation
+    text: "Trained a PyTorch segmentation baseline, reaching 72% validation mIoU on held-out synthetic images"
+    metrics: {validation_miou_pct: 72, field_accuracy: null}
+    evidence: "Fictional demo evaluation"
     can_demo: true
   - id: F003
     source: experience:X001
-    text: "Built a ROS 2 perception pipeline running at 30 FPS on a Raspberry Pi 5"
-    metrics: {fps: 30}
-    evidence: "video"
+    text: "Built a ROS 2 perception pipeline processing simulated camera frames at 24 FPS on a laptop CPU"
+    metrics: {fps: 24}
+    evidence: "Fictional demo timing log"
     can_demo: true
+  - id: F004
+    source: project:point-cloud
+    text: "Compared voxel filtering and statistical outlier removal using point retention and runtime"
+    metrics: {}
+    evidence: "Fictional demo experiment notes"
+  - id: F005
+    source: project:segmentation
+    text: "Separated training and validation scenes and reported per-class confusion matrices"
+    metrics: {}
+    evidence: "Fictional demo split manifest"
+  - id: F006
+    source: experience:X001
+    text: "Added rosbag replay and timestamp checks to reproduce camera-processing failures"
+    metrics: {}
+    evidence: "Fictional demo test log"
+  - id: F007
+    source: project:sensor-logs
+    text: "Built a Python validator that detects dropped frames and non-monotonic camera timestamps"
+    metrics: {}
+    evidence: "Fictional demo notebook"
+  - id: F008
+    source: project:sensor-logs
+    text: "Generated synthetic sensor faults and added regression cases for each failure category"
+    metrics: {}
+    evidence: "Fictional demo test cases"
+  - id: F009
+    source: project:calibration
+    text: "Implemented OpenCV camera calibration using rendered checkerboards and known camera intrinsics"
+    metrics: {}
+    evidence: "Fictional demo calibration notebook"
+  - id: F010
+    source: project:calibration
+    text: "Compared recovered intrinsics against simulator ground truth and inspected reprojection residuals"
+    metrics: {}
+    evidence: "Fictional demo residual plots"
 
 experience:
   - id: X001
@@ -59,27 +95,41 @@ experience:
     location: "Boston, MA"
     start: "2025-09"
     end: "present"
-    facts: [F003]
+    facts: [F003, F006]
     verifier: "Advisor name (for your reference only, never sent)"
 
 projects:
   - id: P001
-    name: "Monocular depth estimation"
+    name: "Synthetic warehouse point-cloud filtering"
     start: "2025-09"
     end: "2026-05"
-    facts: [F001]
+    facts: [F001, F004]
     links: {repo: "", video: ""}
   - id: P002
-    name: "Learned visual-inertial odometry"
+    name: "Warehouse semantic segmentation"
     start: "2026-01"
     end: "2026-08"
-    facts: [F002]
+    facts: [F002, F005]
     links: {repo: ""}
+  - id: P003
+    name: "Sensor-log validation"
+    start: "2026-02"
+    end: "2026-04"
+    facts: [F007, F008]
+    links: {}
+  - id: P004
+    name: "Simulated camera calibration"
+    start: "2026-03"
+    end: "2026-05"
+    facts: [F009, F010]
+    links: {}
 
 skills:                               # strong | working | familiar, with evidence
   - {skill: "PyTorch", level: strong, evidence: [F001, F002]}
   - {skill: "ROS 2", level: working, evidence: [F003]}
   - {skill: "Python", level: strong, evidence: [F001, F002, F003]}
+  - {skill: "Open3D", level: working, evidence: [F001, F004]}
+  - {skill: "OpenCV", level: working, evidence: [F009, F010]}
   - {skill: "CUDA", level: familiar, evidence: []}
 
 targets:
