@@ -1,8 +1,16 @@
 {
   "docs/assets/jobbot-workflow.gif": {
     "sha256": [
-      "4f63b196444ab2a4560b7adba0adf553b61d58e670313231f9a10754d9a1c215"
+      "4f63b196444ab2a4560b7adba0adf553b61d58e670313231f9a10754d9a1c215",
+      "3fe1b6ef360fd9e9a215aef5689f39d954455561c70328851750543d109c30a5",
+      "4f7223f15c2b89af4443ced08a9b2a8b8b39291576bcc648ce26e8a3ac16dec6"
     ],
     "description": "Reviewed synthetic workflow illustration; no candidate data."
+  },
+  "docs/assets/example-resume.png": {
+    "sha256": [
+      "47589b06f2b52968bc1836c02d3f1693f40f976236b9b11d94830c2223cfe106"
+    ],
+    "description": "Reviewed fictional offline demo output."
   }
 }

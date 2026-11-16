@@ -1,0 +1,7 @@
+# Generated documents and media must never be line-normalized or merged as text.
+*.pdf binary
+*.png binary
+*.gif binary
+*.jpg binary
+*.jpeg binary
+*.webp binary

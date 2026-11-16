@@ -1,0 +1,13 @@
+{
+  "required_content": [],
+  "fact_ids": [],
+  "numbers_match": [],
+  "restriction_quotes": [],
+  "req_match": [],
+  "ats_parse": [],
+  "banned_phrases": [],
+  "length_limits": [],
+  "page_layout": [],
+  "consistency": [],
+  "injection_scan": []
+}

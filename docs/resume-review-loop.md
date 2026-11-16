@@ -2,11 +2,11 @@
 
 Use the advertised job and a fixed rubric, rather than adjusting the rubric to reach a requested score. Keep all candidate facts and output artifacts in ignored local directories.
 
-1. Render the resume, extract its text, and run document checks. On shared clusters, use `sbatch` for rendering and tests.
+1. Render the resume, extract its text, and run document checks.
 2. Give each independent reviewer the same PDF, actual page preview, text, job description, and verified facts. Keep other reviewers' reports and scores hidden until the round is complete.
 3. Use the panel rubric: ownership/engineering depth 30, visible impact/validation 30, role focus 20, communication 20. Review at the advertised experience level. A score is an AI editorial judgment, not an employer ATS result or hiring probability.
 4. Preserve each raw review. Record the exact PDF hash with the round, scores, rubric components, and technical check results.
-5. Merge supported edits, resolving conflicts without inventing evidence. Version the content and rendered artifact. Commit reusable source changes after their relevant checks pass; do not commit private resume files to satisfy a request for frequent commits.
+5. Merge supported edits, resolving conflicts without inventing evidence. Version the content and rendered artifact. Keep private application materials outside the public source tree.
 6. Have reviewers inspect and rescore the new rendered artifact. They may keep or lower their scores. Do not reuse ratings from a different PDF or round up a sub-threshold rating.
 7. Stop when each required reviewer meets the requested score and document checks pass. If the remaining barrier requires new evidence, retain the honest scores and identify that evidence rather than manufacture a passing rating.
 
