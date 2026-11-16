@@ -257,7 +257,7 @@ def parse_pay_text(text: str) -> tuple[int, int] | None:
     lows, highs = [], []
     for m in _RANGE_RE.finditer(text or ""):
         # Funding/valuation suffixes may apply to both ends ($10-20M).
-        if re.match(r"\s*(?:[mMbB]\b|million\b|billion\b)", text[m.end():], re.I):
+        if re.match(r"\s*(?:mm|mil|million|billion|[mb])\b(?![-/])", text[m.end():], re.I):
             continue
         lo, hi = _amount(m.group(1), m.group(2)), _amount(m.group(3), m.group(4))
         # A shared K suffix/prefix applies to both small endpoints: $120-150K.
@@ -266,7 +266,13 @@ def parse_pay_text(text: str) -> tuple[int, int] | None:
         elif m.group(2) and not m.group(4) and hi < 1000:
             hi *= 1000
         context = text[max(0, m.start() - 60): m.end() + 40].lower()
-        if hi < 1000 and ("hour" in context or "/hr" in context or hi < 300):
+        suffix = text[m.end():].lower().lstrip()
+        prefix = text[max(0, m.start() - 60):m.start()].lower()
+        monthly = (re.match(r"(?:usd\s*)?(?:per\s+month\b|/\s*(?:month|mo)\b|monthly\b)", suffix)
+                   or re.search(r"monthly(?:\s+base)?(?:\s+(?:salary|pay))?\s*:?\s*$", prefix))
+        if monthly:
+            lo, hi = lo * 12, hi * 12
+        elif hi < 1000 and ("hour" in context or "/hr" in context or hi < 300):
             lo, hi = lo * HOURS_PER_YEAR, hi * HOURS_PER_YEAR
         if 20_000 <= lo <= hi <= 2_000_000:
             lows.append(lo)
