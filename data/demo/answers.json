@@ -1,0 +1,284 @@
+{
+  "ParsedPosting": {
+    "must_have": [
+      "Python",
+      "PyTorch",
+      "ROS 2",
+      "camera processing"
+    ],
+    "nice_to_have": [
+      "camera calibration",
+      "sensor-log validation"
+    ],
+    "restrictions": [
+      {
+        "type": "export_control",
+        "quote": "applicants must be U.S. persons as defined by ITAR"
+      }
+    ],
+    "min_years_experience": null,
+    "deadline": null,
+    "employment_type": "full-time",
+    "cover_letter_requested": false,
+    "application_questions": [],
+    "keywords": [
+      "Python",
+      "PyTorch",
+      "ROS 2",
+      "segmentation",
+      "camera calibration"
+    ],
+    "injection_attempt": null
+  },
+  "FitResult": {
+    "score": 80,
+    "strengths": [
+      {
+        "text": "Synthetic example covers camera processing and segmentation",
+        "fact_ids": [
+          "F002",
+          "F003"
+        ]
+      }
+    ],
+    "gaps": [
+      "No verified deployment on production robots"
+    ],
+    "restrictions": [],
+    "unknowns": [
+      "Export-control eligibility needs confirmation"
+    ],
+    "questions": [
+      "Confirm eligibility before applying"
+    ],
+    "summary": "DEMO FIXTURE: a stored fit response, not a model assessment."
+  },
+  "TailoredPacket": {
+    "summary": {
+      "text": "",
+      "fact_ids": []
+    },
+    "experience": [
+      {
+        "ref_id": "X001",
+        "bullets": [
+          {
+            "text": "Built a ROS 2 perception pipeline processing simulated camera frames at 24 FPS on a laptop CPU",
+            "fact_ids": [
+              "F003"
+            ]
+          },
+          {
+            "text": "Added rosbag replay and timestamp checks to reproduce camera-processing failures",
+            "fact_ids": [
+              "F006"
+            ]
+          }
+        ]
+      }
+    ],
+    "projects": [
+      {
+        "ref_id": "P001",
+        "bullets": [
+          {
+            "text": "Implemented an Open3D point-cloud filter and evaluated it on 120 synthetic warehouse scenes",
+            "fact_ids": [
+              "F001"
+            ]
+          },
+          {
+            "text": "Compared voxel filtering and statistical outlier removal using point retention and runtime",
+            "fact_ids": [
+              "F004"
+            ]
+          }
+        ]
+      },
+      {
+        "ref_id": "P002",
+        "bullets": [
+          {
+            "text": "Trained a PyTorch segmentation baseline, reaching 72% validation mIoU on held-out synthetic images",
+            "fact_ids": [
+              "F002"
+            ]
+          },
+          {
+            "text": "Separated training and validation scenes and reported per-class confusion matrices",
+            "fact_ids": [
+              "F005"
+            ]
+          }
+        ]
+      },
+      {
+        "ref_id": "P003",
+        "bullets": [
+          {
+            "text": "Built a Python validator that detects dropped frames and non-monotonic camera timestamps",
+            "fact_ids": [
+              "F007"
+            ]
+          },
+          {
+            "text": "Generated synthetic sensor faults and added regression cases for each failure category",
+            "fact_ids": [
+              "F008"
+            ]
+          }
+        ]
+      },
+      {
+        "ref_id": "P004",
+        "bullets": [
+          {
+            "text": "Implemented OpenCV camera calibration using rendered checkerboards and known camera intrinsics",
+            "fact_ids": [
+              "F009"
+            ]
+          },
+          {
+            "text": "Compared recovered intrinsics against simulator ground truth and inspected reprojection residuals",
+            "fact_ids": [
+              "F010"
+            ]
+          }
+        ]
+      }
+    ],
+    "skills": [
+      "Python",
+      "PyTorch",
+      "ROS 2",
+      "Open3D",
+      "OpenCV"
+    ],
+    "skill_groups": [
+      {
+        "category": "Software",
+        "skills": [
+          "Python",
+          "ROS 2"
+        ]
+      },
+      {
+        "category": "Perception",
+        "skills": [
+          "PyTorch",
+          "Open3D",
+          "OpenCV"
+        ]
+      }
+    ],
+    "cover_letter": [
+      {
+        "text": "I am applying for the Perception Engineer role at Example Robotics. My synthetic coursework example combines ROS 2 camera processing with PyTorch segmentation and point-cloud filtering.",
+        "fact_ids": [
+          "F001",
+          "F002",
+          "F003"
+        ]
+      },
+      {
+        "text": "I built a camera-processing pipeline and added rosbag replay and timestamp checks to reproduce failures. In related projects, I evaluated filtering on synthetic scenes and separated training and validation data for a segmentation baseline.",
+        "fact_ids": [
+          "F001",
+          "F002",
+          "F003",
+          "F005",
+          "F006"
+        ]
+      },
+      {
+        "text": "I would welcome a discussion about how these methods relate to your perception stack. My available evidence covers simulated inputs; deployment on production robots would require further validation.",
+        "fact_ids": [
+          "F001",
+          "F002",
+          "F003"
+        ]
+      }
+    ],
+    "answers": [],
+    "rationale": "Recorded offline demo fixture; all achievements are fictional."
+  },
+  "LeadJudgment": {
+    "findings": [],
+    "overall": "DEMO FIXTURE: stored review used to demonstrate the pipeline, not an actual assessment."
+  },
+  "ScreenDecision": {
+    "decision": "pass_to_human",
+    "score": 80,
+    "knockout_failures": [],
+    "missing_keywords": [],
+    "parsing_problems": [],
+    "reason": "DEMO FIXTURE: illustrates the screening report format; eligibility remains to be confirmed."
+  },
+  "InterviewDecision": {
+    "decision": "maybe",
+    "confidence": 60,
+    "reasons_for": [
+      "DEMO FIXTURE: camera processing and reproducible evaluation are visible."
+    ],
+    "reasons_against": [
+      "Only synthetic-data validation is described."
+    ],
+    "what_would_change_my_mind": [
+      "Evidence from a real robot."
+    ],
+    "interview_questions": [
+      "How were synthetic training and validation scenes separated?"
+    ]
+  },
+  "PersonaReview": {
+    "verdict": "maybe",
+    "score": 7.2,
+    "first_impression": "DEMO FIXTURE: fictional perception projects with explicit validation scope.",
+    "strongest": "Owned components and held-out evaluation are named.",
+    "weakest": "No production-robot validation.",
+    "lines_that_hurt": [],
+    "edits": [],
+    "rubric": null
+  },
+  "RevisionPlan": {
+    "keep": [
+      "Explicit ownership and validation conditions."
+    ],
+    "revisions": [],
+    "conflicts_resolved": [],
+    "needs_new_evidence": [
+      "Real-robot validation is outside this fictional example."
+    ],
+    "bulletproof": false
+  },
+  "ParagraphList": {
+    "paragraphs": [
+      {
+        "text": "I am applying for the Perception Engineer role at Example Robotics. My synthetic coursework example combines ROS 2 camera processing with PyTorch segmentation and point-cloud filtering.",
+        "fact_ids": [
+          "F001",
+          "F002",
+          "F003"
+        ]
+      },
+      {
+        "text": "I built a camera-processing pipeline and added rosbag replay and timestamp checks to reproduce failures. In related projects, I evaluated filtering on synthetic scenes and separated training and validation data for a segmentation baseline.",
+        "fact_ids": [
+          "F001",
+          "F002",
+          "F003",
+          "F005",
+          "F006"
+        ]
+      },
+      {
+        "text": "I would welcome a discussion about how these methods relate to your perception stack. My available evidence covers simulated inputs; deployment on production robots would require further validation.",
+        "fact_ids": [
+          "F001",
+          "F002",
+          "F003"
+        ]
+      }
+    ]
+  }
+}

@@ -49,6 +49,11 @@ def cmd_init(_):
     print(f"tracker ready at {core.DB_PATH.relative_to(core.ROOT)}")
 
 
+def cmd_demo(_):
+    from agents import demo
+    demo.run()
+
+
 def cmd_discover(a):
     from agents import discover
     ids = discover.run(web=not a.no_web, alerts=not a.no_alerts)
@@ -289,6 +294,7 @@ def main(argv=None):
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("init").set_defaults(fn=cmd_init)
+    sub.add_parser('demo', help='run an isolated offline example with recorded fixture answers').set_defaults(fn=cmd_demo)
     sub.add_parser('gmail-auth', help='authorize Gmail interactively before scheduled discovery').set_defaults(fn=cmd_gmail_auth)
     s = sub.add_parser("discover"); s.set_defaults(fn=cmd_discover)
     s.add_argument("--no-web", action="store_true"); s.add_argument("--no-alerts", action="store_true")
