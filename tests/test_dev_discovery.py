@@ -66,3 +66,31 @@ def test_bad_board_does_not_stop_other_companies(env, monkeypatch):
     ids = discover.poll_boards(core.connect(), {})
     assert len(ids) == 1
     assert core.get_job(core.connect(), ids[0])['company'] == 'Good'
+
+
+def test_rediscovery_reopens_only_automatic_closures(env):
+    conn = core.connect()
+    auto, manual = greenhouse(101, 'Boston'), greenhouse(102, 'Seattle')
+    ids = discover.upsert_jobs(conn, [auto, manual], {}, parse=False)
+    for jid in ids:
+        conn.execute("UPDATE jobs SET active=0,status='closed' WHERE id=?", (jid,))
+    core.record_action(conn, ids[1], 'me', 'closed', 'no longer pursuing')
+    discover.upsert_jobs(conn, [auto, manual], {}, parse=False)
+    assert core.get_job(conn, ids[0])['status'] == 'discovered'
+    assert core.get_job(conn, ids[0])['active'] == 1
+    assert core.get_job(conn, ids[1])['status'] == 'closed'
+
+
+def test_packet_can_recheck_an_automatically_closed_posting(env, monkeypatch):
+    from agents import packet
+    conn = core.connect()
+    job = greenhouse(101, 'Boston')
+    [jid] = discover.upsert_jobs(conn, [job], {}, parse=False)
+    conn.execute("UPDATE jobs SET active=0,status='closed' WHERE id=?", (jid,))
+    conn.commit()
+    monkeypatch.setattr(discover, 'fetch_by_url', lambda url: job)
+    monkeypatch.setenv('JOBBOT_MODE', 'manual')
+    with pytest.raises(core.ManualTaskPending):
+        packet.build(jid)
+    assert core.get_job(conn, jid)['active'] == 1
+    assert core.get_job(conn, jid)['status'] != 'closed'
