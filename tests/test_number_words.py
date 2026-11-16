@@ -64,3 +64,23 @@ def test_nonnumeric_idioms_do_not_fail_provenance(env, tmp_path, wording):
 def test_idioms_do_not_hide_nearby_quantities():
     assert numbers('one of twenty-one engineers used zero-copy at 24 FPS') == {21, 24}
     assert numbers('zero errors across one scene') == {0, 1}
+
+
+@pytest.mark.parametrize('text,value', [('24k frames', 24000), ('24 thousand frames', 24000),
+    ('$2M', 2000000), ('$2m', 2000000), ('a dozen', 12), ('two dozen', 24), ('tenfold', 10)])
+def test_scaled_and_multiplicative_numbers(text, value):
+    assert numbers(text) == {value}
+
+
+def test_money_is_not_distance_and_year_lists_are_separate():
+    assert quantities('$2M') == {(2000000, 'usd')}
+    assert quantities('2 m') == {(2, 'm')}
+    assert numbers('2023,2024') == {2023, 2024}
+    assert numbers('1,234,567') == {1234567}
+
+
+@pytest.mark.parametrize('claim', ['Processed 24k frames', 'Processed 24 thousand frames',
+    'Supported a dozen customers', 'Served hundreds of users', 'Improved tenfold'])
+def test_expanded_quantities_cannot_borrow_unscaled_evidence(env, tmp_path, claim):
+    (tmp_path / 'resume.tagged.md').write_text(f'- {claim} [F003]')
+    assert numbers_match.check(tmp_path)

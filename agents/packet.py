@@ -151,12 +151,13 @@ def _build(conn, job_id: str, skip_review: bool, offline: bool, skip_panel: bool
 
         if state["phase"] == "checks":
             results = run_all.run(d, offline=offline)
-            state.update(checks=results, blocking=run_all.failures(results), phase="review")
+            state.update(checks=results, blocking=run_all.failures(results), blocking_source="checks", phase="review")
             _save(state_path, state)
 
         if state["phase"] == "review":
             if not state["blocking"] and not skip_review:
                 state["blocking"] = review.act_on(review.review(conn, job_id, d, state["checks"]))
+                state["blocking_source"] = "review"
                 core.set_status(conn, job_id, "reviewed")
             state["phase"] = "decide"
             _save(state_path, state)
@@ -166,7 +167,8 @@ def _build(conn, job_id: str, skip_review: bool, offline: bool, skip_panel: bool
                 if state["fix_loops"] >= MAX_FIX_LOOPS:
                     break
                 state.update(fix_loops=state["fix_loops"] + 1,
-                             feedback=state["blocking"], phase="draft")
+                             feedback=[{"source": state["blocking_source"], "text": f}
+                                       for f in state["blocking"]], phase="draft")
                 _save(state_path, state)
                 continue
             if skip_review or skip_panel:
@@ -183,11 +185,14 @@ def _build(conn, job_id: str, skip_review: bool, offline: bool, skip_panel: bool
                 state["blocking"] = ["Panel target unmet; new evidence required: " + gap
                                      for gap in evidence_gaps]
                 break  # re-rendering identical claims cannot supply a missing experiment
+            if not verdict["revisions"]:
+                state['blocking'] = ['Review panel did not approve and supplied no actionable revision']
+                break
             if state["panel_round"] >= MAX_PANEL_ROUNDS:
                 state["blocking"] = ["Review panel still requests revisions: " + r
                                      for r in verdict["revisions"]] or ["Review panel did not approve"]
                 break
-            state.update(feedback=[f"Review panel (round {state['panel_round']}): {r}"
+            state.update(feedback=[{"source": "panel", "text": r}
                                    for r in verdict["revisions"]], phase="draft")
             _save(state_path, state)
 

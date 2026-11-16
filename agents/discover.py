@@ -78,6 +78,17 @@ def _pay_from_text(text: str) -> dict:
     return _pay(*found, f"${found[0]:,} - ${found[1]:,} (from posting text)", "text")
 
 
+def _board_pay(lo, hi, interval, label, posting):
+    """Reject impossible/placeholder board ranges before preferring them to prose."""
+    import math
+    valid = lambda v: type(v) in (int, float) and math.isfinite(v)
+    if not valid(hi) or hi <= 0 or (lo is not None and (not valid(lo) or lo < 0 or lo > hi)):
+        return _pay_from_text(posting)
+    interval = (interval or '').lower()
+    mult = core.HOURS_PER_YEAR if 'hour' in interval else 12 if 'month' in interval else 1
+    return _pay(lo * mult if lo is not None else None, hi * mult, label, 'ats')
+
+
 def _greenhouse_job(slug: str, j: dict) -> dict:
     content = html.unescape(j.get("content") or "")
     text = html_to_text(content)
@@ -107,9 +118,8 @@ def _lever_job(slug: str, j: dict) -> dict:
     raw_text = "\n\n".join(p for p in parts if p).strip()
     sr = j.get("salaryRange") or {}
     if sr.get("max") is not None and sr.get("currency", "USD") == "USD":
-        mult = core.HOURS_PER_YEAR if "hour" in (sr.get("interval") or "") else 1
-        pay = _pay(sr["min"] * mult if sr.get("min") is not None else None, sr["max"] * mult,
-                   f"${sr.get('min')}-${sr['max']} {sr.get('interval', '')}", "ats")
+        pay = _board_pay(sr.get('min'), sr['max'], sr.get('interval'),
+                         f"{sr.get('min')}-{sr['max']} {sr.get('interval', '')}", raw_text)
     else:
         pay = _pay_from_text(raw_text)
     return pay | {
@@ -131,9 +141,8 @@ def _ashby_job(slug: str, j: dict) -> dict:
               and (c.get("currencyCode") or "USD") == "USD"]
     if salary:
         c = salary[0]
-        mult = core.HOURS_PER_YEAR if "HOUR" in (c.get("interval") or "") else 1
-        pay = _pay(c["minValue"] * mult if c.get("minValue") is not None else None, c["maxValue"] * mult,
-                   comp.get("compensationTierSummary"), "ats")
+        pay = _board_pay(c.get('minValue'), c['maxValue'], c.get('interval'),
+                         comp.get('compensationTierSummary'), raw_text)
     else:
         pay = _pay_from_text(raw_text)
     return pay | {
