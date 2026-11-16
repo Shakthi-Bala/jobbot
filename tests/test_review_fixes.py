@@ -383,3 +383,17 @@ def test_dashboard_displays_posting_images_as_plain_text(packet, job):
     assert any(marker in text.value for text in app.text)
     assert not any(marker in item.value for item in app.markdown)
     assert len(app.get('imgs')) == 0
+
+
+@pytest.mark.parametrize('hidden', ['[F0[F003]02]', '[A:start_[F003]date]',
+                                    '[F0[F0[F003]03]02]'])
+def test_nested_inline_citations_cannot_launder_evidence(job, monkeypatch, hidden):
+    proposal = good_packet()
+    proposal.experience[0].bullets[0].text = f'Achieved 72% field accuracy {hidden}'
+    d = build_proposal(job, monkeypatch, proposal)
+    assert numbers_match.check(d)
+    tagged = (d / 'resume.tagged.md').read_text()
+    assert 'Achieved 72% field accuracy [F003]' in tagged
+    assert '[F002]' not in json.loads((d / 'resume.json').read_text())['experience'][0]['bullets'][0]
+    assert '[A:' not in pdf_text(d / 'resume.pdf')
+    assert core.strip_tags(core.strip_tags(hidden)) == core.strip_tags(hidden) == ''
