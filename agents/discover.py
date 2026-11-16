@@ -293,6 +293,13 @@ def posting_id(conn, job: dict) -> str:
     return core.job_id_for(job["company"], job["title"], job.get("location", ""), req_id)
 
 
+def may_reopen(conn, job_id: str) -> bool:
+    """Only automatically reopen closures without a recorded human outcome."""
+    return conn.execute("SELECT 1 FROM actions WHERE job_id=? AND action IN "
+                        "('applied','responded','interview','rejected','offer','closed') LIMIT 1",
+                        (job_id,)).fetchone() is None
+
+
 def upsert_jobs(conn, jobs: Iterable[dict], targets: dict, parse: bool = True,
                 min_pay: int = 0) -> list[str]:
     """Insert new matching jobs, refresh known ones. Returns new job IDs.
@@ -308,6 +315,7 @@ def upsert_jobs(conn, jobs: Iterable[dict], targets: dict, parse: bool = True,
         existing = conn.execute("SELECT * FROM jobs WHERE id=?", (jid,)).fetchone()
         if existing:
             changed = existing["raw_text"] != job["raw_text"]
+            reopened = existing['status'] == 'closed' and may_reopen(conn, jid)
             conn.execute(
                 "UPDATE jobs SET last_verified=?, active=1, url=COALESCE(?, url), "
                 "title=?, location=?, req_id=?, raw_text=?, raw_html=?, "
@@ -316,15 +324,17 @@ def upsert_jobs(conn, jobs: Iterable[dict], targets: dict, parse: bool = True,
                 "comp_source=COALESCE(?, comp_source) WHERE id=?",
                 (core.now(), job.get("url"), job["title"], job.get("location", ""), job.get("req_id"),
                  job["raw_text"], job.get("raw_html", ""), *comp, jid))
-            if changed:
+            if changed or reopened:
                 conn.execute("UPDATE jobs SET parsed_json=NULL, deadline=? WHERE id=?",
                              (job.get("deadline"), jid))
                 conn.execute("DELETE FROM fit WHERE job_id=?", (jid,))
-                if existing["status"] not in ("applied", "responded", "interview", "rejected",
-                                               "offer", "closed"):
+                if reopened or existing["status"] not in ("applied", "responded", "interview", "rejected",
+                                                           "offer", "closed"):
                     conn.execute("UPDATE jobs SET status='discovered' WHERE id=?", (jid,))
                 core.log_decision("discover", jid, "posting_changed",
                                   "stored posting refreshed; requirements and fit invalidated")
+                if reopened:
+                    core.log_decision('discover', jid, 'reopened', 'previously unavailable posting is live again')
             continue
         ok, reason = matches_targets(job, targets)
         if not ok:

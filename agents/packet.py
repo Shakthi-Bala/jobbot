@@ -75,18 +75,21 @@ def build(job_id: str, skip_review: bool = False, offline: bool = False,
 def _build(conn, job_id: str, skip_review: bool, offline: bool, skip_panel: bool,
            force: bool = False) -> dict:
     job = core.get_job(conn, job_id)
-    if job["status"] in RECORDED_STATUSES:
+    automatic_closure = job['status'] == 'closed' and discover.may_reopen(conn, job_id)
+    if job["status"] in RECORDED_STATUSES and not automatic_closure:
         raise core.JobbotError(f"Job {job_id} is already {job['status']}; its application history is retained")
-    if not job["active"]:
-        return _stop(conn, job_id, "closed", "posting is inactive")
-
     if not offline and job["url"] and discover.parse_ats_url(job["url"]):
         live = discover.fetch_by_url(job["url"])
         if live is None:
             conn.execute("UPDATE jobs SET active=0 WHERE id=?", (job_id,))
             return _stop(conn, job_id, "closed", "posting is no longer live")
         if job["req_id"] and live["req_id"] != job["req_id"]:
-            return _stop(conn, job_id, "closed", "live requisition ID changed")
+            # A mismatch needs corrected metadata, not a permanent closure.
+            return _stop(conn, job_id, "needs_input", "live posting ID differs; re-import the correct posting")
+        if automatic_closure or not job['active']:
+            live['company'] = job['company']
+            discover.upsert_jobs(conn, [live], {}, parse=False)
+            job = core.get_job(conn, job_id)
         if live["raw_text"] != job["raw_text"]:
             conn.execute("UPDATE jobs SET raw_text=?, raw_html=?, parsed_json=NULL, deadline=NULL "
                          "WHERE id=?", (live["raw_text"], live.get("raw_html", ""), job_id))
@@ -95,6 +98,8 @@ def _build(conn, job_id: str, skip_review: bool, offline: bool, skip_panel: bool
         conn.commit()
         job = core.get_job(conn, job_id)
     else:
+        if not job['active'] or automatic_closure:
+            return _stop(conn, job_id, 'closed', 'posting is inactive; rediscover it or recheck its live URL')
         core.log_decision("packet", job_id, "unverified_source",
                           "offline mode or no supported ATS URL; live verification skipped")
 
