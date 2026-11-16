@@ -106,7 +106,7 @@ def _lever_job(slug: str, j: dict) -> dict:
     created = j.get("createdAt")
     raw_text = "\n\n".join(p for p in parts if p).strip()
     sr = j.get("salaryRange") or {}
-    if sr.get("max") and sr.get("currency", "USD") == "USD":
+    if sr.get("max") is not None and sr.get("currency", "USD") == "USD":
         mult = core.HOURS_PER_YEAR if "hour" in (sr.get("interval") or "") else 1
         pay = _pay(sr["min"] * mult if sr.get("min") is not None else None, sr["max"] * mult,
                    f"${sr.get('min')}-${sr['max']} {sr.get('interval', '')}", "ats")
@@ -127,12 +127,12 @@ def _ashby_job(slug: str, j: dict) -> dict:
     raw_text = j.get("descriptionPlain") or html_to_text(raw_html)
     comp = j.get("compensation") or {}
     salary = [c for c in comp.get("summaryComponents", [])
-              if c.get("compensationType") == "Salary" and c.get("maxValue")
+              if c.get("compensationType") == "Salary" and c.get("maxValue") is not None
               and (c.get("currencyCode") or "USD") == "USD"]
     if salary:
         c = salary[0]
         mult = core.HOURS_PER_YEAR if "HOUR" in (c.get("interval") or "") else 1
-        pay = _pay((c.get("minValue") or 0) * mult, c["maxValue"] * mult,
+        pay = _pay(c["minValue"] * mult if c.get("minValue") is not None else None, c["maxValue"] * mult,
                    comp.get("compensationTierSummary"), "ats")
     else:
         pay = _pay_from_text(raw_text)
@@ -350,7 +350,7 @@ def upsert_jobs(conn, jobs: Iterable[dict], targets: dict, parse: bool = True,
         ok, reason = matches_targets(job, targets)
         if not ok:
             continue  # not logged: most postings at a company are irrelevant
-        if min_pay and job.get("comp_max") and job["comp_max"] < min_pay:
+        if min_pay and job.get("comp_max") is not None and job["comp_max"] < min_pay:
             core.log_decision("discover", jid, "excluded",
                               f"pay tops out at ${job['comp_max']:,} (< ${min_pay:,} minimum)",
                               [job.get("url") or ""])
