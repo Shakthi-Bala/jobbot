@@ -57,6 +57,7 @@ COLUMNS = [
 COL = {key or header: i + 1 for i, (header, _, key) in enumerate(COLUMNS)}
 USER_KEYS = ("applied", "date_applied", "notes")
 FIRST_ROW = 6   # rows 1-4: title and legend, row 5: headers
+SAVED_EDITS_SHEET = "Saved edits"
 
 
 def _posted(value: str | None) -> date | None:
@@ -80,8 +81,15 @@ def read_user_edits(path: Path = PATH) -> dict[str, dict]:
     """Applied?/Date applied/Notes per Job ID from the existing sheet."""
     if not path.exists():
         return {}
-    ws = load_workbook(path)["Applications"]
+    wb = load_workbook(path)
     edits = {}
+    # Filtered rows retain their inputs in the workbook. Visible edits take precedence.
+    if SAVED_EDITS_SHEET in wb.sheetnames:
+        for job_id, applied, date_applied, notes in wb[SAVED_EDITS_SHEET].iter_rows(
+                min_row=2, max_col=4, values_only=True):
+            if job_id:
+                edits[str(job_id)] = dict(zip(USER_KEYS, (applied, date_applied, notes)))
+    ws = wb["Applications"]
     for row in range(FIRST_ROW, ws.max_row + 1):
         job_id = ws.cell(row, COL["job_id"]).value
         if not job_id:
@@ -338,7 +346,9 @@ def build(path: Path = PATH) -> dict:
     edits = read_user_edits(path)
     errors = {}
     recorded = apply_edits(conn, edits, errors)
-    rows = collect(conn, include_ids=edits)
+    # Only failed application recordings need to stay visible for correction.
+    # Merely having appeared in an older workbook must not defeat the status filter.
+    rows = collect(conn, include_ids=errors)
     wb = Workbook()
     ws = wb.active
     ws.title = "Applications"
@@ -346,6 +356,14 @@ def build(path: Path = PATH) -> dict:
     _gaps(wb.create_sheet("Gaps"), rows)
     _projects(wb.create_sheet("Projects"), rows)
     _summary(wb.create_sheet("Summary"), len(rows))
+    visible = {r["job_id"] for r in rows}
+    filtered_edits = {jid: e for jid, e in edits.items() if jid not in visible}
+    if filtered_edits:
+        saved = wb.create_sheet(SAVED_EDITS_SHEET)
+        saved.append(["job_id", *USER_KEYS])
+        for jid, e in sorted(filtered_edits.items()):
+            saved.append([jid, *(e.get(k) for k in USER_KEYS)])
+        saved.sheet_state = "hidden"
     path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(path)
     return {"path": path, "rows": len(rows), "recorded_applied": recorded, "errors": errors}

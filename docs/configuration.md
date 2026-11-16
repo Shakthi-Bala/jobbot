@@ -76,7 +76,7 @@ The panel's minimum score is an editorial gate. A high average cannot override a
 
 - **Gmail alerts:** use a read-only OAuth client, save credentials in ignored `data/credentials.json`, and run `python jobbot.py gmail-auth` interactively. Label alerts `jobbot/alerts`. Scheduled discovery only uses existing credentials and never opens a browser. Board discovery can run with `--no-alerts`.
 - **Discord:** set `DISCORD_WEBHOOK_URL` in the environment or ignored `.env` file. `python -m agents.notify --help` documents explicit updates and supported media attachments. Keep candidate data and credentials out of messages.
-- **Spreadsheet:** `python jobbot.py sheet` refreshes `data/applications.xlsx`. Review edits to application-status fields before refreshing; the integration can record entries marked as applied.
+- **Spreadsheet:** `python jobbot.py sheet` refreshes `data/applications.xlsx`. Review edits to application-status fields before refreshing; the integration can record entries marked as applied. Skipped, blocked, and closed rows disappear from the active sheet on refresh; their editable values remain in the hidden `Saved edits` worksheet and return if the job is reopened. A failed application recording stays visible for correction.
 - **Daily runs:** use `python run_daily.py --help` to control packet count and discovery sources. Manual mode queues tasks for your assistant; it cannot answer them unattended.
 
 Return to the [README](../README.md).

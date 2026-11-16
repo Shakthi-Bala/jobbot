@@ -397,7 +397,13 @@ def job_dir(job_id: str, conn: sqlite3.Connection | None = None, *, create: bool
 
 def strip_tags(text: str) -> str:
     """Remove [Fxxx] / [A:key] tags for the rendered, human-facing version."""
-    return ANY_TAG_RE.sub("", text)
+    # Removing an inner tag can expose another citation, e.g. [F0[F003]02].
+    # Normalize to a fixed point before either checks or rendering see prose.
+    while True:
+        clean = ANY_TAG_RE.sub("", text)
+        if clean == text:
+            return clean
+        text = clean
 
 
 def claim_text(text: str) -> str:

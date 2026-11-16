@@ -16,18 +16,63 @@ if str(ROOT) not in sys.path:
 from agents import core  # noqa: E402
 
 NUMBER_RE = re.compile(r"(?<![\w.])(?:\d[\d,]*(?:\.\d+)?|\.\d+)")
+# Cardinal words use the same representation in sources and generated prose.
+# Match valid compounds rather than adding unrelated adjacent words ("one two").
+_SMALL = "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen".split()
+_TENS = "twenty thirty forty fifty sixty seventy eighty ninety".split()
+_WORD_VALUES = {word: n for n, word in enumerate(_SMALL)}
+_WORD_VALUES.update({word: 20 + 10 * n for n, word in enumerate(_TENS)})
+_SCALES = {"hundred": 100, "thousand": 1000, "million": 1000000, "billion": 1000000000}
+_WORD_SEP = r"[\s\-‐‑–]+"
+_units = "(?:" + "|".join(_SMALL[1:10]) + ")"
+_under100 = ("(?:" + "|".join(_TENS) + ")" + rf"(?:{_WORD_SEP}{_units})?"
+             + "|(?:" + "|".join(_SMALL) + ")")
+_group = rf"(?:(?:{_units}|a){_WORD_SEP}hundred(?:{_WORD_SEP}(?:and{_WORD_SEP})?(?:{_under100}))?|{_under100})"
+_word_number = _group
+for _scale in ("thousand", "million", "billion"):
+    _word_number = rf"(?:{_group}{_WORD_SEP}{_scale}(?:{_WORD_SEP}(?:and{_WORD_SEP})?{_word_number})?|{_word_number})"
+_digit_words = "(?:" + "|".join(_SMALL[:10]) + ")"
+_fraction = rf"point{_WORD_SEP}{_digit_words}(?:{_WORD_SEP}{_digit_words})*"
+_WORD_NUMBER_RE = re.compile(
+    rf"(?<!\w)(?:{_word_number}(?:{_WORD_SEP}{_fraction})?|{_fraction})(?!\w)", re.I)
+
+
+def numeric_text(text: str) -> str:
+    """Normalize English cardinal numbers, including hyphenated compounds."""
+    def convert(match):
+        total = group = 0
+        tokens = re.split(_WORD_SEP, match[0].lower())
+        decimal = ''
+        if 'point' in tokens:
+            index = tokens.index('point')
+            decimal = '.' + ''.join(str(_WORD_VALUES[w]) for w in tokens[index + 1:])
+            tokens = tokens[:index]
+        for word in tokens:
+            if word == 'and':
+                continue
+            if word == 'hundred':
+                group *= 100
+            elif word in _SCALES:
+                total += group * _SCALES[word]
+                group = 0
+            else:
+                group += 1 if word == 'a' else _WORD_VALUES[word]
+        return str(total + group) + decimal
+    return _WORD_NUMBER_RE.sub(convert, text or '')
+
+
 MULTIPLIERS = {"doubled": 2, "doubling": 2, "twofold": 2, "tripled": 3,
                "tripling": 3, "threefold": 3, "quadrupled": 4, "fourfold": 4,
                "halved": 0.5, "halving": 0.5}
 UNIT_RE = re.compile(
-    r"\s*(%|percent\b|percentage points?\b|fps\b|frames? per second\b|"
+    r"[\s\-‐‑–]*(%|percent\b|percentage[\s\-‐‑–]+points?\b|fps\b|frames?[\s\-‐‑–]+per[\s\-‐‑–]+second\b|"
     r"ms\b|milliseconds?\b|[µμu]s\b|microseconds?\b|s\b|seconds?\b|"
     r"mins?\b|minutes?\b|hrs?\b|hours?\b|days?\b|weeks?\b|months?\b|years?\b|"
-    r"khz\b|mhz\b|ghz\b|hz\b|kb\b|mb\b|gb\b|tb\b|"
+    r"khz\b|mhz\b|ghz\b|hz\b|hertz\b|kb\b|mb\b|gb\b|tb\b|"
     r"m/s\b|km/h\b|mm\b|cm\b|meters?\b|km\b|m\b|kg\b|g\b|"
     r"pixels?\b|px\b|db\b|degrees?\b|°|watts?\b|kw\b|w\b|"
     r"times\b|x\b|×)", re.I)
-UNIT_ALIASES = {'percent': '%', 'frame per second': 'fps', 'frames per second': 'fps',
+UNIT_ALIASES = {'hertz': 'hz', 'percent': '%', 'frame per second': 'fps', 'frames per second': 'fps',
                 'millisecond': 'ms', 'microsecond': 'us', 'µs': 'us', 'μs': 'us',
                 'second': 's', 'min': 'minute', 'hr': 'hour', 'meter': 'm',
                 'pixel': 'px', 'degree': '°', 'watt': 'w',
@@ -36,11 +81,12 @@ UNIT_ALIASES = {'percent': '%', 'frame per second': 'fps', 'frames per second': 
 
 def quantities(text: str) -> set[tuple[float, str]]:
     """Measured numbers keep their units; multiplicative prose is a claim too."""
+    text = numeric_text(text)
     out = set()
-    for match in NUMBER_RE.finditer(text or ''):
+    for match in NUMBER_RE.finditer(text):
         unit = UNIT_RE.match(text, match.end())
         if unit:
-            name = unit[1].lower()
+            name = re.sub(r'[\s\-‐‑–]+', ' ', unit[1].lower())
             name = name[:-1] if name.endswith('s') and name not in ('ms', 'us', 's', 'fps') else name
             out.add((float(match[0].replace(',', '')), UNIT_ALIASES.get(name, name)))
     for word, value in MULTIPLIERS.items():
@@ -93,7 +139,7 @@ def numbers(text: str) -> set[float]:
     out = set()
     # Dimensional labels name a technical domain, not a measured result.
     # Keep quantities such as 45 FPS or 2 days subject to numerical provenance.
-    text = re.sub(r"\b[234][dD]\b", "", text or "")
+    text = re.sub(r"\b[234][dD]\b", "", numeric_text(text))
     for m in NUMBER_RE.findall(text):
         try:
             out.add(float(m.replace(",", "")))
