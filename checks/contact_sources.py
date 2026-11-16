@@ -4,6 +4,7 @@ import json
 import ipaddress
 import socket
 import sys
+import re
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -18,6 +19,9 @@ DISALLOWED = ("linkedin.com", "glassdoor.com", "dice.com")
 def domain(url: str) -> str:
     host = (urlparse(url).hostname or "").lower()
     parts = host.split(".")
+    # Independent tenants publish on these shared hosting suffixes.
+    if host.endswith(('.github.io', '.gitlab.io', '.pages.dev', '.netlify.app', '.vercel.app')):
+        return '.'.join(parts[-3:])
     return ".".join(parts[-2:]) if len(parts) >= 2 else host
 
 
@@ -72,11 +76,13 @@ def confirmed_source(url: str, name: str, company: str) -> str | None:
     from agents.discover import html_to_text
     try:
         body, final_url = public_page(url)
-    except (httpx.HTTPError, ValueError, OSError):
+    except (httpx.HTTPError, httpx.InvalidURL, ValueError, OSError):
         return None
     text = core.normalize(html_to_text(body))
     person, employer = core.normalize(name), core.normalize(company)
-    return final_url if person and employer and person in text and employer in text else None
+    def mentions(phrase):
+        return bool(phrase) and re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", text)
+    return final_url if mentions(person) and mentions(employer) else None
 
 
 def page_confirms(url: str, name: str, company: str) -> bool:
@@ -87,10 +93,14 @@ def verified_sources(sources: list[str], name: str, company: str) -> list[str]:
     """Sources that are allowed, on distinct domains, and actually mention the person."""
     seen, ok = set(), []
     for url in sources:
-        parsed = urlparse(url)
-        if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        try:
+            parsed = urlparse(url)
+            if parsed.scheme not in ("http", "https") or not parsed.hostname:
+                continue
+            parsed.port  # validate malformed ports too
+            dom = domain(url)
+        except (ValueError, TypeError):
             continue
-        dom = domain(url)
         if dom in seen or dom in DISALLOWED:
             continue
         final = confirmed_source(url, name, company)

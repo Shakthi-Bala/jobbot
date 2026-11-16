@@ -68,7 +68,7 @@ Drafting a master can require an AI task. Rendering an existing master does not 
 
 ## Reviews and model calls
 
-Configure mode and models in [`models.yaml`](../models.yaml). In manual mode, task files and answer schemas are saved under `out/tasks/`; complete the answers in a coding-assistant session, validate them, and rerun the original command.
+Configure mode and models in local `models.yaml`, copied from the tracked [example configuration](../models.example.yaml) by `init`. Without a local file, the example supplies the defaults. In manual mode, task files and answer schemas are saved under `out/tasks/`; complete the answers in a coding-assistant session, validate them, and rerun the original command.
 
 The panel's minimum score is an editorial gate. A high average cannot override a reader below the configured threshold. If stronger evidence is needed, the pipeline stops rather than inventing a result. See [the review guide](resume-review-loop.md) for scoring and visual-review limitations.
 

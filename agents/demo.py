@@ -25,7 +25,7 @@ def run() -> dict:
     root = base / f'run-{number:03d}'
     root.mkdir()
     (root / 'data').mkdir()
-    for name in ('schema.sql', 'models.yaml'):
+    for name in ('schema.sql', 'models.example.yaml'):
         shutil.copy(SOURCE / name, root / name)
     for folder in ('skills', 'principles', 'templates'):
         shutil.copytree(SOURCE / folder, root / folder)

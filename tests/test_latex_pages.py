@@ -21,7 +21,7 @@ RESUME = {
     "person": {"name": "Alex Example", "email": "a@x.com", "phone": "", "location": "Boston, MA",
                "links": {"github": "https://github.com/alex", "scholar": ""}},
     "summary": "Built things & measured them.",
-    "education": [{"school": "WPI", "degree": "M.S. Robotics", "dates": "Aug 2025 – May 2027",
+    "education": [{"school": "Example Polytechnic Institute", "degree": "M.S. Robotics", "dates": "Aug 2025 – May 2027",
                    "gpa": "4.0", "location": "", "details": []}],
     "skills": [{"category": "Project tools", "items": ["ROS 2", "C++"]}],
     "courses": ["Computer Vision"],
@@ -91,6 +91,8 @@ def test_optional_summary_matches_pdf_metadata(packet, monkeypatch):
     import typst
     data_path = packet / 'resume.json'
     data = json.loads(data_path.read_text())
+    data['summary'] = 'Real summary'
+    data_path.write_text(json.dumps(data))
     meta_path = packet / 'meta.json'
     meta = json.loads(meta_path.read_text())
     meta.update(format='latex', show_summary=True)
@@ -168,7 +170,7 @@ def test_research_presentation_keeps_complete_education_and_project_links(tmp_pa
     tex = latex.render_tex(data, tmp_path / 'resume.tex').read_text()
     assert r'\section{Education}' in tex and r'\section{Selected Projects}' in tex
     assert r'\section{Technical Skills}' in tex
-    assert r'WPI}\hfill Aug 2025' in tex
+    assert r'Example Polytechnic Institute}\hfill Aug 2025' in tex
     assert r'M.S. Robotics\hfill GPA: 4.0' in tex
     assert r'\textbf{Stereo VIO}\enspace' in tex
     assert r'\documentclass[11pt' in tex and r'\linespread{1.0}' in tex

@@ -7,6 +7,7 @@ version that checks/ read, and a clean rendered version you send.
 from __future__ import annotations
 
 import difflib
+import copy
 import json
 import re
 import shutil
@@ -86,14 +87,14 @@ def draft(conn, job_id: str, feedback: list[str] | None = None) -> TailoredPacke
         + "\n\n## Answers bank (approved by the candidate; cite as answer_bank_keys)\n"
         + core.dumps(core.load_answers_bank())
         + "\n\n## Preferences\n" + core.dumps(prefs)
-        + f"\n\n## Job\nCompany: {job['company']}\nTitle: {job['title']}\n"
-        f"Req ID: {job['req_id']}\nParsed: {core.dumps(parsed)}\n"
-        + (f"Fit analysis: strengths={fit['strengths_json']} gaps={fit['gaps_json']}\n"
+        + "\n\n" + core.untrusted("job_metadata", core.dumps({
+            k: job[k] for k in ("company", "title", "req_id")}))
+        + "\n" + core.untrusted("parsed_posting", core.dumps(parsed))
+        + (core.untrusted("fit_analysis", f"strengths={fit['strengths_json']} gaps={fit['gaps_json']}")
            if fit else "")
         + f"Cover letter required: {wants_cover_letter(parsed, profile)}"
         + (f" ({prefs.get('cover_letter_min_words', 0)}-{prefs.get('cover_letter_max_words', 300)} words)\n"
            if wants_cover_letter(parsed, profile) else "\n")
-        + f"Application questions: {core.dumps(parsed.get('application_questions', []))}\n\n"
         + core.untrusted("posting", job["raw_text"])
     )
     from . import ats, master
@@ -115,9 +116,9 @@ def draft(conn, job_id: str, feedback: list[str] | None = None) -> TailoredPacke
              "Use a term only where it accurately explains a selected contribution. "
              "Do not force exact spellings into every section, add a disabled summary, "
              "or replace distinctive engineering context with keyword lists.\n"
-             + ", ".join(kw["fixable"])
+             + core.untrusted("supported_keywords", ", ".join(kw["fixable"]))
              + "\n\n## Posting keywords with NO evidence in the profile (never claim these)\n"
-             + (", ".join(kw["gap"]) or "none"))
+             + core.untrusted("unsupported_keywords", ", ".join(kw["gap"]) or "none"))
     from . import bank
     approved = bank.load(profile)
     if approved:
@@ -138,7 +139,7 @@ def draft(conn, job_id: str, feedback: list[str] | None = None) -> TailoredPacke
                  + core.dumps(m))
     if feedback:
         user += ("\n\n## Fix these problems from the previous draft\n"
-                 + "\n".join(f"- {f}" for f in feedback))
+                 + core.untrusted("review_feedback", core.dumps(feedback)))
     return core.llm_json("writing", core.system_prompt("tailor"), user, TailoredPacket,
                          max_tokens=32000)
 
@@ -157,7 +158,7 @@ def unslop(paragraphs: list[dict], profile: dict) -> list[dict]:
     for before, after in zip(paragraphs, result.paragraphs):
         # The rewrite may not add sources. Fall back to the original if it did.
         if set(after.fact_ids) <= set(before["fact_ids"]) and after.fact_ids:
-            out.append(after.model_dump())
+            out.append({"text": core.claim_text(after.text), "fact_ids": after.fact_ids})
         else:
             out.append(before)
     return out + paragraphs[len(result.paragraphs):]
@@ -175,7 +176,7 @@ def select_skills(chosen: list[str], profile: dict, must_have: list[str],
     auto_add = profile.get("preferences", {}).get("resume_auto_add_skills", False)
     out = []
     for s in profile.get("skills", []):
-        if not s.get("evidence"):
+        if not s.get("evidence") or not set(s["evidence"]) <= core.profile_ids(profile):
             continue
         wanted = s["skill"].lower() in picked or (
             auto_add and posting_text and ats.mentions(s["skill"], posting_text))
@@ -190,12 +191,16 @@ def select_skills(chosen: list[str], profile: dict, must_have: list[str],
     return out
 
 
-def group_skills(skills: list[dict], groups) -> list[dict]:
+def group_skills(skills: list[dict], groups, profile: dict | None = None) -> list[dict]:
     """The writer's Skills rows for this posting, limited to skills that survived
     select_skills(). A group can order and label; it can never add a skill."""
     by_name = {s["skill"].removesuffix(" (familiar)").lower(): s for s in skills}
+    categories = {s.get("category", "Skills") for s in (profile or {}).get("skills", skills)}
+    categories.update((profile or {}).get("preferences", {}).get("resume_skill_groups", {}))
     used, out = set(), []
     for g in groups or []:
+        if g.category.strip() not in categories:
+            continue
         names = []
         for name in g.skills:
             key = name.removesuffix(" (familiar)").lower()
@@ -211,19 +216,18 @@ def enforce(packet: TailoredPacket, profile: dict, job_id: str,
             must_have: list[str], posting_text: str = "") -> dict:
     """Apply no-unsourced-claims in code. Returns a plain dict ready to render."""
     known = core.profile_ids(profile)
-    entries = {e["id"]: e for e in profile.get("experience", []) + profile.get("projects", [])}
     bank = core.load_answers_bank()
 
-    def keep_entry(entry) -> dict | None:
-        src = entries.get(entry.ref_id)
+    def keep_entry(entry, section: str) -> dict | None:
+        src = next((e for e in profile.get(section, []) if e["id"] == entry.ref_id), None)
         if not src:
             core.log_decision("tailor", job_id, "dropped_entry", f"unknown ref {entry.ref_id}")
             return None
-        allowed = set(src.get("facts", []))
+        allowed = set(src.get("facts", [])) & known
         bullets = []
         for b in entry.bullets:
             if b.fact_ids and set(b.fact_ids) <= allowed:
-                bullets.append({"text": b.text.strip(), "fact_ids": b.fact_ids})
+                bullets.append({"text": core.claim_text(b.text), "fact_ids": b.fact_ids})
             else:
                 core.log_decision("tailor", job_id, "dropped_bullet",
                                   f"{entry.ref_id}: ids {b.fact_ids} not in {sorted(allowed)}: "
@@ -231,16 +235,16 @@ def enforce(packet: TailoredPacket, profile: dict, job_id: str,
         return {"ref_id": entry.ref_id, "bullets": bullets} if bullets else None
 
     skills = select_skills(packet.skills, profile, must_have, posting_text)
-    skill_groups = group_skills(skills, packet.skill_groups)
+    skill_groups = group_skills(skills, packet.skill_groups, profile)
 
     summary = None
     if packet.summary.fact_ids and set(packet.summary.fact_ids) <= known:
-        summary = packet.summary.model_dump()
+        summary = {"text": core.claim_text(packet.summary.text), "fact_ids": packet.summary.fact_ids}
     else:
         core.log_decision("tailor", job_id, "dropped_summary",
                           f"uncited or unknown ids {packet.summary.fact_ids}")
 
-    paragraphs = [p.model_dump() for p in packet.cover_letter
+    paragraphs = [{"text": core.claim_text(p.text), "fact_ids": p.fact_ids} for p in packet.cover_letter
                   if p.fact_ids and set(p.fact_ids) <= known]
 
     answers = []
@@ -253,18 +257,18 @@ def enforce(packet: TailoredPacket, profile: dict, job_id: str,
             answers.append({"question": a.question, "answer": "", "fact_ids": [],
                             "keys": [], "need_input": a.need_input or "no supporting fact"})
         else:
-            answer = a.answer.strip()
+            answer = core.claim_text(a.answer)
             # An answer-bank citation is not permission to reverse the approved
             # answer (especially self-identification). Use the stored value.
-            if keys and (not ids or any(k.startswith("self_identification.") for k in keys)):
-                answer = "\n".join(str(_bank_get(bank, k)) for k in keys)
+            if keys:
+                answer = " ".join(core.claim_text(str(_bank_get(bank, k))) for k in keys)
             answers.append({"question": a.question, "answer": answer,
                             "fact_ids": ids, "keys": keys, "need_input": None})
 
     return {
         "summary": summary,
-        "experience": [e for e in map(keep_entry, packet.experience) if e],
-        "projects": [e for e in map(keep_entry, packet.projects) if e],
+        "experience": [e for e in (keep_entry(x, "experience") for x in packet.experience) if e],
+        "projects": [e for e in (keep_entry(x, "projects") for x in packet.projects) if e],
         "skills": skills,
         "skill_groups": skill_groups,
         "cover_letter": paragraphs,
@@ -290,6 +294,20 @@ def tags(ids: list[str], keys: list[str] = ()) -> str:
 
 def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1,
                  pages_reason: str = "") -> Path:
+    # Every renderer and check sees identical, single-line claim text, including
+    # master-resume material and the final unslop rewrite.
+    content = copy.deepcopy(content)
+    if content.get('summary'):
+        content['summary']['text'] = core.claim_text(content['summary']['text'])
+    for entry in content['experience'] + content['projects']:
+        for bullet in entry['bullets']:
+            bullet['text'] = core.claim_text(bullet['text'])
+    for paragraph in content['cover_letter']:
+        paragraph['text'] = core.claim_text(paragraph['text'])
+    for answer in content['answers']:
+        for key in ('question', 'answer', 'need_input'):
+            if answer.get(key):
+                answer[key] = core.claim_text(answer[key])
     d = packet_dir(job["id"])
     d.mkdir(parents=True, exist_ok=True)
     person = profile.get("person", {})
@@ -307,9 +325,9 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
     # --- resume: tagged markdown (for checks) + json (for Typst) ----------
     lines = [f"# {person.get('name', '')} | {person.get('email', '')} | "
              f"{person.get('phone', '')} | {person.get('location', '')}", ""]
-    summary = content.get("summary")
+    summary = content.get("summary") if meta["show_summary"] else None
     if summary:
-        lines += ["## Summary", f"{summary['text']} {tags(summary['fact_ids'])}", ""]
+        lines += ["## Summary", f"- {summary['text']} {tags(summary['fact_ids'])}", ""]
     lines.append("## Education")
     edu_json = []
     for i, e in enumerate(profile.get("education", [])):
@@ -356,7 +374,10 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
     category_for_skill = {name: category for category, names in display_groups.items() for name in names}
     by_name = {sk["skill"]: sk for sk in content["skills"]}
     placed = set()
+    allowed_categories = {s.get('category', 'Skills') for s in profile.get('skills', [])} | set(display_groups)
     for g in content.get("skill_groups") or []:      # the writer's rows for this posting
+        if g['category'] not in allowed_categories:
+            continue
         for name in g["skills"]:
             if name in by_name:
                 groups.setdefault(g["category"], []).append(by_name[name])
@@ -398,7 +419,7 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
         (d / p).unlink(missing_ok=True)
     if content["cover_letter"]:
         tagged = [f"# Cover letter: {job['title']}, {job['company']}", ""]
-        tagged += [f"{p['text']} {tags(p['fact_ids'])}\n" for p in content["cover_letter"]]
+        tagged += [f"- {p['text']} {tags(p['fact_ids'])}\n" for p in content["cover_letter"]]
         (d / "cover_letter.tagged.md").write_text("\n".join(tagged))
         clean = [p["text"] for p in content["cover_letter"]]
         (d / "cover_letter.md").write_text("\n\n".join(clean) + "\n")
@@ -417,7 +438,7 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
             tagged.append(f"[NEED INPUT: {a['need_input']}]")
             clean.append(f"[NEED INPUT: {a['need_input']}]\n")
         else:
-            tagged.append(f"{a['answer']} {tags(a['fact_ids'], a['keys'])}")
+            tagged.append(f"- {a['answer']} {tags(a['fact_ids'], a['keys'])}")
             clean.append(a["answer"] + "\n")
         tagged.append("")
     (d / "answers.tagged.md").write_text("\n".join(tagged))

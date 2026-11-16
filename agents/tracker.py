@@ -29,6 +29,8 @@ def edit_draft(job_id: str, *, changes: str | None = None) -> None:
                 raise core.JobbotError('Requested changes cannot be empty')
             (core.job_dir(job_id, conn) / 'requested_changes.md').write_text(changes.strip() + '\n')
         core.set_status(conn, job_id, 'shortlisted' if changes is not None else 'skipped')
+        if changes is None:
+            core.record_action(conn, job_id, 'me', 'skip', 'skipped from dashboard')
         core.log_decision('me', job_id, 'request_changes' if changes is not None else 'skip',
                           changes.strip() if changes is not None else 'skipped from dashboard')
     finally:
@@ -43,7 +45,9 @@ def mark_applied(job_id: str) -> int | None:
                             "ORDER BY id LIMIT 1", (job_id,)).fetchone()
     if existing:
         return existing["doc_id"]
-    if job['status'] in ('responded', 'interview', 'rejected', 'offer', 'closed'):
+    from . import discover
+    if job['status'] in ('responded', 'interview', 'rejected', 'offer') or (
+            job['status'] == 'closed' and not discover.may_reopen(conn, job_id)):
         raise core.JobbotError(f"Job is already {job['status']}; marking applied cannot overwrite that outcome")
     doc = conn.execute(
         "SELECT * FROM documents WHERE job_id=? AND kind='resume' ORDER BY version DESC, id DESC LIMIT 1",
@@ -58,7 +62,7 @@ def mark_applied(job_id: str) -> int | None:
         if draft.exists() and core.sha256_file(draft) != doc["sha256"]:
             raise core.JobbotError("Current resume differs from the recorded version; finish the packet before marking applied")
     detail = f"resume v{doc['version']} sha256={doc['sha256'][:16]}" if doc else "no resume on file"
-    due = (date.today() + timedelta(days=10)).isoformat()
+    due = (date.fromisoformat(core.today()) + timedelta(days=10)).isoformat()
     with conn:
         conn.execute("INSERT INTO actions (job_id, actor, action, detail, doc_id, at) "
                      "VALUES (?, 'me', 'applied', ?, ?, ?)",
@@ -125,7 +129,7 @@ def draft_nudges() -> list[str]:
 
 def daily_log(new_ids: list[str], packets: list[dict]) -> str:
     conn = core.connect()
-    soon = (date.today() + timedelta(days=7)).isoformat()
+    soon = (date.fromisoformat(core.today()) + timedelta(days=7)).isoformat()
     lines = [f"# jobbot daily log: {core.today()}", ""]
 
     lines += ["## New shortlist", ""]
@@ -165,7 +169,7 @@ def daily_log(new_ids: list[str], packets: list[dict]) -> str:
 def weekly_review() -> str:
     """Funnel and response rates by source and role type."""
     conn = core.connect()
-    since = (date.today() - timedelta(days=7)).isoformat()
+    since = (date.fromisoformat(core.today()) - timedelta(days=7)).isoformat()
     q = lambda sql, *a: conn.execute(sql, a).fetchone()[0]
     discovered = q("SELECT COUNT(*) FROM jobs WHERE first_seen >= ?", since)
     shortlisted = q("SELECT COUNT(*) FROM fit WHERE decision='shortlist' AND created_at >= ?", since)

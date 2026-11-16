@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
+import httpx
 from pathlib import Path
 
 from . import core, discover, panel, review, tailor
@@ -33,7 +34,7 @@ def _inputs(job, requested: Path, skip_review: bool, offline: bool, skip_panel: 
     """Invalidate checkpoints when evidence, instructions, code or options change."""
     paths = [core.DATA / n for n in ("profile.yaml", "answers_bank.yaml", "master_resume.yaml",
                                      "approved_bullets.yaml")]
-    paths += [core.ROOT / "models.yaml", requested]
+    paths += [core.ROOT / "models.yaml", core.ROOT / 'models.example.yaml', requested]
     for folder in (core.TEMPLATES, core.SKILLS, core.PRINCIPLES):
         paths += sorted(p for p in folder.rglob("*") if p.is_file())
     for folder in (core.ROOT / "agents", core.ROOT / "checks"):
@@ -79,7 +80,10 @@ def _build(conn, job_id: str, skip_review: bool, offline: bool, skip_panel: bool
     if job["status"] in RECORDED_STATUSES and not automatic_closure:
         raise core.JobbotError(f"Job {job_id} is already {job['status']}; its application history is retained")
     if not offline and job["url"] and discover.parse_ats_url(job["url"]):
-        live = discover.fetch_by_url(job["url"])
+        try:
+            live = discover.fetch_by_url(job["url"])
+        except (httpx.HTTPError, ValueError, TypeError, KeyError) as e:
+            raise core.JobbotError(f"Live posting verification failed ({type(e).__name__}); retry later") from e
         if live is None:
             conn.execute("UPDATE jobs SET active=0 WHERE id=?", (job_id,))
             return _stop(conn, job_id, "closed", "posting is no longer live")

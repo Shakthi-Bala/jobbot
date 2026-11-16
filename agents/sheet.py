@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
@@ -63,7 +63,8 @@ def _posted(value: str | None) -> date | None:
     if not value:
         return None
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00")).date()
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return (parsed.astimezone(timezone.utc) if parsed.tzinfo else parsed).date()
     except ValueError:
         return None
 
@@ -89,7 +90,7 @@ def read_user_edits(path: Path = PATH) -> dict[str, dict]:
     return edits
 
 
-def apply_edits(conn, edits: dict[str, dict]) -> list[str]:
+def apply_edits(conn, edits: dict[str, dict], errors: dict[str, str] | None = None) -> list[str]:
     """'Yes' in Applied? -> record it in the tracker (once). Returns newly recorded IDs."""
     recorded = []
     for job_id, e in edits.items():
@@ -97,21 +98,37 @@ def apply_edits(conn, edits: dict[str, dict]) -> list[str]:
             continue
         row = conn.execute("SELECT status FROM jobs WHERE id=?", (job_id,)).fetchone()
         if row and row["status"] not in ("applied", "responded", "interview", "rejected", "offer"):
-            tracker.mark_applied(job_id)
-            recorded.append(job_id)
+            try:
+                tracker.mark_applied(job_id)
+            except core.JobbotError as e:
+                core.warn(f"sheet {job_id}: {e}")
+                if errors is not None:
+                    errors[job_id] = str(e)
+            else:
+                recorded.append(job_id)
     return recorded
 
 
 # ---------------------------------------------------------------- collect rows
 
-def collect(conn) -> list[dict]:
+def _pay_label(lo: int | None, hi: int | None) -> str:
+    if lo is not None and hi is not None:
+        return f"${lo:,} - ${hi:,}"
+    if hi is not None:
+        return f"up to ${hi:,}"
+    if lo is not None:
+        return f"from ${lo:,}"
+    return "not listed"
+
+def collect(conn, include_ids=()) -> list[dict]:
     rows = []
     jobs = conn.execute(
         "SELECT j.*, f.score FROM jobs j LEFT JOIN fit f ON f.job_id=j.id "
         f"ORDER BY {core.PAY_ORDER_SQL}, f.score DESC").fetchall()
     for j in jobs:
         d = core.job_dir(j["id"], conn)
-        if not (d / "meta.json").exists() or j["status"] in ("skipped", "blocked", "closed"):
+        if not (d / "meta.json").exists() or (
+                j["status"] in ("skipped", "blocked", "closed") and j['id'] not in include_ids):
             continue  # only jobs you're still considering
         gaps = json.loads((d / "gaps.json").read_text()) if (d / "gaps.json").exists() else {}
         fixes = [i["change"] for i in gaps.get("resume_improvements", [])][:3]
@@ -125,7 +142,7 @@ def collect(conn) -> list[dict]:
         rows.append({
             "job_id": j["id"], "company": j["company"], "title": j["title"].strip(),
             "location": j["location"],
-            "pay": f"${j['comp_min']:,} - ${j['comp_max']:,}" if j["comp_max"] else "not listed",
+            "pay": _pay_label(j["comp_min"], j["comp_max"]),
             "band": core.pay_band(j["comp_max"]), "posted": _posted(j["posted_at"]),
             "score": j["score"], "readiness": gaps.get("readiness"),
             "recommend": RECOMMEND.get(gaps.get("verdict"), "Run gap coach"),
@@ -319,8 +336,9 @@ def _summary(ws, n_rows: int) -> None:
 def build(path: Path = PATH) -> dict:
     conn = core.connect()
     edits = read_user_edits(path)
-    recorded = apply_edits(conn, edits)
-    rows = collect(conn)
+    errors = {}
+    recorded = apply_edits(conn, edits, errors)
+    rows = collect(conn, include_ids=edits)
     wb = Workbook()
     ws = wb.active
     ws.title = "Applications"
@@ -330,4 +348,4 @@ def build(path: Path = PATH) -> dict:
     _summary(wb.create_sheet("Summary"), len(rows))
     path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(path)
-    return {"path": path, "rows": len(rows), "recorded_applied": recorded}
+    return {"path": path, "rows": len(rows), "recorded_applied": recorded, "errors": errors}

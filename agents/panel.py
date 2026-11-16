@@ -88,18 +88,20 @@ def run(conn, job_id: str, d: Path, round_no: int) -> dict:
     job = core.get_job(conn, job_id)
     resume, letter = _documents(d)
     keywords = ats.score_packet(conn, job_id, d)
-    role = f"Role: {job['title']} at {job['company']}"
+    role = core.untrusted('job_metadata', f"Role: {job['title']} at {job['company']}")
     digest = core.sha256_file(d / "resume.pdf")
     docs = ("## Review modality\nText-only review: no rendered page images are supplied. "
             "Assess wording and reading order; do not claim visual inspection or approve typography.\n\n"
             f"## Resume artifact SHA-256\n{digest}\n\n"
-            f"## Resume (text as parsed from the PDF)\n{resume}\n\n## Cover letter\n{letter}")
+            + core.untrusted('review_documents',
+                             f"## Resume (text as parsed from the PDF)\n{resume}\n\n## Cover letter\n{letter}"))
     posting = core.untrusted("posting", job["raw_text"])
 
     calls = {
         "ats_gate": lambda: core.llm_json(
             "review_lead", persona_prompt("ats-gate.md"),
-            f"{role}\n\n## Code-computed keyword match\n{core.dumps(keywords)}\n\n{docs}\n\n{posting}",
+            role + '\n\n## Code-computed keyword match\n'
+            + core.untrusted('keyword_diagnostics', core.dumps(keywords)) + f'\n\n{docs}\n\n{posting}',
             ScreenDecision),
         "hiring_manager": lambda: core.llm_json(
             "review_lead", persona_prompt("hiring-manager.md"), f"{role}\n\n{docs}\n\n{posting}",
@@ -117,7 +119,8 @@ def run(conn, job_id: str, d: Path, round_no: int) -> dict:
         "## Candidate-supplied editing inventory\nUse these facts to identify supported edits, "
         "including useful omissions. They do not count as visible evidence on the current resume. "
         "Respect disclosure constraints.\n" + core.dumps(_editing_inventory(profile)) + "\n\n"
-        "## Panel reviews\n" + core.dumps({k: v.model_dump() for k, v in reviews.items()}),
+        "## Panel reviews\n" + core.untrusted("panel_reviews", core.dumps(
+            {k: v.model_dump() for k, v in reviews.items()})),
         RevisionPlan)
 
     prefs = profile.get("preferences", {})
@@ -154,8 +157,8 @@ def summarize(reviews: dict, plan: RevisionPlan, keywords: dict, round_no: int,
                 raise core.JobbotError(f"{name}: score does not match rubric total; do not round to reach a target")
     avg = round(sum(scores.values()) / max(1, len(scores)), 1)
     gate, hm = reviews["ats_gate"], reviews["hiring_manager"]
-    done = plan.bulletproof or not plan.revisions or (
-        gate.decision == "pass_to_human" and hm.decision == "interview" and avg >= 8)
+    done = (set(readers) == set(READERS) and gate.decision == "pass_to_human"
+            and hm.decision == "interview" and avg >= 8)
     lowest = min(scores.values(), default=0)
     if min_score is not None:
         try:

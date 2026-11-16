@@ -29,7 +29,8 @@ def path() -> Path:
 
 
 def _key(text: str) -> str:
-    return core.normalize(text)
+    # Punctuation carries meaning: < 5 ms and > 5 ms are different claims.
+    return " ".join(text.split())
 
 
 def load(profile: dict | None = None) -> dict[str, list[dict]]:

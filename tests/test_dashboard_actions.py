@@ -36,7 +36,9 @@ def test_dashboard_can_request_changes_to_an_unsubmitted_draft(job):
 def test_mark_applied_cannot_regress_an_outcome_from_a_stale_dashboard(job, status):
     conn = core.connect()
     core.set_status(conn, job['id'], status)
+    if status == 'closed':
+        core.record_action(conn, job['id'], 'me', 'closed')
     with pytest.raises(core.JobbotError, match='cannot overwrite'):
         tracker.mark_applied(job['id'])
     assert core.get_job(conn, job['id'])['status'] == status
-    assert conn.execute('SELECT COUNT(*) FROM actions').fetchone()[0] == 0
+    assert conn.execute("SELECT COUNT(*) FROM actions WHERE action='applied'").fetchone()[0] == 0

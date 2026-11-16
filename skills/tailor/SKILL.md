@@ -56,7 +56,7 @@ A bullet is ready when a skeptical engineer on the hiring team could ask "how do
 - Use the posting's terminology where it naturally and accurately describes the work; do not force exact keywords into every first bullet.
 - Order experience chronologically within relevant sections. Allocate detail to the strongest contributions, not equally to every entry.
 - If resume_summary is disabled, return an empty summary paragraph. Otherwise write a brief specific summary only if it adds context beyond education and experience.
-- Skills use names from profile.skills. Strong/working levels only, with a familiar skill included only when required and supported. Automatic additions are optional, not a reason for a tools dump. `skill_groups` only labels and orders names already in `skills`; code drops anything else.
+- Skills use names from profile.skills. Strong/working levels only, with a familiar skill included only when required and supported. Automatic additions are optional, not a reason for a tools dump. `skill_groups` only orders names already in `skills`, using category names from profile.skills or preferences.resume_skill_groups; code drops invented labels.
 
 ## Cover letter
 Write one when the input says `Cover letter required: True` (the posting asks, or the

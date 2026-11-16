@@ -14,8 +14,8 @@ data/credentials.json
 data/token.json
 data/uploads/
 my_resume/
-/Directed_research_mer_lab.pdf
-/Final_report.pdf
+/*.pdf
+models.yaml
 out/
 *.answer.json
 *.task.md

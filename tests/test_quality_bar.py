@@ -64,6 +64,7 @@ def test_writer_sees_approved_wording_and_packet_lists_new_wording(packet, job, 
 
 def test_skill_groups_label_and_order_but_never_add(job):
     profile = core.load_profile()
+    profile['preferences']['resume_skill_groups'] = {'Robotics': ['ROS 2'], 'Learning': ['PyTorch']}
     p = good_packet()
     p.skill_groups = [SkillGroup(category="Robotics", skills=["ROS 2", "Fortran", "CUDA"]),
                       SkillGroup(category="Learning", skills=["PyTorch", "ROS 2"]),

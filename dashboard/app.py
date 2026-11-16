@@ -54,7 +54,7 @@ with tabs[0]:
         for f in due:
             who = f" with {f['contact_name']}" if f["contact_name"] else ""
             cols = st.columns([4, 1])
-            cols[0].write(f"**{f['due']}** {f['company'] or ''}{who}: {f['note']}")
+            cols[0].text(f"{f['due']} {f['company'] or ''}{who}: {f['note']}")
             if cols[1].button("Done", key=f"fu{f['id']}"):
                 tracker.complete_followup(f["id"])
                 st.rerun()
@@ -83,7 +83,7 @@ with tabs[1]:
 
 # ----------------------------------------------------------------- Packet
 with tabs[2]:
-    packet_jobs = [r for r in conn.execute(
+    packet_jobs = [dict(r) for r in conn.execute(
         "SELECT id, title, company, status FROM jobs ORDER BY first_seen DESC").fetchall()
         if (core.job_dir(r["id"], conn, create=False) / "meta.json").exists()]
     if not packet_jobs:
@@ -93,8 +93,8 @@ with tabs[2]:
                               format_func=lambda r: f"{r['title']}, {r['company']} [{r['status']}]")
         d = core.job_dir(choice["id"], conn, create=False)
         meta = json.loads((d / "meta.json").read_text())
-        st.write(f"**{meta['title']}** at **{meta['company']}** · req {meta.get('req_id') or 'n/a'} "
-                 f"· v{meta['version']} · [posting]({meta.get('url') or '#'})")
+        st.text(f"{meta['title']} at {meta['company']} · req {meta.get('req_id') or 'n/a'} "
+                f"· v{meta['version']} · {meta.get('url') or ''}")
 
         fit = tracker.fit_row(conn, choice["id"])
         if fit:
@@ -103,16 +103,16 @@ with tabs[2]:
                                               "questions")})
 
         if (d / "open_issues.md").exists():
-            st.warning((d / "open_issues.md").read_text())
+            st.text((d / "open_issues.md").read_text())
         if (d / 'injection_warnings.json').exists():
             for warning in json.loads((d / 'injection_warnings.json').read_text()):
-                st.warning(warning)
+                st.text(warning)
         sub = st.tabs(["Review", "Resume", "Cover letter", "Answers", "changes.diff", "Checks", "Panel"])
         with sub[6]:
-            st.markdown((d / "panel.md").read_text() if (d / "panel.md").exists()
+            st.text((d / "panel.md").read_text() if (d / "panel.md").exists()
                         else "_Review panel hasn't run yet._")
         with sub[0]:
-            st.markdown((d / "review.md").read_text() if (d / "review.md").exists()
+            st.text((d / "review.md").read_text() if (d / "review.md").exists()
                         else "_No review yet._")
         with sub[1]:
             if (d / "resume.pdf").exists():
@@ -122,7 +122,7 @@ with tabs[2]:
                 st.text(pdf_text(d / "resume.pdf"))
         with sub[2]:
             if (d / "cover_letter.md").exists():
-                st.markdown((d / "cover_letter.md").read_text())
+                st.text((d / "cover_letter.md").read_text())
                 if (d / "cover_letter.pdf").exists():
                     st.download_button("Download cover_letter.pdf",
                                        (d / "cover_letter.pdf").read_bytes(),
@@ -130,7 +130,7 @@ with tabs[2]:
             else:
                 st.write("No cover letter for this role.")
         with sub[3]:
-            st.markdown((d / "answers.md").read_text() if (d / "answers.md").exists() else "")
+            st.text((d / "answers.md").read_text() if (d / "answers.md").exists() else "")
         with sub[4]:
             st.code((d / "changes.diff").read_text() if (d / "changes.diff").exists() else "",
                     language="diff")
@@ -159,13 +159,13 @@ with tabs[2]:
 with tabs[GAPS]:
     summary = core.OUT / "gaps" / "summary.md"
     if summary.exists():
-        st.markdown(summary.read_text())
+        st.text(summary.read_text())
     else:
         st.info("No gap reports yet. Run `python jobbot.py gaps`.")
     reports = sorted(core.OUT.glob("*/gaps.md"))
     if reports:
         pick = st.selectbox("Job report", reports, format_func=lambda p: p.read_text().splitlines()[0][2:])
-        st.markdown(pick.read_text())
+        st.text(pick.read_text())
 
 # --------------------------------------------------------------- Contacts
 with tabs[CONTACTS]:
@@ -175,10 +175,11 @@ with tabs[CONTACTS]:
     if not contacts:
         st.info("No contacts yet. Run `python jobbot.py outreach JOB_ID`.")
     for c in contacts:
-        with st.expander(f"{c['name']}, {c['role']} at {c['company']} [{c['status']}] "
-                         f"next: {c['next_followup'] or '-'}"):
-            st.write(f"**Reason:** {c['reason']}  \n**Channel:** {c['channel']}")
-            st.write("**Sources:** " + ", ".join(json.loads(c["sources_json"] or "[]")))
+        with st.expander(f"Contact {c['id']}"):
+            st.text(f"{c['name']}, {c['role']} at {c['company']} [{c['status']}] "
+                    f"next: {c['next_followup'] or '-'}")
+            st.text(f"Reason: {c['reason']}\nChannel: {c['channel']}")
+            st.text("Sources: " + ", ".join(json.loads(c["sources_json"] or "[]")))
             draft = (core.job_dir(c['job_id'], conn, create=False) / 'outreach' / f"{core.slugify(c['name'])}.md"
                      if c['job_id'] else None)
             if draft and draft.exists():
@@ -211,7 +212,7 @@ with tabs[FUNNEL]:
         st.bar_chart(weekly.set_index("week")[["discovered", "shortlisted", "applied", "positive"]])
         st.dataframe(weekly, hide_index=True, width="stretch")
     if st.button("Generate weekly review"):
-        st.markdown(tracker.weekly_review())
+        st.text(tracker.weekly_review())
 
 # -------------------------------------------------------------------- Log
 with tabs[LOG]:
