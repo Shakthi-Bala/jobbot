@@ -4,15 +4,16 @@
 
 ### Correctness and reliability
 
-- Restrict generated skill headings to profile labels; flatten claim text and remove model-supplied citation tags before rendering and checking.
+- Restrict generated skill headings to profile labels; flatten claim text and remove model-supplied citation tags, including recursively exposed nested tags, before rendering and checking.
 - Preserve saved answer-bank wording even when the writer also cites facts; decode restriction quotations before comparing them with postings.
-- Treat parsed posting data, model feedback, review documents, and posting-derived diagnostics as untrusted model input.
-- Ignore funding ranges with million/billion suffixes; preserve zero salary bounds and display maximum-only pay in spreadsheets.
+- Keep posting data and its derivatives untrusted while treating candidate revision requests and deterministic check failures as actionable requirements bounded by verified facts. Retain candidate requests throughout revision rounds.
+- Ignore funding ranges with million/billion suffixes; preserve zero salary bounds, enforce the salary floor for a disclosed zero ceiling, and display maximum-only pay in spreadsheets.
 - Require passing reader verdicts for panel approval; an empty revision plan or editor flag cannot waive rejection.
 - Preserve manual skips and recorded fit scores when postings change. Allow recording an application after an automatic closure and continue spreadsheet imports after row errors without losing edits.
+- Filter skipped, blocked, and closed spreadsheet rows on refresh; preserve their notes and dates in a hidden worksheet and restore them if the job returns. Keep failed application recordings visible for correction.
 - Handle malformed contact URLs, people-search failures, posting-fetch failures, wrong-section entry IDs, and revoked Gmail tokens.
 - Match exclusions and contact identities as whole phrases; distinguish independent GitHub Pages tenants.
-- Check fractional quantities, multiplicative wording, and measurement units; keep entry dates from supporting achievement numbers.
+- Check fractional quantities, English cardinal and decimal number words, multiplicative wording, and hyphenated measurement units; keep entry dates from supporting achievement numbers.
 - Honor disabled summaries in Typst, preserve comparison operators in approved wording, render external dashboard content as plain text, and use UTC calendar dates consistently.
 - Distinguish Greenhouse public postings that share an internal requisition, preserving existing application history by public URL during migration.
 - Handle missing salary bounds and shared-unit ranges such as `$120–150K`.
