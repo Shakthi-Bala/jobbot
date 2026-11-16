@@ -64,7 +64,7 @@ def test_branded_greenhouse_urls_retain_a_verifiable_board_identity(monkeypatch)
                'location': {'name': 'Boston, MA'}, 'content': '<p>Required: Python.</p>'}
     job = discover._greenhouse_job('acme', payload)
     assert discover.parse_ats_url(job['url']) == ('greenhouse', 'acme', '123')
-    assert job['req_id'] == 'REQ-7'  # posting ID and requisition ID are different
+    assert job['req_id'] == '123'  # public posting ID, not the shared internal requisition
     seen = []
 
     class Response:
