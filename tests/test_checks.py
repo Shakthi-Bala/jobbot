@@ -11,23 +11,23 @@ from checks import (ats_parse, banned_phrases, consistency, fact_ids, injection_
 
 def good_packet() -> TailoredPacket:
     return TailoredPacket.model_validate({
-        "summary": {"text": "Robotics M.S. student training PPO policies in Isaac Lab and running "
-                            "ROS 2 perception at 30 FPS on a Raspberry Pi 5.",
+        "summary": {"text": "Robotics M.S. student evaluating synthetic images and running "
+                            "ROS 2 perception at 24 FPS on a laptop CPU.",
                     "fact_ids": ["E001", "F002", "F003"]},
         "experience": [{"ref_id": "X001", "bullets": [
-            {"text": "Built a ROS 2 perception pipeline running at 30 FPS on a Raspberry Pi 5",
+            {"text": "Built a ROS 2 perception pipeline running at 24 FPS on a laptop CPU",
              "fact_ids": ["F003"]}]}],
         "projects": [
             {"ref_id": "P002", "bullets": [
-                {"text": "Trained VIO networks (vision-only, IMU-only, fusion) on an HPC cluster",
+                {"text": "Trained a PyTorch segmentation baseline reaching 72% validation mIoU on held-out synthetic images",
                  "fact_ids": ["F002"]}]},
             {"ref_id": "P001", "bullets": [
-                {"text": "Designed a learned 11×11 depth-refinement kernel trained jointly with a CNN "
-                         "depth classifier", "fact_ids": ["F001"]},
+                {"text": "Implemented an Open3D point-cloud filter evaluated on 120 synthetic "
+                         "warehouse scenes", "fact_ids": ["F001"]},
                 {"text": "Smuggled claim from another entry", "fact_ids": ["F003"]}]}],
         "skills": ["PyTorch", "ROS 2", "CUDA", "Fortran"],
         "cover_letter": [{"text": "Example Robotics is building drones that fly without GPS. "
-                                  "I trained VIO networks on an HPC cluster.",
+                                  "I trained a PyTorch segmentation baseline on synthetic images.",
                           "fact_ids": ["F002"]}],
         "answers": [
             {"question": "Why robotics?", "answer": "I like real-time perception problems.",

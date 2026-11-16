@@ -75,14 +75,14 @@ def test_panel_history_and_markdown(tmp_path):
 MASTER = {
     "families": {"rl": {"label": "Robot learning", "experience": ["X001"], "projects": ["P002"],
                         "skill_categories": ["Skills"]}},
-    "summaries": {"rl": {"text": "Robotics M.S. student building ROS 2 perception at 30 FPS.",
+    "summaries": {"rl": {"text": "Robotics M.S. student building ROS 2 perception at 24 FPS.",
                          "fact_ids": ["E001", "F003"]}},
     "entries": {
-        "X001": [{"text": "Built a ROS 2 perception pipeline running at 30 FPS on a Raspberry Pi 5",
+        "X001": [{"text": "Built a ROS 2 perception pipeline running at 24 FPS on a laptop CPU",
                   "fact_ids": ["F003"], "families": ["rl", "perception"], "priority": 1}],
-        "P002": [{"text": "Trained visual-inertial odometry networks on an HPC cluster",
+        "P002": [{"text": "Trained a PyTorch segmentation baseline on synthetic images",
                   "fact_ids": ["F002"], "families": ["rl"], "priority": 1}],
-        "P001": [{"text": "Designed a learned 11×11 depth-refinement kernel with a CNN depth classifier",
+        "P001": [{"text": "Implemented an Open3D point-cloud filter evaluated on 120 synthetic warehouse scenes",
                   "fact_ids": ["F001"], "families": ["perception"], "priority": 1}],
     },
 }
