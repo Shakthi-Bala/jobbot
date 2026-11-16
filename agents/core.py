@@ -65,6 +65,18 @@ class ManualTaskPending(JobbotError):
         super().__init__(f"waiting for a task answer: {path.relative_to(ROOT) if path.is_relative_to(ROOT) else path}")
 
 
+def write_private(path: Path, text: str) -> None:
+    """Write secrets atomically; the temporary file is private before the first byte."""
+    import tempfile
+    fd, temporary = tempfile.mkstemp(dir=path.parent, prefix='.private-', suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as target:
+            target.write(text)
+        os.replace(temporary, path)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
 # --------------------------------------------------------------------- time
 
 def now() -> str:
@@ -453,8 +465,13 @@ def is_manual() -> bool:
     used. Each AI step is written to out/tasks/ for a coding assistant to answer."""
     env = os.environ.get("JOBBOT_MODE")
     if env:
-        return env == "manual"
-    return model_config().get("mode", "manual") == "manual"
+        if env not in ('manual', 'api'):
+            raise JobbotError('JOBBOT_MODE must be manual or api')
+        return env == 'manual'
+    mode = model_config().get("mode", "api")
+    if mode not in ('manual', 'api'):
+        raise JobbotError('models.yaml mode must be manual or api')
+    return mode == 'manual'
 
 
 def tasks_dir() -> Path:

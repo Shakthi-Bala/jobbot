@@ -498,8 +498,7 @@ def gmail_credentials(interactive: bool = False):
                 creds = _authorize_gmail(creds_path, scopes, interactive)
         else:
             creds = _authorize_gmail(creds_path, scopes, interactive)
-        token_path.write_text(creds.to_json())
-        token_path.chmod(0o600)
+        core.write_private(token_path, creds.to_json())
     return creds
 
 

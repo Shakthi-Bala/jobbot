@@ -43,7 +43,7 @@ PRIVATE_PATHS = ('.env', 'data/profile.yaml', 'data/answers_bank.yaml', 'data/cr
 
 
 def _clean(value) -> str:
-    return re.sub(r"\s*\(.*?\)\s*", " ", str(value or "")).strip()
+    return " ".join(re.sub(r"\s*\(.*?\)\s*", " ", str(value or "")).split())
 
 
 def identifiers(profile: dict) -> dict[str, str]:
@@ -198,13 +198,14 @@ def inspect_blob(data: bytes, path: str, ids: dict[str, str], assets: dict,
         # The configured public repository URL is intentional project attribution.
         folded = (re.sub(re.escape(repository) + r'''(?=$|[/\s?#)"'])''',
                          '<public-repository>', line, flags=re.I) if repository else line).casefold()
+        folded = ' '.join(folded.split())
         labels = sorted({label for needle, label in ids.items() if needle in folded})
         for needle, label in ids.items():
             if label != 'phone':
                 continue
             digits = re.sub(r'\D', '', needle)
             if len(digits) >= 7 and re.search(
-                    r'(?<!\d)' + r'[\s().+\-]*'.join(digits) + r'(?!\d)', folded):
+                    r'(?<!\d)' + r'[\s().+\-‐‑‒–—/]*'.join(digits) + r'(?!\d)', folded):
                 labels = sorted(set(labels) | {'phone'})
         if labels:
             problems.append(f"{path}:{number} contains your {', '.join(labels)}")
