@@ -23,4 +23,15 @@ def test_ats_salary_endpoints_preserve_zero_and_missing_lower_bound(maximum):
                                'maxValue': maximum, 'currencyCode': 'USD', 'interval': 'YEAR'}]}})
     for job in (lever, ashby):
         assert job['comp_min'] is None
-        assert job['comp_max'] == maximum
+        assert job['comp_max'] == (maximum or None)
+
+
+@pytest.mark.parametrize('lo,hi', [(90000, 0), (150000, 90000), (-1, 100000), (None, float('nan'))])
+def test_invalid_board_pay_falls_back_to_posting_text(lo, hi):
+    pay = discover._board_pay(lo, hi, 'YEAR', '', 'Salary $90,000-$110,000 m/w/d')
+    assert (pay['comp_min'], pay['comp_max'], pay['comp_source']) == (90000, 110000, 'text')
+
+
+def test_monthly_board_pay_and_genuine_zero_lower_bound():
+    assert discover._board_pay(0, 10000, 'MONTH', '', '')['comp_max'] == 120000
+    assert discover._board_pay(0, 10000, 'MONTH', '', '')['comp_min'] == 0
