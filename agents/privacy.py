@@ -192,7 +192,8 @@ def inspect_blob(data: bytes, path: str, ids: dict[str, str], assets: dict,
         problems.append(f'{path}: PDF has no extractable text; review required')
     for number, line in enumerate(text.splitlines(), 1):
         # The configured public repository URL is intentional project attribution.
-        folded = (line.replace(repository, '<public-repository>') if repository else line).casefold()
+        folded = (re.sub(re.escape(repository) + r'''(?=$|[/\s?#)"'])''',
+                         '<public-repository>', line, flags=re.I) if repository else line).casefold()
         labels = sorted({label for needle, label in ids.items() if needle in folded})
         if labels:
             problems.append(f"{path}:{number} contains your {', '.join(labels)}")
@@ -208,6 +209,9 @@ def scan(files: list[Path], ids: dict[str, str], root: Path | None = None) -> li
     for path in files:
         try:
             if not path.is_file():
+                continue
+            if path.stat().st_size > MAX_BYTES:
+                problems.append(f'{path.name}: exceeds privacy scan size limit; review required')
                 continue
             data = path.read_bytes()
         except OSError:
@@ -260,6 +264,9 @@ def scan_push(updates: str, root: Path | None = None) -> list[str]:
                 continue
             seen.add(key)
             if _git(root, 'cat-file', '-t', oid).strip() != 'blob':
+                continue
+            if int(_git(root, 'cat-file', '-s', oid)) > MAX_BYTES:
+                problems.append(f'{commit[:12]} {path}: exceeds privacy scan size limit; review required')
                 continue
             findings = inspect_blob(_git_bytes(root, 'cat-file', 'blob', oid), path, ids,
                                     assets, secrets, repository)
