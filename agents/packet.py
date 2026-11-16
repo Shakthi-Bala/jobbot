@@ -131,8 +131,7 @@ def _build(conn, job_id: str, skip_review: bool, offline: bool, skip_panel: bool
     state = json.loads(state_path.read_text()) if state_path.exists() else {}
     if state.get("inputs") != key or state.get("manifest", {}) != _manifest(d):
         state = {"inputs": key, "phase": "draft", "fix_loops": 0, "panel_round": 0,
-                 "blocking": [], "feedback": ([f"The candidate asked for: {requested.read_text().strip()}"]
-                                               if requested.exists() else [])}
+                 "blocking": [], "feedback": []}
     if state["phase"] == "complete":
         return state["result"]
 
