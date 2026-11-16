@@ -10,6 +10,7 @@ import html
 import re
 from datetime import datetime, timezone
 from typing import Iterable
+from urllib.parse import urlsplit
 
 import httpx
 from bs4 import BeautifulSoup
@@ -89,7 +90,7 @@ def _board_pay(lo, hi, interval, label, posting):
     return _pay(lo * mult if lo is not None else None, hi * mult, label, 'ats')
 
 
-def _greenhouse_job(slug: str, j: dict) -> dict:
+def _greenhouse_job(slug: str, j: dict, region: str = "us") -> dict:
     content = html.unescape(j.get("content") or "")
     text = html_to_text(content)
     return _pay_from_text(text) | {
@@ -99,7 +100,7 @@ def _greenhouse_job(slug: str, j: dict) -> dict:
         "req_id": str(j["id"]),
         # Branded career-page URLs cannot be re-fetched by our ATS adapter.
         # Keep the public board identity available to packet/checks.
-        "url": f"https://job-boards.greenhouse.io/{slug}/jobs/{j['id']}",
+        "url": f"https://job-boards{'.eu' if region == 'eu' else ''}.greenhouse.io/{slug}/jobs/{j['id']}",
         "source": "greenhouse",
         "posted_at": j.get("first_published") or j.get("updated_at"),
         "raw_text": text, "raw_html": content,
@@ -153,10 +154,20 @@ def _ashby_job(slug: str, j: dict) -> dict:
     }
 
 
-def fetch_board(ats: str, slug: str) -> list[dict]:
+def _greenhouse_api(region: str) -> str:
+    if region not in ('us', 'eu'):
+        raise core.JobbotError('Greenhouse region must be us or eu')
+    return 'https://boards-api' + ('.eu' if region == 'eu' else '') + '.greenhouse.io'
+
+
+def _region(url: str) -> str:
+    return 'eu' if (urlsplit(url).hostname or '').endswith('.eu.greenhouse.io') else 'us'
+
+
+def fetch_board(ats: str, slug: str, region: str = 'us') -> list[dict]:
     if ats == "greenhouse":
-        data = _get(f"https://boards-api.greenhouse.io/v1/boards/{slug}/jobs", content="true").json()
-        return [_greenhouse_job(slug, j) for j in data.get("jobs", [])]
+        data = _get(f"{_greenhouse_api(region)}/v1/boards/{slug}/jobs", content="true").json()
+        return [_greenhouse_job(slug, j, region) for j in data.get("jobs", [])]
     if ats == "lever":
         data = _get(f"https://api.lever.co/v0/postings/{slug}", mode="json").json()
         return [_lever_job(slug, j) for j in data]
@@ -186,8 +197,9 @@ def fetch_by_url(url: str) -> dict | None:
     ats, slug, job_id = parsed
     try:
         if ats == "greenhouse":
-            j = _get(f"https://boards-api.greenhouse.io/v1/boards/{slug}/jobs/{job_id}").json()
-            return _greenhouse_job(slug, j)
+            region = _region(url)
+            j = _get(f"{_greenhouse_api(region)}/v1/boards/{slug}/jobs/{job_id}").json()
+            return _greenhouse_job(slug, j, region)
         if ats == "lever":
             j = _get(f"https://api.lever.co/v0/postings/{slug}/{job_id}").json()
             return _lever_job(slug, j)
@@ -390,10 +402,16 @@ def upsert_jobs(conn, jobs: Iterable[dict], targets: dict, parse: bool = True,
     return new_ids
 
 
-def mark_missing_inactive(conn, company: str, seen_ids: set[str]) -> int:
-    rows = conn.execute("SELECT id FROM jobs WHERE company=? AND active=1 AND source IN "
+def mark_missing_inactive(conn, company: str, seen_ids: set[str], board=None) -> int:
+    rows = conn.execute("SELECT id, url FROM jobs WHERE company=? AND active=1 AND source IN "
                         "('greenhouse','lever','ashby')", (company,)).fetchall()
-    gone = [r["id"] for r in rows if r["id"] not in seen_ids]
+    gone = []
+    for row in rows:
+        parsed = parse_ats_url(row['url'] or '')
+        if board and (not parsed or (*parsed[:2], _region(row['url'])) != board):
+            continue  # No evidence that this posting belongs to the polled board.
+        if row['id'] not in seen_ids:
+            gone.append(row['id'])
     for jid in gone:
         conn.execute("UPDATE jobs SET active=0 WHERE id=?", (jid,))
         core.log_decision("discover", jid, "inactive", "no longer on the company board")
@@ -411,7 +429,7 @@ def poll_boards(conn, targets: dict, min_pay: int = 0) -> list[str]:
             core.warn(f"skipping {c.get('name')}: needs ats + slug in companies.yaml")
             continue
         try:
-            jobs = fetch_board(ats, slug)
+            jobs = (fetch_board(ats, slug, c['region']) if c.get('region') else fetch_board(ats, slug))
         except (httpx.HTTPError, core.JobbotError, ValueError, TypeError, KeyError) as e:
             core.warn(f"{c.get('name')}: {e}")
             core.log_decision("discover", None, "board_error", f"{c.get('name')}: {e}")
@@ -421,13 +439,13 @@ def poll_boards(conn, targets: dict, min_pay: int = 0) -> list[str]:
             j["company"] = name
         new_ids += upsert_jobs(conn, jobs, targets, min_pay=min_pay)
         seen = {posting_id(conn, j) for j in jobs}
-        mark_missing_inactive(conn, name, seen)
+        mark_missing_inactive(conn, name, seen, (ats, slug, c.get('region', 'us')))
     return new_ids
 
 
-def _company_name_for(slug: str) -> str:
+def _company_name_for(slug: str, ats: str | None = None) -> str:
     for c in core.load_companies():
-        if c.get("slug") == slug:
+        if c.get("slug") == slug and (ats is None or c.get("ats") == ats):
             return c.get("name") or slug
     return slug
 
@@ -436,16 +454,19 @@ def ingest_urls(conn, urls: Iterable[str], targets: dict, source: str,
                 min_pay: int = 0) -> list[str]:
     new_ids = []
     for url in dict.fromkeys(urls):
+        parsed = parse_ats_url(url)
+        if not parsed:
+            continue
         try:
             job = fetch_by_url(url)
-        except httpx.HTTPError as e:
-            core.warn(f"{url}: {e}")
+            if job is None:
+                continue
+            job["company"] = _company_name_for(parsed[1], parsed[0])
+            job["source"] = source
+            new_ids += upsert_jobs(conn, [job], targets, min_pay=min_pay)
+        except (httpx.HTTPError, core.JobbotError, ValueError, TypeError, KeyError) as e:
+            core.warn(f"posting ingestion skipped ({type(e).__name__}): {url}")
             continue
-        if job is None:
-            continue
-        job["company"] = _company_name_for(parse_ats_url(url)[1])
-        job["source"] = source
-        new_ids += upsert_jobs(conn, [job], targets, min_pay=min_pay)
     return new_ids
 
 
