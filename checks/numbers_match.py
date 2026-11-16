@@ -14,7 +14,7 @@ def source_texts(profile: dict) -> dict[str, str]:
         out[f["id"]] = f.get("text", "") + " " + json_strings(metrics)
     for key in ("education", "experience", "projects"):
         for e in profile.get(key, []) or []:
-            excluded = ("facts",) if key == 'education' else ('facts', 'start', 'end', 'dates')
+            excluded = ('facts', 'start', 'end', 'dates')
             scalars = {k: v for k, v in e.items() if k not in excluded}
             out[e["id"]] = json_strings(scalars)
     return out
@@ -33,9 +33,34 @@ def check(d: Path) -> list[str]:
     # Numbers that are part of names, never claims: job title, company, req ID, skill names.
     names = [str(m.get(k) or '') for k in ('company', 'title', 'req_id')]
     names += [s.get('skill', '') for s in profile.get('skills', [])]
+    from agents.tailor import dates
+    education_headers = {}
+    for entry in profile.get('education', []):
+        header = f"{entry['degree']}, {entry['school']}, {dates(entry)}"
+        if entry.get('gpa'):
+            header += f", GPA {entry['gpa']}"
+        education_headers[header + f" [{entry['id']}]"] = dates(entry)
+    posting = ''
+    if m.get('job_id') and core.DB_PATH.exists():
+        conn = core.connect()
+        try:
+            posting = core.get_job(conn, m['job_id'])['raw_text'] or ''
+        except core.JobbotError:
+            pass  # A detached packet still receives strict numerical checks.
+        finally:
+            conn.close()
     bad = []
     for path in tagged_files(d):
-        for n, line in claim_lines(path):
+        claims = list(claim_lines(path))
+        # Question labels are visible prose too. An exact posting question is
+        # quoted input; invented numerical assertions in a label are not exempt.
+        if path.name == 'answers.tagged.md':
+            for n, label in enumerate(path.read_text().splitlines(), 1):
+                if label.startswith('## Q: '):
+                    question = label[len('## Q: '):]
+                    if not core.quote_in_text(question, posting):
+                        claims.append((n, question))
+        for n, line in claims:
             if core.NEED_INPUT_RE.fullmatch(line):
                 continue  # a question for you, not a claim
             sources = []
@@ -43,6 +68,8 @@ def check(d: Path) -> list[str]:
                 sources.append(src.get(t, ''))
             for k in core.ANSWER_TAG_RE.findall(line):
                 sources.append(json_strings(_bank_get(bank, k)))
+            if path.name == 'resume.tagged.md' and line in education_headers:
+                sources.append(education_headers[line])
             prose = core.strip_tags(line)
             # A number in a product name permits that name, not an unrelated metric.
             for name in sorted(filter(None, names), key=len, reverse=True):

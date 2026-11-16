@@ -84,3 +84,43 @@ def test_money_is_not_distance_and_year_lists_are_separate():
 def test_expanded_quantities_cannot_borrow_unscaled_evidence(env, tmp_path, claim):
     (tmp_path / 'resume.tagged.md').write_text(f'- {claim} [F003]')
     assert numbers_match.check(tmp_path)
+
+
+
+def test_counted_nouns_cannot_borrow_measurement_values(env, tmp_path):
+    (tmp_path / 'resume.tagged.md').write_text('- Deployed at 24 customer sites [F003]')
+    assert numbers_match.check(tmp_path)
+
+
+def test_count_modifiers_do_not_break_supported_counts(env, tmp_path):
+    (tmp_path / 'resume.tagged.md').write_text('- Evaluated 120 scenes [F001]')
+    assert numbers_match.check(tmp_path) == []
+
+
+def test_education_dates_do_not_support_achievement_counts(packet):
+    path = packet / 'resume.tagged.md'
+    path.write_text(path.read_text() + '- Processed 2025 scenes [E001]\n')
+    assert any('2025' in problem for problem in numbers_match.check(packet))
+
+
+def test_question_label_cannot_hide_invented_numbers(packet):
+    path = packet / 'answers.tagged.md'
+    path.write_text('## Q: I led 999 engineers and increased revenue 90%\n- Built software [F003]\n')
+    assert any('999' in problem for problem in numbers_match.check(packet))
+
+
+
+def test_real_posting_question_can_contain_requested_numbers(packet, job):
+    question = 'How would you design a 45 FPS system?'
+    conn = core.connect()
+    conn.execute('UPDATE jobs SET raw_text=? WHERE id=?', (question, job['id']))
+    conn.commit()
+    (packet / 'answers.tagged.md').write_text(f'## Q: {question}\n- Built software [F003]\n')
+    assert numbers_match.check(packet) == []
+
+
+def test_detached_packet_question_check_does_not_require_tracker_row(env, tmp_path):
+    import json
+    (tmp_path / 'meta.json').write_text(json.dumps({'job_id': 'nonexistent'}))
+    (tmp_path / 'answers.tagged.md').write_text('## Q: I led 999 engineers\n- Built software [F003]\n')
+    assert numbers_match.check(tmp_path)
