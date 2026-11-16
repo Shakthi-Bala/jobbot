@@ -94,3 +94,13 @@ def test_packet_can_recheck_an_automatically_closed_posting(env, monkeypatch):
         packet.build(jid)
     assert core.get_job(conn, jid)['active'] == 1
     assert core.get_job(conn, jid)['status'] != 'closed'
+
+
+def test_reimport_can_correct_a_manual_posting_id_without_losing_history(env):
+    conn = core.connect()
+    job = greenhouse(101, 'Boston') | {'req_id': 'WRONG', 'source': 'manual'}
+    [jid] = discover.upsert_jobs(conn, [job], {}, parse=False)
+    core.set_status(conn, jid, 'needs_input')
+    result = discover.add_manual(job['company'], job['title'], job['raw_text'],
+                                 job['location'], job['url'], '101')
+    assert result == jid and core.get_job(conn, jid)['req_id'] == '101'

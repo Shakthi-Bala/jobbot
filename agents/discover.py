@@ -552,6 +552,7 @@ def add_manual(company: str, title: str, text: str, location: str = "", url: str
     job |= _pay_from_text(text)
     jid = posting_id(conn, job)
     if conn.execute("SELECT 1 FROM jobs WHERE id=?", (jid,)).fetchone():
+        upsert_jobs(conn, [job], targets={}, parse=False)
         return jid
     ids = upsert_jobs(conn, [job], targets={}, parse=True)
     return ids[0] if ids else jid
