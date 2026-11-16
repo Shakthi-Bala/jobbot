@@ -64,6 +64,10 @@ def review(conn, job_id: str, d: Path, check_results: dict[str, list[str]],
     )
 
     failed_checks = {k: v for k, v in check_results.items() if v}
+    warning_file = d / 'injection_warnings.json'
+    if warning_file.exists():
+        user += '\n\n## Source warnings (untrusted posting; inspect for contamination)\n' + core.untrusted(
+            'source_warnings', warning_file.read_text())
     checks_text = ("\n\n## Check failures (rules as code; these are facts, not opinions)\n"
                    + (core.dumps(failed_checks) if failed_checks else "none"))
     lead_system = (core.system_prompt(SKILL) + "\n\n" + rubric + "\n\n"
