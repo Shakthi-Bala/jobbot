@@ -229,7 +229,7 @@ def cmd_privacy(a):
     from agents import privacy
     if a.install_hook:
         print(f"installed {privacy.install_hook()}: every `git push` now runs the scan")
-    problems = privacy.run()
+    problems = privacy.scan_push(sys.stdin.read()) if a.push else privacy.run()
     for p in problems:
         print("  -", p)
     print("no personal details in tracked files" if not problems
@@ -321,6 +321,7 @@ def main(argv=None):
                    choices=["full", "all", "perception", "rl", "robotics_swe", "ml"])
     s = sub.add_parser("privacy"); s.set_defaults(fn=cmd_privacy)
     s.add_argument("--install-hook", action="store_true", help="scan before every git push")
+    s.add_argument('--push', action='store_true', help='scan outgoing commits from pre-push stdin')
     s = sub.add_parser("tasks"); s.set_defaults(fn=cmd_tasks)
     s.add_argument("--check", action="store_true")
 
