@@ -107,7 +107,17 @@ def apply_edits(conn, edits: dict[str, dict], errors: dict[str, str] | None = No
         row = conn.execute("SELECT status FROM jobs WHERE id=?", (job_id,)).fetchone()
         if row and row["status"] not in ("applied", "responded", "interview", "rejected", "offer"):
             try:
-                tracker.mark_applied(job_id)
+                applied_on = e.get('date_applied')
+                if isinstance(applied_on, datetime):
+                    applied_on = applied_on.date()
+                if applied_on:
+                    try:
+                        applied_on = date.fromisoformat(str(applied_on).strip()).isoformat()
+                    except ValueError as invalid_date:
+                        raise core.JobbotError('Date applied must be an ISO date (YYYY-MM-DD)') from invalid_date
+                    tracker.mark_applied(job_id, applied_on=applied_on)
+                else:
+                    tracker.mark_applied(job_id)
             except core.JobbotError as e:
                 core.warn(f"sheet {job_id}: {e}")
                 if errors is not None:
@@ -134,7 +144,7 @@ def collect(conn, include_ids=()) -> list[dict]:
         "SELECT j.*, f.score FROM jobs j LEFT JOIN fit f ON f.job_id=j.id "
         f"ORDER BY {core.PAY_ORDER_SQL}, f.score DESC").fetchall()
     for j in jobs:
-        d = core.job_dir(j["id"], conn)
+        d = core.job_dir(j["id"], conn, create=False)
         if not (d / "meta.json").exists() or (
                 j["status"] in ("skipped", "blocked", "closed") and j['id'] not in include_ids):
             continue  # only jobs you're still considering

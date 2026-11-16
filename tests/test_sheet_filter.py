@@ -36,3 +36,28 @@ def test_failed_applied_edit_remains_visible_for_correction(packet, job, tmp_pat
     result = sheet.build(path)
     assert result['rows'] == 1 and job['id'] in result['errors']
     assert sheet.read_user_edits(path)[job['id']]['applied'] == 'Yes'
+
+
+
+def test_sheet_collection_does_not_create_job_directories(job):
+    d = core.job_dir(job['id'], create=False)
+    assert not d.exists()
+    assert sheet.collect(core.connect()) == []
+    assert not d.exists()
+
+
+@pytest.mark.parametrize('value', ['2025-10-01', __import__('datetime').datetime(2025, 10, 1)])
+def test_date_applied_controls_action_and_followup(job, value):
+    conn = core.connect()
+    assert sheet.apply_edits(conn, {job['id']: {'applied': 'Yes', 'date_applied': value}}) == [job['id']]
+    assert conn.execute("SELECT at FROM actions WHERE action='applied'").fetchone()[0] == '2025-10-01'
+    assert conn.execute('SELECT due FROM followups').fetchone()[0] == '2025-10-11'
+
+
+def test_invalid_applied_date_is_reported_without_recording(job, capsys):
+    errors = {}
+    conn = core.connect()
+    assert sheet.apply_edits(conn, {job['id']: {'applied': 'Yes', 'date_applied': 'yesterday'}}, errors) == []
+    assert job['id'] in errors
+    assert 'Date applied' in capsys.readouterr().err
+    assert conn.execute('SELECT COUNT(*) FROM actions').fetchone()[0] == 0

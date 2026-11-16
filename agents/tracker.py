@@ -37,7 +37,7 @@ def edit_draft(job_id: str, *, changes: str | None = None) -> None:
         conn.close()
 
 
-def mark_applied(job_id: str) -> int | None:
+def mark_applied(job_id: str, applied_on: str | None = None) -> int | None:
     """Record exactly which resume version you sent (by hash)."""
     conn = core.connect()
     job = core.get_job(conn, job_id)
@@ -62,11 +62,16 @@ def mark_applied(job_id: str) -> int | None:
         if draft.exists() and core.sha256_file(draft) != doc["sha256"]:
             raise core.JobbotError("Current resume differs from the recorded version; finish the packet before marking applied")
     detail = f"resume v{doc['version']} sha256={doc['sha256'][:16]}" if doc else "no resume on file"
-    due = (date.fromisoformat(core.today()) + timedelta(days=10)).isoformat()
+    try:
+        submitted = date.fromisoformat(applied_on or core.today())
+    except ValueError as invalid_date:
+        raise core.JobbotError('Date applied must be an ISO date (YYYY-MM-DD)') from invalid_date
+    due = (submitted + timedelta(days=10)).isoformat()
+    recorded_at = submitted.isoformat() if applied_on else core.now()
     with conn:
         conn.execute("INSERT INTO actions (job_id, actor, action, detail, doc_id, at) "
                      "VALUES (?, 'me', 'applied', ?, ?, ?)",
-                     (job_id, detail, doc["id"] if doc else None, core.now()))
+                     (job_id, detail, doc["id"] if doc else None, recorded_at))
         conn.execute("UPDATE jobs SET status='applied' WHERE id=?", (job_id,))
         conn.execute("INSERT INTO followups (job_id, due, note) VALUES (?,?,?)",
                      (job_id, due, "Check application status / nudge recruiter"))
