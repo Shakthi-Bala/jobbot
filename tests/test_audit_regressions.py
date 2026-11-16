@@ -293,10 +293,9 @@ def test_latex_links_cannot_inject_commands(tmp_path):
 
 
 def test_contacts_require_both_name_and_company(monkeypatch):
-    def respond(url, **kwargs):
-        return httpx.Response(200, text='<p>Alex Example works at Other Company</p>',
-                              request=httpx.Request('GET', url))
-    monkeypatch.setattr(contact_sources.httpx, 'get', respond)
+    def respond(url):
+        return '<p>Alex Example works at Other Company</p>', url
+    monkeypatch.setattr(contact_sources, 'public_page', respond)
     assert not contact_sources.page_confirms('https://example.com', 'Alex Example', 'Acme')
     assert contact_sources.page_confirms('https://example.com', 'Alex Example', 'Other Company')
 
