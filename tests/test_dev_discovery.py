@@ -1,4 +1,5 @@
 from agents import core, discover
+import pytest
 
 
 def greenhouse(posting_id, location):
@@ -34,3 +35,34 @@ def test_greenhouse_migration_preserves_application_history(env):
     original = core.get_job(conn, jid)
     assert original['req_id'] == '101' and original['status'] == 'interview'
     assert conn.execute('SELECT job_id FROM actions').fetchone()[0] == jid
+
+
+def test_lever_missing_lower_salary_can_be_listed(env, capsys):
+    import jobbot
+    job = discover._lever_job('acme', {
+        'id': 'lever-1', 'text': 'Engineer', 'salaryRange': {
+            'min': None, 'max': 175000, 'currency': 'USD', 'interval': 'year'}})
+    assert job['comp_min'] is None and job['comp_max'] == 175000
+    [jid] = discover.upsert_jobs(core.connect(), [job], {}, parse=False)
+    jobbot._print_jobs([jid])
+    assert 'up to $175K' in capsys.readouterr().out
+
+
+@pytest.mark.parametrize('text', ['$120-150K', '$120K - 150K', '$120K to $150K'])
+def test_shared_salary_units(text):
+    assert core.parse_pay_text(text) == (120000, 150000)
+
+
+def test_bad_board_does_not_stop_other_companies(env, monkeypatch):
+    monkeypatch.setattr(core, 'load_companies', lambda: [
+        {'name': 'Broken', 'ats': 'lever', 'slug': 'bad'},
+        {'name': 'Good', 'ats': 'greenhouse', 'slug': 'good'}])
+    def fetch(ats, slug):
+        if slug == 'bad':
+            raise ValueError('malformed board data')
+        return [greenhouse(103, 'Boston')]
+    monkeypatch.setattr(discover, 'fetch_board', fetch)
+    monkeypatch.setattr(discover, 'parse_posting', lambda *a: (_ for _ in ()).throw(core.JobbotError('unavailable')))
+    ids = discover.poll_boards(core.connect(), {})
+    assert len(ids) == 1
+    assert core.get_job(core.connect(), ids[0])['company'] == 'Good'

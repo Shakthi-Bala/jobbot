@@ -106,7 +106,7 @@ def _lever_job(slug: str, j: dict) -> dict:
     sr = j.get("salaryRange") or {}
     if sr.get("max") and sr.get("currency", "USD") == "USD":
         mult = core.HOURS_PER_YEAR if "hour" in (sr.get("interval") or "") else 1
-        pay = _pay(sr.get("min", 0) * mult, sr["max"] * mult,
+        pay = _pay(sr["min"] * mult if sr.get("min") is not None else None, sr["max"] * mult,
                    f"${sr.get('min')}-${sr['max']} {sr.get('interval', '')}", "ats")
     else:
         pay = _pay_from_text(raw_text)
@@ -382,7 +382,7 @@ def poll_boards(conn, targets: dict, min_pay: int = 0) -> list[str]:
             continue
         try:
             jobs = fetch_board(ats, slug)
-        except (httpx.HTTPError, core.JobbotError) as e:
+        except (httpx.HTTPError, core.JobbotError, ValueError, TypeError, KeyError) as e:
             core.warn(f"{c.get('name')}: {e}")
             core.log_decision("discover", None, "board_error", f"{c.get('name')}: {e}")
             continue
