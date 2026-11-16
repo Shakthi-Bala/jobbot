@@ -1,12 +1,15 @@
 # jobbot
 
-**Turn job descriptions and verified experience into application materials you can review.**
+**Find robotics and ML roles ranked by pay. Build fact-checked applications with a seven-reader review panel. Never auto-apply.**
+
+[![Tests](https://github.com/Shakthi-Bala/jobbot/actions/workflows/tests.yml/badge.svg?branch=dev)](https://github.com/Shakthi-Bala/jobbot/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ![Animated jobbot workflow: verified facts and a job description become tailored documents, checks, and a human review queue.](docs/assets/jobbot-workflow.gif)
 
-*Illustrated workflow using synthetic data. This preview shows the process, rather than a live application or a measured hiring outcome.*
+*Replay of actual offline CLI output, with synthetic data and fixture review answers.*
 
-[Quick start](#quick-start) · [Workflow](#workflow) · [Review panel](#review-panel) · [Configuration](docs/configuration.md) · [Audit](AUDIT.md)
+[Quick start](#quick-start) · [Example output](#example-output) · [Workflow](#workflow) · [Review panel](#review-panel) · [Configuration](docs/configuration.md)
 
 jobbot is a Python toolkit for finding relevant roles, assessing fit, drafting tailored résumés and cover letters, and tracking applications. It combines structured AI tasks with document checks and an explicit review step. You review the materials and submit applications yourself.
 
@@ -31,10 +34,14 @@ Use Python 3.10 or newer. Run these commands from the repository root:
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-python jobbot.py init
+python jobbot.py demo
 ```
 
-Initialization creates the local tracker and copies the example profile and answers bank if they do not already exist. Replace the illustrative profile facts before generating an application.
+The offline demo runs the real import, packet, PDF-rendering, checks, and panel-report commands using the [example posting](data/evals/example-perception/posting.txt) and fictional profile. It supplies recorded JSON answers instead of calling a model. No API key, browser login, job-board request, or application submission is needed.
+
+Open the résumé, cover letter, `checks.json`, and `panel.md` in the packet directory printed at the end. Each run gets a fresh directory under `out/demo/`; `out/demo/latest.json` records the latest paths. Scores in this demo are fixtures, not assessments of an applicant. Your existing profile and tracker are untouched.
+
+For your own applications, run `python jobbot.py init` and edit the local files below. Initialization creates the tracker and copies examples only where those files do not already exist.
 
 | File | Add |
 | --- | --- |
@@ -54,6 +61,12 @@ python jobbot.py tasks          # list pending tasks
 python jobbot.py tasks --check  # validate answer schemas
 ```
 
+Open your coding assistant in this repository and type:
+
+> Read AGENTS.md and answer the pending tasks in out/tasks. Validate the answers and rerun the paused command. Report any evidence gaps.
+
+[AGENTS.md](AGENTS.md) documents the task/answer protocol and skill router; [CLAUDE.md](CLAUDE.md) points Claude Code to the same instructions. The assistant may need several rounds as later writing and review tasks are queued. Missing evidence requires your input.
+
 **API mode** calls the Anthropic API. Set `mode: api` in `models.yaml` and provide `ANTHROPIC_API_KEY` in the process environment. Model identifiers must be available to your account. The built-in API adapter currently supports Anthropic models; other providers are not connected.
 
 Task files and application packets contain candidate information. In either mode, the model service or coding assistant used to answer a task receives its contents.
@@ -69,6 +82,27 @@ sudo apt install poppler-utils
 ```
 
 LaTeX output uses an 11-point body with single line spacing. If a LaTeX engine is unavailable, the renderer writes a fallback note; the layout check flags that fallback rather than approving it as the intended LaTeX layout.
+
+## Example output
+
+This is a real rendered PDF from the offline demo. All names, projects, results, and review answers are fictional.
+
+[![Rendered synthetic résumé](docs/assets/example-resume.png)](docs/assets/example-resume.pdf)
+
+[Download the example PDF](docs/assets/example-resume.pdf) · [Panel report](docs/assets/example-panel.md) · [Check results](docs/assets/example-checks.json)
+
+An excerpt from the generated check results:
+
+```json
+{
+  "fact_ids": [],
+  "numbers_match": [],
+  "ats_parse": [],
+  "length_limits": []
+}
+```
+
+Empty lists mean those checks found no failures. They do not establish semantic truth or hiring success. The demo's panel report includes a `maybe` hiring-manager verdict and 7.2/10 fixture reader scores, illustrating how evidence gaps remain visible.
 
 ## Workflow
 
@@ -148,7 +182,7 @@ python jobbot.py weekly              # summarize the application funnel
 python run_daily.py --top 3          # discovery, fit, and up to three packets
 ```
 
-Manual-mode runs can pause for task answers. API-mode runs can incur model costs, particularly with the full review panel. On shared clusters, submit rendering, batch generation, and test runs through the local scheduler.
+Manual-mode runs can pause for task answers. API-mode runs can incur model costs, particularly with the full review panel. Token usage is recorded in the decision log.
 
 ## Privacy and boundaries
 
@@ -159,19 +193,21 @@ python jobbot.py privacy
 python jobbot.py privacy --install-hook
 ```
 
-The privacy command compares tracked text files against identifiers in the active local profile. It is a targeted check, rather than a comprehensive secret or Git-history scanner. Keep credentials in the process environment or the ignored `.env` file. Optional Discord notifications use an explicitly configured webhook.
+The privacy command checks tracked files against identifiers in the active local profile and configured secrets. Its pre-push hook checks the committed contents of every outgoing commit, including earlier versions hidden by a clean working copy. PDF text and metadata are inspected; unreadable documents, oversized files, and unknown binaries require review. Synthetic image assets have reviewed hashes in [the public asset manifest](docs/assets/public-assets.json).
+
+This is a targeted check, not a universal secret detector or an audit of copies already hosted elsewhere. Your Git author name and email remain normal public attribution. The configured repository URL is permitted for project links and badges. Keep credentials in the process environment or the ignored `.env` file.
 
 The application workflow prepares materials for human review. It does not submit applications or send recruiter outreach. External model calls, job-board requests, and explicitly configured notifications still communicate with their respective services.
 
 ## Development
 
 ```bash
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest
+python -m pytest
 python jobbot.py eval run baseline
 python jobbot.py eval compare baseline candidate
 ```
 
-Tests use isolated fixtures and do not require paid model calls. Saved evaluations help compare prompt changes; inspect their inputs before running model-backed evaluations. The [audit](AUDIT.md) documents defects, fixes, and remaining limitations.
+Tests use isolated fixtures and do not require paid model calls. [GitHub Actions](.github/workflows/tests.yml) runs them on Python 3.10 and 3.12 with Typst and PDF tools installed. Saved evaluations help compare prompt changes; inspect their inputs before running model-backed evaluations. The [changelog](CHANGELOG.md) records fixes and remaining limitations.
 
 | Directory | Purpose |
 | --- | --- |
@@ -183,3 +219,5 @@ Tests use isolated fixtures and do not require paid model calls. Saved evaluatio
 | [`tests/`](tests/) | Regression tests and isolated fixtures. |
 
 The workflow structure draws inspiration from [pstack](https://github.com/cursor/plugins/tree/main/pstack): focused skills, fixed playbooks, and rules enforced in code.
+
+Licensed under the [MIT License](LICENSE).
