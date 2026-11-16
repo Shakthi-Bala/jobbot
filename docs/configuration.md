@@ -68,7 +68,7 @@ Drafting a master can require an AI task. Rendering an existing master does not 
 
 ## Reviews and model calls
 
-Configure mode and models in local `models.yaml`, copied from the tracked [example configuration](../models.example.yaml) by `init`. Without a local file, the example supplies the defaults. In manual mode, task files and answer schemas are saved under `out/tasks/`; complete the answers in a coding-assistant session, validate them, and rerun the original command.
+Configure mode and models in local `models.yaml`, copied from the tracked [example configuration](../models.example.yaml) by `init`. Without a local file, the example supplies the defaults (`mode: manual`). An existing local file without `mode` uses API mode; set `mode: manual` explicitly to queue local tasks. Unknown mode values are errors. In manual mode, task files and answer schemas are saved under `out/tasks/`; complete the answers in a coding-assistant session, validate them, and rerun the original command.
 
 The panel's minimum score is an editorial gate. A high average cannot override a reader below the configured threshold. If stronger evidence is needed, the pipeline stops rather than inventing a result. See [the review guide](resume-review-loop.md) for scoring and visual-review limitations.
 
@@ -76,7 +76,10 @@ The panel's minimum score is an editorial gate. A high average cannot override a
 
 - **Gmail alerts:** use a read-only OAuth client, save credentials in ignored `data/credentials.json`, and run `python jobbot.py gmail-auth` interactively. Label alerts `jobbot/alerts`. Scheduled discovery only uses existing credentials and never opens a browser. Board discovery can run with `--no-alerts`.
 - **Discord:** set `DISCORD_WEBHOOK_URL` in the environment or ignored `.env` file. `python -m agents.notify --help` documents explicit updates and supported media attachments. Keep candidate data and credentials out of messages.
-- **Spreadsheet:** `python jobbot.py sheet` refreshes `data/applications.xlsx`. Review edits to application-status fields before refreshing; the integration can record entries marked as applied. Skipped, blocked, and closed rows disappear from the active sheet on refresh; their editable values remain in the hidden `Saved edits` worksheet and return if the job is reopened. A failed application recording stays visible for correction.
+- **Spreadsheet:** `python jobbot.py sheet` refreshes `data/applications.xlsx`. Review edits to application-status fields before refreshing; the integration can record entries marked as applied. Skipped, blocked, and closed rows disappear from the active sheet on refresh; their editable values remain in the hidden `Saved edits` worksheet and return if the job is reopened. A failed application recording stays visible for correction and prints an error to stderr. `Date applied` accepts an Excel date or `YYYY-MM-DD`; it sets the application event date and the ten-day follow-up date. Collection does not create directories for jobs without packets.
 - **Daily runs:** use `python run_daily.py --help` to control packet count and discovery sources. Manual mode queues tasks for your assistant; it cannot answer them unattended.
 
 Return to the [README](../README.md).
+
+
+For a Greenhouse board hosted in the EU, set `region: eu` beside its `ats: greenhouse` and `slug` in local company configuration. The default region is `us`. Imported EU posting URLs retain their regional API and public hosts. Board refreshes deactivate only postings belonging to that board, even when several boards use the same company name.

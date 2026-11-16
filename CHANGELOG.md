@@ -4,6 +4,14 @@
 
 ### Correctness and reliability
 
+- Exempt ordinary idioms such as “one of” and “zero-copy” without exempting actual zero/one measurements. Expand compact/scaled numbers, dozen counts, and common multipliers; distinguish currency from distance and comma-separated years from grouped thousands.
+- Preserve feedback origin: candidate requests and deterministic check failures remain actionable; reviewer and panel suggestions are wrapped as untrusted data.
+- Parse salary ranges followed by `m/w/d` or `M-F`, annualize monthly pay, and exclude `mm`/`mil` funding suffixes. Fall back to posting text for invalid or zero-ceiling board ranges.
+- Match paragraph rewrites by stable source identity; preserve omitted paragraphs and reject duplicate identities. Deduplicate resume entries, protect LaTeX bracketed bullets, and stop rejected panels without actionable revisions.
+- Preserve Greenhouse EU hosts, isolate malformed ingested postings, and scope missing-posting detection to each board.
+- Keep spreadsheet collection read-only and honor entered application dates for recorded actions and follow-up schedules. Write refreshed tokens atomically with private permissions; normalize whitespace in privacy identities and recognize Unicode/slash phone separators.
+- Scope education dates to exact education labels, bind counts to recognized nouns, and check unquoted question labels for numerical assertions. Numerical provenance remains a bounded check rather than proof of a claim's meaning.
+
 - Restrict generated skill headings to profile labels; flatten claim text and remove model-supplied citation tags, including recursively exposed nested tags, before rendering and checking.
 - Preserve saved answer-bank wording even when the writer also cites facts; decode restriction quotations before comparing them with postings.
 - Keep posting data and its derivatives untrusted while treating candidate revision requests and deterministic check failures as actionable requirements bounded by verified facts. Retain candidate requests throughout revision rounds.
