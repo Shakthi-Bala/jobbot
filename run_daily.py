@@ -14,6 +14,16 @@ import argparse
 from agents import core, discover, fit, packet, tracker
 
 
+def run_stage(name, action):
+    """Keep already stored work usable when an expected provider/source error occurs."""
+    try:
+        return action()
+    except core.JobbotError as e:
+        core.log_decision('run_daily', None, f'{name}_error', str(e))
+        core.warn(f'{name} paused: {e}')
+        return []
+
+
 def main(argv=None) -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--top", type=int, default=3, help="packets to build per run")
@@ -23,9 +33,9 @@ def main(argv=None) -> None:
     a = p.parse_args(argv)
 
     print(f"=== jobbot daily run {core.now()} ===")
-    new_ids = discover.run(web=not a.no_web, alerts=not a.no_alerts)
+    new_ids = run_stage('discovery', lambda: discover.run(web=not a.no_web, alerts=not a.no_alerts))
     print(f"discovered {len(new_ids)} new job(s)")
-    scored = fit.run()
+    scored = run_stage('fit', fit.run)
     print(f"scored {len(scored)} job(s)")
 
     packets = []

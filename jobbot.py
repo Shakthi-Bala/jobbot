@@ -30,6 +30,7 @@ re-run the same command to continue.
 from __future__ import annotations
 
 import argparse
+import shlex
 import shutil
 import sys
 from pathlib import Path
@@ -266,6 +267,9 @@ def cmd_weekly(_):
 
 def cmd_eval(a):
     from agents import evals
+    expected = 1 if a.action == 'run' else 2
+    if len(a.labels) != expected:
+        raise core.JobbotError(f'eval {a.action} expects {expected} label(s)')
     if a.action == "run":
         evals.run(a.labels[0])
     else:
@@ -324,8 +328,9 @@ def main(argv=None):
     try:
         a.fn(a)
     except core.ManualTaskPending as e:
-        print(f"{e}\nAsk Claude to answer it, then re-run: python jobbot.py "
-              + " ".join(sys.argv[1:] if argv is None else argv))
+        command = shlex.join(['python', 'jobbot.py', *(sys.argv[1:] if argv is None else argv)])
+        print(f"{e}\nAnswer the pending tasks in out/tasks with your coding assistant, "
+              f"then re-run: {command}")
         _pending_note()
         sys.exit(3)
     except core.JobbotError as e:

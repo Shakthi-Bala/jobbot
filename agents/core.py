@@ -359,6 +359,8 @@ def job_dir(job_id: str, conn: sqlite3.Connection | None = None) -> Path:
     location), the short job ID is appended. A folder from before this naming
     (out/<job_id>) is renamed on first use, so nothing is lost.
     """
+    if not re.fullmatch(r'[A-Za-z0-9_-]+', job_id):
+        raise JobbotError('Invalid job ID; use the identifier printed by `jobbot.py jobs`')
     row = (conn or connect()).execute(
         "SELECT company, title FROM jobs WHERE id=?", (job_id,)).fetchone()
     if row is None:
@@ -479,21 +481,41 @@ def llm_json(role: str | dict, system: str, user: str, schema_model: type[T],
     if cfg.get("effort") and supports_effort(cfg["model"]):
         output_config["effort"] = cfg["effort"]
 
-    with client().messages.stream(
-        model=cfg["model"],
-        max_tokens=max_tokens,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-        output_config=output_config,
-    ) as stream:
-        response = stream.get_final_message()
+    import anthropic
+    import httpx
+    try:
+        with client().messages.stream(
+            model=cfg["model"],
+            max_tokens=max_tokens,
+            system=system,
+            messages=[{"role": "user", "content": user}],
+            output_config=output_config,
+        ) as stream:
+            response = stream.get_final_message()
+    except (anthropic.AnthropicError, httpx.HTTPError) as e:
+        # Provider exception bodies can contain request text or credentials.
+        reason = f"{cfg['model']}: provider request failed ({type(e).__name__})"
+        log_decision('llm', None, 'provider_error', reason)
+        raise JobbotError(reason) from e
+
+    usage = getattr(response, 'usage', None)
+    log_decision('llm', None, 'usage', dumps({
+        'model': cfg['model'], 'role': role if isinstance(role, str) else 'explicit',
+        **{key: getattr(usage, key, 0) or 0 for key in (
+            'input_tokens', 'output_tokens', 'cache_creation_input_tokens', 'cache_read_input_tokens')},
+    }))
 
     if response.stop_reason == "refusal":
-        raise JobbotError(f"{cfg['model']} declined the request ({response.stop_details})")
+        raise JobbotError(f"{cfg['model']} declined the request")
     if response.stop_reason == "max_tokens":
         raise JobbotError(f"{cfg['model']} hit max_tokens={max_tokens}; output truncated")
-    text = next(b.text for b in response.content if b.type == "text")
-    return schema_model.model_validate_json(text)
+    text = ''.join(b.text for b in response.content if b.type == 'text')
+    if not text.strip():
+        raise JobbotError(f"{cfg['model']} returned no text for {schema_model.__name__}")
+    try:
+        return schema_model.model_validate_json(text)
+    except ValueError as e:
+        raise JobbotError(f"{cfg['model']} returned invalid {schema_model.__name__} JSON") from e
 
 
 def supports_effort(model: str) -> bool:
