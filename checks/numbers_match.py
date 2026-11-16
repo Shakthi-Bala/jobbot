@@ -1,46 +1,62 @@
 """Every number in the output appears in the facts it cites. A null metric means no number."""
 import sys
+import re
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from checks._lib import claim_lines, cli, core, json_strings, meta, numbers, tagged_files  # noqa: E402
+from checks._lib import claim_lines, cli, core, json_strings, meta, numbers, quantities, tagged_files  # noqa: E402
 
 
-def source_numbers(profile: dict) -> dict[str, set[float]]:
+def source_texts(profile: dict) -> dict[str, str]:
     out = {}
     for f in profile.get("facts", []):
         metrics = {k: v for k, v in (f.get("metrics") or {}).items() if v is not None}
-        out[f["id"]] = numbers(f.get("text", "") + " " + json_strings(metrics))
+        out[f["id"]] = f.get("text", "") + " " + json_strings(metrics)
     for key in ("education", "experience", "projects"):
         for e in profile.get(key, []) or []:
-            scalars = {k: v for k, v in e.items() if k not in ("facts",)}
-            out[e["id"]] = numbers(json_strings(scalars))
+            excluded = ("facts",) if key == 'education' else ('facts', 'start', 'end', 'dates')
+            scalars = {k: v for k, v in e.items() if k not in excluded}
+            out[e["id"]] = json_strings(scalars)
     return out
+
+
+def source_numbers(profile: dict) -> dict[str, set[float]]:
+    return {key: numbers(text) for key, text in source_texts(profile).items()}
 
 
 def check(d: Path) -> list[str]:
     profile = core.load_profile()
     bank = core.load_answers_bank()
     from agents.tailor import _bank_get
-    src = source_numbers(profile)
+    src = source_texts(profile)
     m = meta(d)
     # Numbers that are part of names, never claims: job title, company, req ID, skill names.
-    always_ok = numbers(" ".join(str(m.get(k, "")) for k in ("company", "title", "req_id")))
-    always_ok |= numbers(" ".join(s.get("skill", "") for s in profile.get("skills", [])))
+    names = [str(m.get(k) or '') for k in ('company', 'title', 'req_id')]
+    names += [s.get('skill', '') for s in profile.get('skills', [])]
     bad = []
     for path in tagged_files(d):
         for n, line in claim_lines(path):
             if core.NEED_INPUT_RE.fullmatch(line):
                 continue  # a question for you, not a claim
-            allowed = set(always_ok)
+            sources = []
             for t in core.FACT_TAG_RE.findall(line):
-                allowed |= src.get(t, set())
+                sources.append(src.get(t, ''))
             for k in core.ANSWER_TAG_RE.findall(line):
-                allowed |= numbers(json_strings(_bank_get(bank, k)))
-            extra = numbers(core.strip_tags(line)) - allowed
+                sources.append(json_strings(_bank_get(bank, k)))
+            prose = core.strip_tags(line)
+            # A number in a product name permits that name, not an unrelated metric.
+            for name in sorted(filter(None, names), key=len, reverse=True):
+                prose = re.sub(rf'(?<!\w){re.escape(name)}(?!\w)', '', prose, flags=re.I)
+            allowed = set().union(*(numbers(s) for s in sources))
+            extra = numbers(prose) - allowed
             if extra:
                 shown = ", ".join(f"{x:g}" for x in sorted(extra))
                 bad.append(f"{path.name}:{n} numbers not in cited facts ({shown}): {line[:120]}")
+            allowed_units = set().union(*(quantities(s) for s in sources))
+            unsupported = quantities(prose) - allowed_units
+            if unsupported:
+                shown = ', '.join(f'{value:g} {unit}' for value, unit in sorted(unsupported))
+                bad.append(f"{path.name}:{n} quantities not in cited facts ({shown}): {line[:120]}")
     return bad
 
 

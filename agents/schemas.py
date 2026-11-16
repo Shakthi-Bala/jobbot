@@ -82,7 +82,7 @@ class Answer(BaseModel):
 
 
 class SkillGroup(BaseModel):
-    category: str = Field(description="Short display label, e.g. 'Vision & Learning'")
+    category: str = Field(description="Existing category from profile.skills or preferences.resume_skill_groups only")
     skills: list[str] = Field(description="Names from the `skills` list, most relevant first")
 
 

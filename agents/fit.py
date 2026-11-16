@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import re
+import html
 
 from . import core
 from .schemas import FitResult, FitRestriction
@@ -56,7 +57,7 @@ def dealbreaker_hits(job, profile: dict) -> list[str]:
     db = profile.get("dealbreakers", {}) or {}
     text = core.normalize(f"{job['title']} {job['raw_text']}")
     hits = [f"excluded term: {t}" for t in db.get("excluded_terms", [])
-            if core.normalize(t) in text]
+            if core.normalize(t) and re.search(rf"(?<!\w){re.escape(core.normalize(t))}(?!\w)", text)]
     parsed = json.loads(job["parsed_json"] or "{}")
     allowed = [e.lower() for e in db.get("employment_types", [])]
     et = (parsed.get("employment_type") or "").lower()
@@ -84,8 +85,9 @@ def score_job(conn, job_id: str, profile: dict | None = None) -> dict:
             ("authorization", "education", "experience", "projects", "skills", "facts",
              "targets", "dealbreakers")
         })
-        + f"\n\n## Job\nCompany: {job['company']}\nTitle: {job['title']}\n"
-        f"Location: {job['location']}\nParsed requirements: {job['parsed_json'] or 'n/a'}\n\n"
+        + "\n\n" + core.untrusted("job_metadata", core.dumps({
+            k: job[k] for k in ("company", "title", "location")}))
+        + "\n" + core.untrusted("parsed_posting", job['parsed_json'] or '{}') + "\n"
         + core.untrusted("posting", job["raw_text"])
     )
     result = core.llm_json("fit", core.system_prompt("fit"), user, FitResult)
@@ -97,6 +99,7 @@ def score_job(conn, job_id: str, profile: dict | None = None) -> dict:
                                             for r in parsed_restrictions]
     seen = set()
     for r in candidates:
+        r.quote = html.unescape(r.quote)
         key = (r.type, " ".join(r.quote.split()).casefold())
         if key in seen:
             continue
@@ -124,8 +127,10 @@ def score_job(conn, job_id: str, profile: dict | None = None) -> dict:
     score = max(0, min(100, result.score))
     deal = dealbreaker_hits(job, profile)
     threshold = profile.get("targets", {}).get("min_fit_score", 70)
-    if blockers or deal:
+    if blockers:
         decision, status = "blocked", "blocked"
+    elif deal:
+        decision, status = "skip", "skipped"
     elif score >= threshold:
         decision, status = "shortlist", "shortlisted"
     else:

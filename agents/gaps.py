@@ -38,11 +38,10 @@ def analyze(conn, job_id: str, profile: dict | None = None) -> GapReport:
         "## Candidate profile (verified facts only)\n" + core.dumps({
             k: profile.get(k) for k in ("education", "experience", "projects", "skills",
                                         "facts", "authorization")})
-        + f"\n\n## Job\nCompany: {job['company']}\nTitle: {job['title']}\n"
-        f"Location: {job['location']}\nPay: {job['comp_text'] or core.pay_band(job['comp_max'])}"
-        f" (band {core.pay_band(job['comp_max'])})\n"
-        f"Parsed requirements: {job['parsed_json'] or 'n/a'}\n"
-        + (f"Fit score: {fit['score']}; fit gaps: {fit['gaps_json']}\n" if fit else "")
+        + '\n\n' + core.untrusted('job_metadata', core.dumps({
+            k: job[k] for k in ('company', 'title', 'location', 'comp_text', 'comp_max')}))
+        + '\n' + core.untrusted('parsed_posting', job['parsed_json'] or '{}')
+        + (core.untrusted('fit_analysis', f"Fit score: {fit['score']}; fit gaps: {fit['gaps_json']}") if fit else '')
         + "\n" + core.untrusted("posting", job["raw_text"])
     )
     report = core.llm_json("writing", core.system_prompt("gap-coach"), user, GapReport)

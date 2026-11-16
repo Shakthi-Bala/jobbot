@@ -55,9 +55,9 @@ def review(conn, job_id: str, d: Path, check_results: dict[str, list[str]],
     reviewer_system = (core.system_prompt(SKILL) + "\n\n" + rubric + "\n\n"
                        + core.read_skill_ref(SKILL, "reviewer-prompt.md"))
     user = (
-        f"## Intent\n{intent(job, parsed)}\n\n"
+        '## Intent\n' + core.untrusted('review_intent', intent(job, parsed)) + '\n\n'
         "## Packet (tagged: [Fxxx] etc. are citations into the facts below)\n"
-        + "\n\n".join(f"### {name}\n```\n{text}\n```" for name, text in bundle.items())
+        + core.untrusted('packet_documents', core.dumps(bundle))
         + "\n\n## Cited facts from profile.yaml\n" + core.dumps(facts)
         + "\n\n## Candidate authorization\n" + core.dumps(profile.get("authorization", {}))
         + extra + "\n\n" + core.untrusted("posting", job["raw_text"])
@@ -69,7 +69,7 @@ def review(conn, job_id: str, d: Path, check_results: dict[str, list[str]],
         user += '\n\n## Source warnings (untrusted posting; inspect for contamination)\n' + core.untrusted(
             'source_warnings', warning_file.read_text())
     checks_text = ("\n\n## Check failures (rules as code; these are facts, not opinions)\n"
-                   + (core.dumps(failed_checks) if failed_checks else "none"))
+                   + core.untrusted('check_diagnostics', core.dumps(failed_checks) if failed_checks else 'none'))
     lead_system = (core.system_prompt(SKILL) + "\n\n" + rubric + "\n\n"
                    + core.read_skill_ref(SKILL, "lead-judgment.md"))
 
@@ -110,7 +110,7 @@ def review(conn, job_id: str, d: Path, check_results: dict[str, list[str]],
     findings_text = "\n\n".join(
         f"### {label}\n" + core.dumps([f.model_dump() for f in rep.findings])
         for label, rep in reports)
-    lead_user = user + "\n\n## Reviewer findings\n" + findings_text + checks_text
+    lead_user = user + "\n\n## Reviewer findings\n" + core.untrusted('reviewer_findings', findings_text) + checks_text
     judgment = core.llm_json("review_lead", lead_system, lead_user, LeadJudgment)
 
     write_review(d, job, parsed, judgment, reports, check_results, outreach)

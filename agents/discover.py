@@ -64,9 +64,11 @@ def hidden_text_flags(raw_html: str) -> list[str]:
 
 
 def _pay(lo, hi, text: str, source: str) -> dict:
-    return {"comp_min": int(lo) if lo else None, "comp_max": int(hi) if hi else None,
-            "comp_currency": "USD" if hi else None, "comp_text": text or None,
-            "comp_source": source if hi else None}
+    listed = lo is not None or hi is not None
+    return {"comp_min": int(lo) if lo is not None else None,
+            "comp_max": int(hi) if hi is not None else None,
+            "comp_currency": "USD" if listed else None, "comp_text": text or None,
+            "comp_source": source if listed else None}
 
 
 def _pay_from_text(text: str) -> dict:
@@ -229,7 +231,7 @@ def parse_posting(job: dict) -> ParsedPosting:
     return core.llm_json(
         "discovery_parse",
         core.system_prompt("discover"),
-        f"Company: {job['company']}\nTitle: {job['title']}\nLocation: {job['location']}\n\n"
+        core.untrusted('job_metadata', core.dumps({k: job[k] for k in ('company', 'title', 'location')})) + '\n\n'
         + core.untrusted("posting", job["raw_text"]),
         ParsedPosting,
         max_tokens=4000,
@@ -240,6 +242,7 @@ def verify_quotes(parsed: ParsedPosting, raw_text: str) -> list[str]:
     """Drop restrictions whose quote isn't verbatim in the posting. Returns dropped quotes."""
     kept, dropped = [], []
     for r in parsed.restrictions:
+        r.quote = html.unescape(r.quote)
         (kept if core.quote_in_text(r.quote, raw_text) else dropped).append(r)
     parsed.restrictions = kept
     return [r.quote for r in dropped]
@@ -260,7 +263,8 @@ def apply_parse(conn, job_id: str, raw_text: str, parsed: ParsedPosting, raw_htm
     conn.execute("UPDATE jobs SET parsed_json=?, deadline=COALESCE(deadline, ?) WHERE id=?",
                  (core.dumps(data), parsed.deadline, job_id))
     max_years = targets.get("max_years_experience")
-    if max_years is not None and (parsed.min_years_experience or 0) > max_years:
+    if (max_years is not None and (parsed.min_years_experience or 0) > max_years
+            and may_reopen(conn, job_id)):
         conn.execute("UPDATE jobs SET status='skipped' WHERE id=?", (job_id,))
         core.log_decision("discover", job_id, "excluded",
                           f"requires {parsed.min_years_experience}+ years")
@@ -327,12 +331,19 @@ def upsert_jobs(conn, jobs: Iterable[dict], targets: dict, parse: bool = True,
             if changed or reopened:
                 conn.execute("UPDATE jobs SET parsed_json=NULL, deadline=? WHERE id=?",
                              (job.get("deadline"), jid))
-                conn.execute("DELETE FROM fit WHERE job_id=?", (jid,))
-                if reopened or existing["status"] not in ("applied", "responded", "interview", "rejected",
-                                                           "offer", "closed"):
+                # Recorded outcomes retain the assessment behind the application.
+                preserve_history = (not may_reopen(conn, jid) or (
+                    existing["status"] in ("applied", "responded", "interview", "rejected", "offer", "closed")
+                    and not reopened))
+                # Older dashboard skips were recorded only in the decision log;
+                # conservatively retain skipped jobs rather than undoing that choice.
+                if not preserve_history:
+                    conn.execute("DELETE FROM fit WHERE job_id=?", (jid,))
+                if reopened or (not preserve_history and existing["status"] != "skipped"):
                     conn.execute("UPDATE jobs SET status='discovered' WHERE id=?", (jid,))
                 core.log_decision("discover", jid, "posting_changed",
-                                  "stored posting refreshed; requirements and fit invalidated")
+                                  "stored posting refreshed; requirements invalidated; "
+                                  + ("recorded fit retained" if preserve_history else "fit invalidated"))
                 if reopened:
                     core.log_decision('discover', jid, 'reopened', 'previously unavailable posting is live again')
             continue
@@ -450,7 +461,11 @@ def gmail_credentials(interactive: bool = False):
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             from google.auth.transport.requests import Request
-            creds.refresh(Request())
+            from google.auth.exceptions import RefreshError
+            try:
+                creds.refresh(Request())
+            except RefreshError:
+                creds = _authorize_gmail(creds_path, scopes, interactive)
         else:
             creds = _authorize_gmail(creds_path, scopes, interactive)
         token_path.write_text(creds.to_json())

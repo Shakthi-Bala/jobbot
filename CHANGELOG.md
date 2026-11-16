@@ -4,6 +4,16 @@
 
 ### Correctness and reliability
 
+- Restrict generated skill headings to profile labels; flatten claim text and remove model-supplied citation tags before rendering and checking.
+- Preserve saved answer-bank wording even when the writer also cites facts; decode restriction quotations before comparing them with postings.
+- Treat parsed posting data, model feedback, review documents, and posting-derived diagnostics as untrusted model input.
+- Ignore funding ranges with million/billion suffixes; preserve zero salary bounds and display maximum-only pay in spreadsheets.
+- Require passing reader verdicts for panel approval; an empty revision plan or editor flag cannot waive rejection.
+- Preserve manual skips and recorded fit scores when postings change. Allow recording an application after an automatic closure and continue spreadsheet imports after row errors without losing edits.
+- Handle malformed contact URLs, people-search failures, posting-fetch failures, wrong-section entry IDs, and revoked Gmail tokens.
+- Match exclusions and contact identities as whole phrases; distinguish independent GitHub Pages tenants.
+- Check fractional quantities, multiplicative wording, and measurement units; keep entry dates from supporting achievement numbers.
+- Honor disabled summaries in Typst, preserve comparison operators in approved wording, render external dashboard content as plain text, and use UTC calendar dates consistently.
 - Distinguish Greenhouse public postings that share an internal requisition, preserving existing application history by public URL during migration.
 - Handle missing salary bounds and shared-unit ranges such as `$120–150K`.
 - Convert provider failures, missing text, and invalid JSON into recoverable workflow errors. Record input/output/cache token counts.
@@ -16,6 +26,8 @@
 
 ### Input and privacy checks
 
+- Ignore root-level PDFs without naming private files; protect runtime logs and Streamlit secrets and detect phone separator variants.
+- Install the privacy hook with the current Python interpreter and distinguish scan failures from detected private data.
 - Escape untrusted data wrappers and separate posting warnings from generated-output contamination checks.
 - Validate contact-source addresses and every redirect; pin connections to approved public IPs and bound response sizes.
 - Inspect committed contents in every outgoing commit before push, independently of the working tree.
@@ -23,6 +35,7 @@
 
 ### Contributor experience
 
+- Ship `models.example.yaml` and retain ignored local `models.yaml` settings; point the CI badge at `main`.
 - Add an MIT license and Python 3.10/3.12 CI with Typst and PDF tools.
 - Require Streamlit 1.49 or newer for the dashboard's `width="stretch"` API ([release notes](https://docs.streamlit.io/develop/quick-reference/release-notes/2025#version-1490)).
 - Document manual task answering in AGENTS.md and CLAUDE.md.
@@ -39,7 +52,7 @@
 
 ## Validation
 
-The revised suite passes **190 tests**, including the offline CLI demo, actual PDF rendering and extraction, outgoing-history privacy scans, network-target restrictions, and application-state regressions. The synthetic demo also passes all 11 packet checks. GitHub Actions is configured for Python 3.10 and 3.12; hosted run status is reported by the workflow badge.
+The revised suite passes **256 tests**, including adversarial claim-generation cases, the offline CLI demo, actual PDF rendering and extraction, a Streamlit dashboard integration check, outgoing-history privacy scans, network-target restrictions, and application-state regressions. This local run used Python 3.13 with a LaTeX compiler available. The synthetic demo also passes all 11 packet checks. GitHub Actions is configured for Python 3.10 and 3.12; hosted run status is reported by the workflow badge.
 
 ## Known limits
 

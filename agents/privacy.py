@@ -17,6 +17,8 @@ import io
 import json
 import os
 import subprocess
+import shlex
+import sys
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -27,15 +29,17 @@ MAX_BYTES = 2_000_000
 HOOK = """#!/bin/sh
 # Installed by `python jobbot.py privacy --install-hook`.
 cd "$(git rev-parse --show-toplevel)" || exit 1
-python3 jobbot.py privacy --push || {
-  echo "push refused: personal details found in tracked files (see above)" >&2
+__PYTHON__ jobbot.py privacy --push || {
+  echo "push refused: privacy check failed (see above)" >&2
   exit 1
 }
 """
 ASSET_MANIFEST = 'docs/assets/public-assets.json'
 PRIVATE_PATHS = ('.env', 'data/profile.yaml', 'data/answers_bank.yaml', 'data/credentials.json',
                  'data/token.json', 'data/tracker.db', 'data/master_resume.yaml',
-                 'data/approved_bullets.yaml', 'data/decisions.tsv', 'my_resume/', 'data/uploads/', 'out/')
+                 'data/approved_bullets.yaml', 'data/decisions.tsv', 'data/daily_log.md',
+                 'data/weekly_review.md', 'data/run.log', 'data/applications.xlsx',
+                 '.streamlit/secrets.toml', 'my_resume/', 'data/uploads/', 'out/')
 
 
 def _clean(value) -> str:
@@ -195,6 +199,13 @@ def inspect_blob(data: bytes, path: str, ids: dict[str, str], assets: dict,
         folded = (re.sub(re.escape(repository) + r'''(?=$|[/\s?#)"'])''',
                          '<public-repository>', line, flags=re.I) if repository else line).casefold()
         labels = sorted({label for needle, label in ids.items() if needle in folded})
+        for needle, label in ids.items():
+            if label != 'phone':
+                continue
+            digits = re.sub(r'\D', '', needle)
+            if len(digits) >= 7 and re.search(
+                    r'(?<!\d)' + r'[\s().+\-]*'.join(digits) + r'(?!\d)', folded):
+                labels = sorted(set(labels) | {'phone'})
         if labels:
             problems.append(f"{path}:{number} contains your {', '.join(labels)}")
     return problems
@@ -280,6 +291,6 @@ def install_hook(root: Path | None = None) -> Path:
     if hook.exists() and "jobbot.py privacy" not in hook.read_text():
         raise core.JobbotError(f"{hook} already exists; add `python3 jobbot.py privacy` to it by hand")
     hook.parent.mkdir(parents=True, exist_ok=True)
-    hook.write_text(HOOK)
+    hook.write_text(HOOK.replace('__PYTHON__', shlex.quote(sys.executable)))
     hook.chmod(0o755)
     return hook

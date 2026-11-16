@@ -55,8 +55,8 @@ def test_panel_stops_when_everyone_says_yes():
     assert panel.summarize(_reviews(), _plan(), kw, 1)["done"]
     assert not panel.summarize(_reviews(hm="maybe"), _plan(), kw, 1)["done"]
     assert not panel.summarize(_reviews(score=6), _plan(), kw, 1)["done"]
-    assert panel.summarize(_reviews(hm="no"), _plan(bulletproof=True), kw, 1)["done"]
-    assert panel.summarize(_reviews(hm="no"), _plan(revisions=0), kw, 1)["done"]
+    assert not panel.summarize(_reviews(hm="no"), _plan(bulletproof=True), kw, 1)["done"]
+    assert not panel.summarize(_reviews(hm="no"), _plan(revisions=0), kw, 1)["done"]
 
 
 def test_panel_history_and_markdown(tmp_path):
@@ -96,6 +96,8 @@ def test_master_family_picks_tagged_bullets(env):
 
 
 def test_master_renders_one_page_and_passes_checks(env, monkeypatch):
+    from tests.test_quality_bar import _set_prefs
+    _set_prefs(resume_summary=True)
     monkeypatch.setattr(master, "PATH", core.DATA / "master_resume.yaml")
     master.PATH.write_text(yaml.safe_dump(MASTER))
     r = master.render("rl")

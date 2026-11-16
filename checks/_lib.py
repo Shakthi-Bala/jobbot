@@ -15,7 +15,38 @@ if str(ROOT) not in sys.path:
 
 from agents import core  # noqa: E402
 
-NUMBER_RE = re.compile(r"(?<![\w.])\d[\d,]*(?:\.\d+)?")
+NUMBER_RE = re.compile(r"(?<![\w.])(?:\d[\d,]*(?:\.\d+)?|\.\d+)")
+MULTIPLIERS = {"doubled": 2, "doubling": 2, "twofold": 2, "tripled": 3,
+               "tripling": 3, "threefold": 3, "quadrupled": 4, "fourfold": 4,
+               "halved": 0.5, "halving": 0.5}
+UNIT_RE = re.compile(
+    r"\s*(%|percent\b|percentage points?\b|fps\b|frames? per second\b|"
+    r"ms\b|milliseconds?\b|[µμu]s\b|microseconds?\b|s\b|seconds?\b|"
+    r"mins?\b|minutes?\b|hrs?\b|hours?\b|days?\b|weeks?\b|months?\b|years?\b|"
+    r"khz\b|mhz\b|ghz\b|hz\b|kb\b|mb\b|gb\b|tb\b|"
+    r"m/s\b|km/h\b|mm\b|cm\b|meters?\b|km\b|m\b|kg\b|g\b|"
+    r"pixels?\b|px\b|db\b|degrees?\b|°|watts?\b|kw\b|w\b|"
+    r"times\b|x\b|×)", re.I)
+UNIT_ALIASES = {'percent': '%', 'frame per second': 'fps', 'frames per second': 'fps',
+                'millisecond': 'ms', 'microsecond': 'us', 'µs': 'us', 'μs': 'us',
+                'second': 's', 'min': 'minute', 'hr': 'hour', 'meter': 'm',
+                'pixel': 'px', 'degree': '°', 'watt': 'w',
+                'x': 'factor', '×': 'factor', 'times': 'factor', 'time': 'factor'}
+
+
+def quantities(text: str) -> set[tuple[float, str]]:
+    """Measured numbers keep their units; multiplicative prose is a claim too."""
+    out = set()
+    for match in NUMBER_RE.finditer(text or ''):
+        unit = UNIT_RE.match(text, match.end())
+        if unit:
+            name = unit[1].lower()
+            name = name[:-1] if name.endswith('s') and name not in ('ms', 'us', 's', 'fps') else name
+            out.add((float(match[0].replace(',', '')), UNIT_ALIASES.get(name, name)))
+    for word, value in MULTIPLIERS.items():
+        if re.search(rf'\b{word}\b', text or '', re.I):
+            out.add((value, 'factor'))
+    return out
 
 
 def meta(d: Path) -> dict:
@@ -68,6 +99,7 @@ def numbers(text: str) -> set[float]:
             out.add(float(m.replace(",", "")))
         except ValueError:
             pass
+    out.update(value for value, unit in quantities(text) if unit == 'factor')
     return out
 
 

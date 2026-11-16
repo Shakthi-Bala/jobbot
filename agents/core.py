@@ -14,7 +14,7 @@ import re
 import shutil
 import sqlite3
 import sys
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, TypeVar
 
@@ -72,7 +72,7 @@ def now() -> str:
 
 
 def today() -> str:
-    return date.today().isoformat()
+    return datetime.now(timezone.utc).date().isoformat()
 
 
 # ------------------------------------------------------------------- config
@@ -124,7 +124,7 @@ def facts_by_id(profile: dict) -> dict[str, dict]:
 
 def model_for(role: str) -> dict:
     """Return {"model": ..., "effort": ...|None} for a role."""
-    cfg = load_yaml(ROOT / "models.yaml", default={})
+    cfg = model_config()
     value = cfg.get(role, DEFAULT_MODELS.get(role))
     if value is None:
         raise JobbotError(f"No model configured for role {role!r}")
@@ -132,8 +132,13 @@ def model_for(role: str) -> dict:
 
 
 def reviewer_models() -> list[dict]:
-    cfg = load_yaml(ROOT / "models.yaml", default={})
+    cfg = model_config()
     return [_normalize_model(v) for v in cfg.get("reviewers", DEFAULT_MODELS["reviewers"])]
+
+
+def model_config() -> dict:
+    path = ROOT / 'models.yaml'
+    return load_yaml(path if path.exists() else ROOT / 'models.example.yaml', default={})
 
 
 def _normalize_model(value: Any) -> dict:
@@ -251,6 +256,9 @@ def parse_pay_text(text: str) -> tuple[int, int] | None:
     '$60 — $75 per hour'. Several ranges (e.g. per location) -> the widest span."""
     lows, highs = [], []
     for m in _RANGE_RE.finditer(text or ""):
+        # Funding/valuation suffixes may apply to both ends ($10-20M).
+        if re.match(r"\s*(?:[mMbB]\b|million\b|billion\b)", text[m.end():], re.I):
+            continue
         lo, hi = _amount(m.group(1), m.group(2)), _amount(m.group(3), m.group(4))
         # A shared K suffix/prefix applies to both small endpoints: $120-150K.
         if m.group(4) and not m.group(2) and lo < 1000:
@@ -342,7 +350,7 @@ def job_id_for(company: str, title: str, location: str, req_id: str | None = Non
 
 def quote_in_text(quote: str, text: str) -> bool:
     """Verbatim except for whitespace/case; empty quotations are never evidence."""
-    q = " ".join(quote.split()).casefold()
+    q = " ".join(html.unescape(quote).split()).casefold()
     return bool(q) and q in " ".join(text.split()).casefold()
 
 
@@ -392,6 +400,11 @@ def strip_tags(text: str) -> str:
     return ANY_TAG_RE.sub("", text)
 
 
+def claim_text(text: str) -> str:
+    """Model prose cannot supply citations or create unchecked physical lines."""
+    return " ".join(strip_tags(text).split())
+
+
 # ----------------------------------------------------------- decision log
 
 def log_decision(agent: str, job_id: str | None, decision: str, reason: str,
@@ -429,7 +442,7 @@ def is_manual() -> bool:
     env = os.environ.get("JOBBOT_MODE")
     if env:
         return env == "manual"
-    return load_yaml(ROOT / "models.yaml", default={}).get("mode", "api") == "manual"
+    return model_config().get("mode", "manual") == "manual"
 
 
 def tasks_dir() -> Path:

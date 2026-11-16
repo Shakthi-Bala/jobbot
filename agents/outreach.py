@@ -40,13 +40,19 @@ def search_people(job, profile: dict) -> str:
     messages = [{"role": "user", "content": people_prompt(job, profile)}]
     notes = []
     for _ in range(3):
-        resp = core.client().messages.create(
-            model=cfg["model"], max_tokens=16000, messages=messages,
-            tools=[{"type": "web_search_20260209", "name": "web_search", "max_uses": 10,
-                    "blocked_domains": BLOCKED_DOMAINS},
-                   {"type": "web_fetch_20260209", "name": "web_fetch", "max_uses": 10,
-                    "blocked_domains": BLOCKED_DOMAINS}],
-        )
+        import anthropic
+        import httpx
+        try:
+            resp = core.client().messages.create(
+                model=cfg["model"], max_tokens=16000, messages=messages,
+                tools=[{"type": "web_search_20260209", "name": "web_search", "max_uses": 10,
+                        "blocked_domains": BLOCKED_DOMAINS},
+                       {"type": "web_fetch_20260209", "name": "web_fetch", "max_uses": 10,
+                        "blocked_domains": BLOCKED_DOMAINS}],
+            )
+        except (anthropic.AnthropicError, httpx.HTTPError) as e:
+            raise core.JobbotError(f"People search request failed ({type(e).__name__})") from e
+        core.record_usage('people_search', cfg['model'], resp)
         notes += [b.text for b in resp.content if b.type == "text"]
         if resp.stop_reason != "pause_turn":
             break
@@ -55,7 +61,7 @@ def search_people(job, profile: dict) -> str:
 
 
 def contacts_this_cycle(conn, company: str) -> int:
-    since = (date.today() - timedelta(days=CYCLE_DAYS)).isoformat()
+    since = (date.fromisoformat(core.today()) - timedelta(days=CYCLE_DAYS)).isoformat()
     return conn.execute("SELECT COUNT(*) FROM contacts WHERE company=? AND created_at >= ?",
                         (company, since)).fetchone()[0]
 
@@ -147,7 +153,7 @@ def _draft_all(conn, job_id: str, job, profile: dict, net: dict, room: int,
                           f"{line} " + "".join(f"[{f}]" for f in msg.fact_ids))
         (d / f"{slug}.tagged.md").write_text("\n".join(tagged) + "\n")
 
-        followup = (date.today() + timedelta(days=7)).isoformat()
+        followup = (date.fromisoformat(core.today()) + timedelta(days=7)).isoformat()
         cur = conn.execute(
             "INSERT OR IGNORE INTO contacts (job_id, name, role, company, sources_json, reason, "
             "channel, status, next_followup, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
@@ -181,7 +187,7 @@ def mark_sent(contact_id: int, followup_days: int = 7) -> None:
         raise core.JobbotError(f"Unknown contact {contact_id}")
     if c["sent_at"]:
         return  # repeated CLI calls must not duplicate the send or its follow-up
-    due = (date.today() + timedelta(days=followup_days)).isoformat()
+    due = (date.fromisoformat(core.today()) + timedelta(days=followup_days)).isoformat()
     conn.execute("UPDATE contacts SET status='sent', sent_at=?, next_followup=? WHERE id=?",
                  (core.now(), due, contact_id))
     conn.execute("INSERT INTO followups (job_id, contact_id, due, note) VALUES (?,?,?,?)",

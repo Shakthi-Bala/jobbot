@@ -40,6 +40,9 @@ from agents import core
 
 def cmd_init(_):
     core.connect().close()
+    models = core.ROOT / 'models.yaml'
+    if not models.exists():
+        shutil.copy(core.ROOT / 'models.example.yaml', models)
     for name in ("profile", "answers_bank"):
         src, dst = core.DATA / f"{name}.example.yaml", core.DATA / f"{name}.yaml"
         if not dst.exists():

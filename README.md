@@ -2,7 +2,7 @@
 
 **Find robotics and ML roles ranked by pay. Build fact-checked applications with a seven-reader review panel. Never auto-apply.**
 
-[![Tests](https://github.com/Shakthi-Bala/jobbot/actions/workflows/tests.yml/badge.svg?branch=dev)](https://github.com/Shakthi-Bala/jobbot/actions/workflows/tests.yml)
+[![Tests](https://github.com/Shakthi-Bala/jobbot/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/Shakthi-Bala/jobbot/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ![Animated jobbot workflow: verified facts and a job description become tailored documents, checks, and a human review queue.](docs/assets/jobbot-workflow.gif)
@@ -42,6 +42,8 @@ The offline demo runs the real import, packet, PDF-rendering, checks, and panel-
 Open the résumé, cover letter, `checks.json`, and `panel.md` in the packet directory printed at the end. Each run gets a fresh directory under `out/demo/`; `out/demo/latest.json` records the latest paths. Scores in this demo are fixtures, not assessments of an applicant. Your existing profile and tracker are untouched.
 
 For your own applications, run `python jobbot.py init` and edit the local files below. Initialization creates the tracker and copies examples only where those files do not already exist.
+
+Model settings come from the tracked [example configuration](models.example.yaml). `init` copies it to ignored `models.yaml` for local changes; existing settings are preserved.
 
 | File | Add |
 | --- | --- |
@@ -170,6 +172,8 @@ Seven reader personas assess the packet: ATS gate, hiring manager, team lead, co
 
 Scoring considers ownership and engineering depth, impact and validation, role focus, and communication. An optional `panel_min_score` requires every reader to meet the threshold, alongside a passing screening verdict and an interview verdict from the hiring-manager persona.
 
+By default, approval requires all five general readers, an average of at least 8/10, a passing ATS verdict, and an interview verdict. An empty editor plan or `bulletproof` flag cannot override those gates.
+
 **Scores are AI editorial assessments.** They are not employer ATS results or interview probabilities. The built-in panel reads extracted PDF text; visual inspection of the rendered page remains a separate step. See the [review workflow and scoring rubric](docs/resume-review-loop.md).
 
 ## Dashboard and daily use
@@ -183,6 +187,8 @@ python run_daily.py --top 3          # discovery, fit, and up to three packets
 ```
 
 Manual-mode runs can pause for task answers. API-mode runs can incur model costs, particularly with the full review panel. Token usage is recorded in the decision log.
+
+Tracker timestamps, calendar dates, and follow-up calculations use UTC consistently.
 
 ## Privacy and boundaries
 
