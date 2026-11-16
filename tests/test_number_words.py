@@ -51,3 +51,16 @@ def test_decimal_words_do_not_borrow_separate_source_numbers(env, tmp_path, monk
     monkeypatch.setattr(core, 'load_profile', lambda: profile)
     (tmp_path / 'resume.tagged.md').write_text('- Measured zero point five-percent error [F099]')
     assert numbers_match.check(tmp_path)
+
+
+@pytest.mark.parametrize('wording', ['one of the core developers', 'no one else',
+    'one-hot encoding', 'zero-copy transport', 'zero‑shot classification'])
+def test_nonnumeric_idioms_do_not_fail_provenance(env, tmp_path, wording):
+    (tmp_path / 'resume.tagged.md').write_text(f'- Implemented {wording} [F004]')
+    assert numbers_match.check(tmp_path) == []
+    assert numbers(wording) == set()
+
+
+def test_idioms_do_not_hide_nearby_quantities():
+    assert numbers('one of twenty-one engineers used zero-copy at 24 FPS') == {21, 24}
+    assert numbers('zero errors across one scene') == {0, 1}

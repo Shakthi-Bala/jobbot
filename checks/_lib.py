@@ -37,6 +37,10 @@ _WORD_NUMBER_RE = re.compile(
     rf"(?<!\w)(?:{_word_number}(?:{_WORD_SEP}{_fraction})?|{_fraction})(?!\w)", re.I)
 
 
+_NUMBER_IDIOMS_RE = re.compile(
+    r"\b(?:one\s+of|no\s+one(?:\s+else)?|(?:one|zero)[-‐‑ ](?:hot|shot)|zero[-‐‑ ]copy)\b", re.I)
+
+
 def numeric_text(text: str) -> str:
     """Normalize English cardinal numbers, including hyphenated compounds."""
     def convert(match):
@@ -58,7 +62,7 @@ def numeric_text(text: str) -> str:
             else:
                 group += 1 if word == 'a' else _WORD_VALUES[word]
         return str(total + group) + decimal
-    return _WORD_NUMBER_RE.sub(convert, text or '')
+    return _WORD_NUMBER_RE.sub(convert, _NUMBER_IDIOMS_RE.sub(' ', text or ''))
 
 
 MULTIPLIERS = {"doubled": 2, "doubling": 2, "twofold": 2, "tripled": 3,
