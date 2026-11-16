@@ -77,3 +77,12 @@ def test_daily_run_continues_after_expected_stage_failure(env, monkeypatch):
     monkeypatch.setattr(run_daily.tracker, 'daily_log', lambda *a: 'done')
     run_daily.main(['--no-packets'])
     assert calls == ['fit']
+
+
+def test_web_search_logs_its_token_usage(api, monkeypatch):
+    monkeypatch.setattr(core, 'client', lambda: NS(messages=NS(create=lambda **kw: NS(
+        content=[], stop_reason='end_turn', usage=NS(input_tokens=33, output_tokens=9)))))
+    assert discover.web_search_urls({'titles': ['Engineer']}) == []
+    rows = list(csv.DictReader(core.DECISIONS_PATH.open(), delimiter='\t'))
+    usage = json.loads(rows[-1]['reason'])
+    assert usage['role'] == 'web_search' and usage['input_tokens'] == 33

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Daily orchestrator: daily-discovery, then new-job-packet for the top N shortlisted jobs,
-highest pay first. In manual mode, run it during your session with Claude: AI steps
+highest pay first. In manual mode, run it during your coding-assistant session: AI steps
 become tasks in out/tasks/, and re-running continues where it stopped.
 
     python run_daily.py [--top 3] [--no-web] [--no-alerts] [--no-packets]
@@ -59,8 +59,8 @@ def main(argv=None) -> None:
     print(tracker.daily_log(new_ids, packets))
     pending = core.pending_tasks()
     if pending:
-        print(f"{len(pending)} AI step(s) waiting for Claude in out/tasks/; "
-              "answer them, then re-run run_daily.py")
+        print(f"{len(pending)} AI step(s) waiting for your coding assistant in out/tasks/; "
+              "answer them with your coding assistant, then re-run run_daily.py")
 
 
 if __name__ == "__main__":

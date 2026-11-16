@@ -32,7 +32,7 @@ def public_target(url: str) -> tuple[httpx.URL, str]:
     addresses = socket.getaddrinfo(host, target.port or (443 if target.scheme == 'https' else 80),
                                    type=socket.SOCK_STREAM)
     ips = [ipaddress.ip_address(row[4][0]) for row in addresses]
-    if not ips or any(not address.is_global for address in ips):
+    if not ips or any(not address.is_global or address.is_multicast for address in ips):
         raise ValueError('Source resolves to a non-public address')
     return target.copy_with(host=str(ips[0])), host
 

@@ -18,13 +18,13 @@
     python jobbot.py eval run LABEL | eval compare LABEL_A LABEL_B
     python jobbot.py gaps [JOB_ID ...] [--top N] [--summary]   what you're missing, highest pay first
     python jobbot.py ingest URL [URL ...]       add postings by ATS URL (manual-mode web search)
-    python jobbot.py tasks [--check]           manual mode: AI steps waiting for Claude
+    python jobbot.py tasks [--check]           manual mode: pending assistant tasks
     python jobbot.py master [--draft] [--family F]   master resume; F = perception|rl|robotics_swe|ml
     python jobbot.py sheet                     refresh data/applications.xlsx (keeps your Applied?/Notes)
     python jobbot.py privacy [--install-hook]  refuse to push if tracked files contain your personal details
 
 Manual mode (models.yaml `mode: manual`) uses no API key: each AI step is written to
-out/tasks/<key>.task.md, Claude (in Claude Code) writes <key>.answer.json, and you
+out/tasks/<key>.task.md, your coding assistant writes <key>.answer.json, and you
 re-run the same command to continue.
 """
 from __future__ import annotations
@@ -188,8 +188,8 @@ def _print_jobs(ids):
 def _pending_note():
     n = len(core.pending_tasks())
     if n:
-        print(f"\n{n} AI step(s) waiting for Claude in out/tasks/ "
-              "(ask Claude to answer them, then re-run this command)")
+        print(f"\n{n} AI step(s) waiting for your coding assistant in out/tasks/ "
+              "(answer them with your coding assistant, then re-run this command)")
 
 
 def cmd_gaps(a):

@@ -498,11 +498,16 @@ def web_search_urls(targets: dict, max_queries: int = 4) -> list[str]:
     messages = [{"role": "user", "content": prompt}]
     urls: list[str] = []
     for _ in range(3):  # resume pause_turn at most twice
-        resp = core.client().messages.create(
-            model=cfg["model"], max_tokens=8000, messages=messages,
-            tools=[{"type": "web_search_20260209", "name": "web_search", "max_uses": 8,
-                    "allowed_domains": ATS_DOMAINS}],
-        )
+        import anthropic
+        try:
+            resp = core.client().messages.create(
+                model=cfg["model"], max_tokens=8000, messages=messages,
+                tools=[{"type": "web_search_20260209", "name": "web_search", "max_uses": 8,
+                        "allowed_domains": ATS_DOMAINS}],
+            )
+        except (anthropic.AnthropicError, httpx.HTTPError) as e:
+            raise core.JobbotError(f'Web search request failed ({type(e).__name__})') from e
+        core.record_usage('web_search', cfg['model'], resp)
         for block in resp.content:
             if block.type == "web_search_tool_result" and isinstance(block.content, list):
                 urls += [r.url for r in block.content if getattr(r, "url", None)]

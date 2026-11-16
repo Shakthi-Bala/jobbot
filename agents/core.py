@@ -58,11 +58,11 @@ class JobbotError(RuntimeError):
 
 
 class ManualTaskPending(JobbotError):
-    """Manual mode: an AI step is waiting for Claude (in Claude Code) to answer a task file."""
+    """Manual mode: an AI step is waiting for a coding assistant to answer a task file."""
 
     def __init__(self, key: str, path: Path):
         self.key, self.path = key, path
-        super().__init__(f"waiting for Claude: {path.relative_to(ROOT) if path.is_relative_to(ROOT) else path}")
+        super().__init__(f"waiting for a task answer: {path.relative_to(ROOT) if path.is_relative_to(ROOT) else path}")
 
 
 # --------------------------------------------------------------------- time
@@ -425,7 +425,7 @@ T = TypeVar("T")
 
 def is_manual() -> bool:
     """Manual mode (models.yaml `mode: manual`, or JOBBOT_MODE=manual): no API key is
-    used. Each AI step is written to out/tasks/ for Claude in Claude Code to answer."""
+    used. Each AI step is written to out/tasks/ for a coding assistant to answer."""
     env = os.environ.get("JOBBOT_MODE")
     if env:
         return env == "manual"
@@ -469,6 +469,15 @@ def pending_tasks() -> list[Path]:
                   key=lambda p: p.stat().st_mtime)
 
 
+def record_usage(role: str, model: str, response) -> None:
+    usage = getattr(response, 'usage', None)
+    log_decision('llm', None, 'usage', dumps({
+        'model': model, 'role': role,
+        **{key: getattr(usage, key, 0) or 0 for key in (
+            'input_tokens', 'output_tokens', 'cache_creation_input_tokens', 'cache_read_input_tokens')},
+    }))
+
+
 def llm_json(role: str | dict, system: str, user: str, schema_model: type[T],
              max_tokens: int = 16000) -> T:
     """One structured-output call. Returns a validated pydantic instance.
@@ -503,12 +512,7 @@ def llm_json(role: str | dict, system: str, user: str, schema_model: type[T],
         log_decision('llm', None, 'provider_error', reason)
         raise JobbotError(reason) from e
 
-    usage = getattr(response, 'usage', None)
-    log_decision('llm', None, 'usage', dumps({
-        'model': cfg['model'], 'role': role if isinstance(role, str) else 'explicit',
-        **{key: getattr(usage, key, 0) or 0 for key in (
-            'input_tokens', 'output_tokens', 'cache_creation_input_tokens', 'cache_read_input_tokens')},
-    }))
+    record_usage(role if isinstance(role, str) else 'explicit', cfg['model'], response)
 
     if response.stop_reason == "refusal":
         raise JobbotError(f"{cfg['model']} declined the request")

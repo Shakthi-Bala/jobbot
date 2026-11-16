@@ -4,7 +4,7 @@ import pytest
 from checks import contact_sources as sources
 
 
-@pytest.mark.parametrize('address', ['127.0.0.1', '10.1.2.3', '169.254.169.254', '::1', 'fc00::1'])
+@pytest.mark.parametrize('address', ['127.0.0.1', '10.1.2.3', '169.254.169.254', '::1', 'fc00::1', '224.0.0.1', 'ff02::1'])
 def test_non_public_sources_are_never_requested(monkeypatch, address):
     monkeypatch.setattr(socket, 'getaddrinfo', lambda *a, **k: [(0, 0, 0, '', (address, 443))])
     with pytest.raises(ValueError, match='non-public'):

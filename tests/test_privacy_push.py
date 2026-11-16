@@ -97,3 +97,26 @@ def test_missing_profile_still_blocks_private_paths(repo, monkeypatch):
     (repo / '.env').write_text('PASSWORD=private')
     head = commit(repo, 'private file')
     assert any('private file' in line for line in privacy.scan_push(update(head), repo))
+
+
+def test_public_repository_exception_is_limited_to_that_repository():
+    ids = {'alex-example': 'account handle'}
+    repository = 'https://github.com/alex-example/jobbot'
+    def inspect(url):
+        return privacy.inspect_blob(url.encode(), 'README.md', ids, {}, [], repository)
+    assert inspect(repository + '/actions/workflows/tests.yml/badge.svg') == []
+    assert inspect(repository.upper() + '/issues') == []
+    assert inspect(repository + '-private-notes')
+    assert inspect('https://github.com/alex-example/profile')
+
+
+def test_oversized_worktree_files_are_not_loaded_into_memory(repo, monkeypatch):
+    large = repo / 'large.bin'
+    with large.open('wb') as file:
+        file.truncate(privacy.MAX_BYTES + 1)
+    original = type(large).read_bytes
+    def read(path):
+        assert path != large, 'Oversized data must not be loaded'
+        return original(path)
+    monkeypatch.setattr(type(large), 'read_bytes', read)
+    assert 'size limit' in privacy.scan([large], {}, repo)[0]
