@@ -110,6 +110,20 @@ def quantities(text: str) -> set[tuple[float, str]]:
             name = re.sub(r'[\s\-‐‑–]+', ' ', unit[1].lower())
             name = name[:-1] if name.endswith('s') and name not in ('ms', 'us', 's', 'fps') else name
             out.add((float(match[0].replace(',', '')), UNIT_ALIASES.get(name, name)))
+        else:
+            # Preserve count nouns as well as physical units. Modifiers may vary
+            # ("synthetic warehouse scenes" vs "scenes"); the counted noun must agree.
+            phrase = re.match(r'[\s\-‐‑–]*([A-Za-z]+(?:[\s\-]+[A-Za-z]+){0,2})', text[match.end():])
+            if phrase:
+                for word in re.split(r'[\s\-]+', phrase[1].lower()):
+                    if word in {'at', 'on', 'in', 'of', 'to', 'and', 'or', 'with', 'from', 'per', 'by', 'for', 'across', 'over'}:
+                        break
+                    if (word.endswith('s') and word not in {'as', 'is', 'was', 'this', 'has'}) or word in {
+                            'site', 'customer', 'scene', 'frame', 'user', 'engineer', 'attempt', 'sequence',
+                            'image', 'sample', 'camera', 'robot', 'object', 'trial', 'target', 'project'}:
+                        noun = word[:-3] + 'y' if word.endswith('ies') else word.removesuffix('s')
+                        out.add((float(match[0].replace(',', '')), 'count:' + noun))
+                        break
     for word, value in MULTIPLIERS.items():
         if re.search(rf'\b{word}\b', text or '', re.I):
             out.add((value, 'factor'))
