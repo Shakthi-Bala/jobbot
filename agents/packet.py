@@ -185,6 +185,9 @@ def _build(conn, job_id: str, skip_review: bool, offline: bool, skip_panel: bool
                 state["blocking"] = ["Panel target unmet; new evidence required: " + gap
                                      for gap in evidence_gaps]
                 break  # re-rendering identical claims cannot supply a missing experiment
+            if not verdict["revisions"]:
+                state['blocking'] = ['Review panel did not approve and supplied no actionable revision']
+                break
             if state["panel_round"] >= MAX_PANEL_ROUNDS:
                 state["blocking"] = ["Review panel still requests revisions: " + r
                                      for r in verdict["revisions"]] or ["Review panel did not approve"]

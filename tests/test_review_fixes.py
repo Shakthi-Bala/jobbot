@@ -9,7 +9,7 @@ import httpx
 import pytest
 
 from agents import bank, core, discover, fit, outreach, packet, panel, privacy, sheet, tailor, tracker
-from agents.schemas import FitResult, Paragraph, ParagraphList, ParsedPosting, SkillGroup
+from agents.schemas import FitResult, ParagraphRewrite, ParagraphRewrites, ParsedPosting, SkillGroup
 from checks import contact_sources, numbers_match, run_all
 from checks._lib import numbers, pdf_text
 from tests.test_checks import good_packet
@@ -70,8 +70,8 @@ def test_inline_fact_tags_cannot_launder_cross_entry_number(job, monkeypatch):
 
 
 def test_unslop_cannot_restore_tags_or_multiline_bypass(job, monkeypatch):
-    monkeypatch.setattr(core, 'llm_json', lambda *a, **k: ParagraphList(paragraphs=[
-        Paragraph(text='Built a tool [F002]\n// Cut costs by 90%', fact_ids=['F003'])]))
+    monkeypatch.setattr(core, 'llm_json', lambda *a, **k: ParagraphRewrites(paragraphs=[
+        ParagraphRewrite(source_index=0, text='Built a tool [F002]\n// Cut costs by 90%', fact_ids=['F003'])]))
     result = tailor.unslop([{'text': 'Built a tool', 'fact_ids': ['F003']}], core.load_profile())
     assert result == [{'text': 'Built a tool // Cut costs by 90%', 'fact_ids': ['F003']}]
 

@@ -4,7 +4,7 @@ description: Remove filler and AI-sounding phrasing from prose without changing 
 ---
 
 Rewrite each paragraph so it sounds like a specific person wrote it. Return the same
-number of paragraphs, in order, each with the same `fact_ids` (you may drop IDs, never add).
+number of paragraphs, each with its original `source_index` and the same `fact_ids` (you may drop IDs, never add).
 
 Remove:
 - Banned phrases and their variants.

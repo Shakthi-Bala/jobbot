@@ -319,3 +319,11 @@ class MasterResume(BaseModel):
     entries: list[MasterEntry]
     summaries: list[FamilySummary]
     families: list[FamilyPlan]
+
+
+class ParagraphRewrite(Paragraph):
+    source_index: int = Field(description="Exact source_index of the input paragraph")
+
+
+class ParagraphRewrites(BaseModel):
+    paragraphs: list[ParagraphRewrite]
