@@ -355,7 +355,7 @@ def readable_name(text: str, limit: int = 60) -> str:
     return re.sub(r"[^A-Za-z0-9]+", "-", text).strip("-")[:limit].strip("-") or "job"
 
 
-def job_dir(job_id: str, conn: sqlite3.Connection | None = None) -> Path:
+def job_dir(job_id: str, conn: sqlite3.Connection | None = None, *, create: bool = True) -> Path:
     """The packet folder for a job: out/<Company>_<Role>, readable instead of a hash.
 
     If a different job already owns that name (same company and title, other
@@ -376,6 +376,8 @@ def job_dir(job_id: str, conn: sqlite3.Connection | None = None) -> Path:
     if existing_id and existing_id != job_id:
         d = d.with_name(f"{d.name}_{job_id[:6]}")
     legacy = OUT / job_id
+    if not create:
+        return legacy if legacy.is_dir() and not d.exists() else d
     if legacy.is_dir() and not d.exists():
         legacy.rename(d)
     # Gap reports and outreach may exist before meta.json. Reserve their folder
