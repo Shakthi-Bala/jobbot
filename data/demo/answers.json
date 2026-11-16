@@ -251,7 +251,7 @@
     ],
     "bulletproof": false
   },
-  "ParagraphList": {
+  "ParagraphRewrites": {
     "paragraphs": [
       {
         "text": "I am applying for the Perception Engineer role at Example Robotics. My synthetic coursework example combines ROS 2 camera processing with PyTorch segmentation and point-cloud filtering.",
@@ -259,7 +259,8 @@
           "F001",
           "F002",
           "F003"
-        ]
+        ],
+        "source_index": 0
       },
       {
         "text": "I built a camera-processing pipeline and added rosbag replay and timestamp checks to reproduce failures. In related projects, I evaluated filtering on synthetic scenes and separated training and validation data for a segmentation baseline.",
@@ -269,7 +270,8 @@
           "F003",
           "F005",
           "F006"
-        ]
+        ],
+        "source_index": 1
       },
       {
         "text": "I would welcome a discussion about how these methods relate to your perception stack. My available evidence covers simulated inputs; deployment on production robots would require further validation.",
@@ -277,7 +279,8 @@
           "F001",
           "F002",
           "F003"
-        ]
+        ],
+        "source_index": 2
       }
     ]
   }
