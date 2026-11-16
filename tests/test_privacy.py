@@ -25,7 +25,8 @@ def test_scan_reports_file_and_line_without_echoing_the_value(env, tmp_path):
     leaky.write_text("x = 1\ncontact = 'ALEX@example.com'  # Example Perception Lab\n")
     (tmp_path / "image.bin").write_bytes(b"\xff\xfe\x00alex@example.com")
     problems = privacy.scan([clean, leaky, tmp_path / "image.bin"], ids, tmp_path)
-    assert problems == ["leaky.py:2 contains your email, employer or lab, name"]
+    assert problems[0] == "leaky.py:2 contains your email, employer or lab, name"
+    assert 'review required' in problems[1]
     assert "alex@example.com" not in problems[0].lower()
 
 

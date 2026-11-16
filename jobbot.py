@@ -57,6 +57,13 @@ def cmd_discover(a):
     _pending_note()
 
 
+def cmd_gmail_auth(_):
+    from agents import discover
+    if discover.gmail_credentials(interactive=True) is None:
+        raise core.JobbotError('Add your read-only OAuth client to data/credentials.json first')
+    print('Gmail authorization saved; discovery can now read existing job alerts')
+
+
 def cmd_fit(a):
     from agents import fit
     for r in fit.run(a.job_ids or None):
@@ -229,7 +236,7 @@ def cmd_privacy(a):
     from agents import privacy
     if a.install_hook:
         print(f"installed {privacy.install_hook()}: every `git push` now runs the scan")
-    problems = privacy.run()
+    problems = privacy.scan_push(sys.stdin.read()) if a.push else privacy.run()
     for p in problems:
         print("  -", p)
     print("no personal details in tracked files" if not problems
@@ -282,6 +289,7 @@ def main(argv=None):
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("init").set_defaults(fn=cmd_init)
+    sub.add_parser('gmail-auth', help='authorize Gmail interactively before scheduled discovery').set_defaults(fn=cmd_gmail_auth)
     s = sub.add_parser("discover"); s.set_defaults(fn=cmd_discover)
     s.add_argument("--no-web", action="store_true"); s.add_argument("--no-alerts", action="store_true")
     s = sub.add_parser("fit"); s.set_defaults(fn=cmd_fit); s.add_argument("job_ids", nargs="*")
@@ -321,6 +329,7 @@ def main(argv=None):
                    choices=["full", "all", "perception", "rl", "robotics_swe", "ml"])
     s = sub.add_parser("privacy"); s.set_defaults(fn=cmd_privacy)
     s.add_argument("--install-hook", action="store_true", help="scan before every git push")
+    s.add_argument('--push', action='store_true', help='scan outgoing commits from pre-push stdin')
     s = sub.add_parser("tasks"); s.set_defaults(fn=cmd_tasks)
     s.add_argument("--check", action="store_true")
 
