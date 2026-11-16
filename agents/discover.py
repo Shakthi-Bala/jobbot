@@ -82,7 +82,8 @@ def _greenhouse_job(slug: str, j: dict) -> dict:
     return _pay_from_text(text) | {
         "company": j.get("company_name") or slug, "title": j["title"],
         "location": (j.get("location") or {}).get("name", ""),
-        "req_id": str(j.get("requisition_id") or j.get("internal_job_id") or j["id"]),
+        # One internal requisition can have several separately published postings.
+        "req_id": str(j["id"]),
         # Branded career-page URLs cannot be re-fetched by our ATS adapter.
         # Keep the public board identity available to packet/checks.
         "url": f"https://job-boards.greenhouse.io/{slug}/jobs/{j['id']}",
@@ -271,11 +272,19 @@ def apply_parse(conn, job_id: str, raw_text: str, parsed: ParsedPosting, raw_htm
 
 def posting_id(conn, job: dict) -> str:
     """Preserve legacy IDs while distinguishing new requisitions."""
+    public = parse_ats_url(job.get("url") or "")
+    if public and public[0] == "greenhouse":
+        # Adopt the old row by its public URL when migrating away from shared
+        # internal requisitions. Preserve its document/action foreign keys.
+        for row in conn.execute("SELECT id, url FROM jobs WHERE company=?", (job["company"],)):
+            if parse_ats_url(row["url"] or "") == public:
+                return row["id"]
     req_id = str(job.get("req_id") or "").strip() or None
     if req_id:
-        row = conn.execute("SELECT id FROM jobs WHERE company=? AND req_id=?",
+        row = conn.execute("SELECT id, url FROM jobs WHERE company=? AND req_id=?",
                            (job["company"], req_id)).fetchone()
-        if row:
+        other_public = parse_ats_url(row["url"] or "") if row else None
+        if row and not (public and other_public and public != other_public):
             return row["id"]
     legacy = core.job_id_for(job["company"], job["title"], job.get("location", ""))
     row = conn.execute("SELECT req_id FROM jobs WHERE id=?", (legacy,)).fetchone()
@@ -301,11 +310,11 @@ def upsert_jobs(conn, jobs: Iterable[dict], targets: dict, parse: bool = True,
             changed = existing["raw_text"] != job["raw_text"]
             conn.execute(
                 "UPDATE jobs SET last_verified=?, active=1, url=COALESCE(?, url), "
-                "title=?, location=?, raw_text=?, raw_html=?, "
+                "title=?, location=?, req_id=?, raw_text=?, raw_html=?, "
                 "comp_min=COALESCE(?, comp_min), comp_max=COALESCE(?, comp_max), "
                 "comp_currency=COALESCE(?, comp_currency), comp_text=COALESCE(?, comp_text), "
                 "comp_source=COALESCE(?, comp_source) WHERE id=?",
-                (core.now(), job.get("url"), job["title"], job.get("location", ""),
+                (core.now(), job.get("url"), job["title"], job.get("location", ""), job.get("req_id"),
                  job["raw_text"], job.get("raw_html", ""), *comp, jid))
             if changed:
                 conn.execute("UPDATE jobs SET parsed_json=NULL, deadline=? WHERE id=?",
