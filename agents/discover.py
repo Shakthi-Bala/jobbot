@@ -429,27 +429,41 @@ def ingest_urls(conn, urls: Iterable[str], targets: dict, source: str,
     return new_ids
 
 
-def gmail_alert_urls(label: str = "jobbot/alerts", days: int = 3) -> list[str]:
-    """URLs from job-alert emails. Requires data/credentials.json (gmail.readonly)."""
+def _authorize_gmail(creds_path, scopes, interactive):
+    if not interactive:
+        raise core.JobbotError('Gmail authorization required; run `python jobbot.py gmail-auth` interactively')
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    return InstalledAppFlow.from_client_secrets_file(str(creds_path), scopes).run_local_server(
+        port=0, timeout_seconds=120)
+
+
+def gmail_credentials(interactive: bool = False):
     creds_path = core.DATA / "credentials.json"
     if not creds_path.exists():
-        return []
-    from google.auth.transport.requests import Request
-    from google.oauth2.credentials import Credentials
-    from google_auth_oauthlib.flow import InstalledAppFlow
-    from googleapiclient.discovery import build
-
+        return None
     scopes = ["https://www.googleapis.com/auth/gmail.readonly"]
     token_path = core.DATA / "token.json"
-    creds = Credentials.from_authorized_user_file(str(token_path), scopes) \
-        if token_path.exists() else None
+    creds = None
+    if token_path.exists():
+        from google.oauth2.credentials import Credentials
+        creds = Credentials.from_authorized_user_file(str(token_path), scopes)
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
+            from google.auth.transport.requests import Request
             creds.refresh(Request())
         else:
-            creds = InstalledAppFlow.from_client_secrets_file(str(creds_path), scopes) \
-                .run_local_server(port=0)
+            creds = _authorize_gmail(creds_path, scopes, interactive)
         token_path.write_text(creds.to_json())
+        token_path.chmod(0o600)
+    return creds
+
+
+def gmail_alert_urls(label: str = "jobbot/alerts", days: int = 3) -> list[str]:
+    """Read alerts using existing credentials; never open an interactive login."""
+    creds = gmail_credentials()
+    if creds is None:
+        return []
+    from googleapiclient.discovery import build
     svc = build("gmail", "v1", credentials=creds, cache_discovery=False)
     q = f'label:"{label}" newer_than:{days}d'
     msgs = svc.users().messages().list(userId="me", q=q, maxResults=100).execute()
