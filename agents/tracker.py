@@ -14,6 +14,27 @@ from .schemas import Rewrite
 OUTCOMES = ("applied", "responded", "interview", "rejected", "offer", "closed")
 
 
+def edit_draft(job_id: str, *, changes: str | None = None) -> None:
+    """Dashboard draft actions cannot overwrite recorded application outcomes."""
+    conn = core.connect()
+    try:
+        job = core.get_job(conn, job_id)
+        recorded = conn.execute("SELECT 1 FROM actions WHERE job_id=? AND action IN "
+                                "('applied','responded','interview','rejected','offer','closed') LIMIT 1",
+                                (job_id,)).fetchone()
+        if job['status'] in OUTCOMES or recorded:
+            raise core.JobbotError('Application history is recorded; draft actions are disabled')
+        if changes is not None:
+            if not changes.strip():
+                raise core.JobbotError('Requested changes cannot be empty')
+            (core.job_dir(job_id, conn) / 'requested_changes.md').write_text(changes.strip() + '\n')
+        core.set_status(conn, job_id, 'shortlisted' if changes is not None else 'skipped')
+        core.log_decision('me', job_id, 'request_changes' if changes is not None else 'skip',
+                          changes.strip() if changes is not None else 'skipped from dashboard')
+    finally:
+        conn.close()
+
+
 def mark_applied(job_id: str) -> int | None:
     """Record exactly which resume version you sent (by hash)."""
     conn = core.connect()

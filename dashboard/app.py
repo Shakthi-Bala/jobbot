@@ -85,13 +85,13 @@ with tabs[1]:
 with tabs[2]:
     packet_jobs = [r for r in conn.execute(
         "SELECT id, title, company, status FROM jobs ORDER BY first_seen DESC").fetchall()
-        if (core.job_dir(r["id"], conn) / "meta.json").exists()]
+        if (core.job_dir(r["id"], conn, create=False) / "meta.json").exists()]
     if not packet_jobs:
         st.info("No packets yet. Run `python jobbot.py packet JOB_ID`.")
     else:
         choice = st.selectbox("Job", packet_jobs,
                               format_func=lambda r: f"{r['title']}, {r['company']} [{r['status']}]")
-        d = core.job_dir(choice["id"], conn)
+        d = core.job_dir(choice["id"], conn, create=False)
         meta = json.loads((d / "meta.json").read_text())
         st.write(f"**{meta['title']}** at **{meta['company']}** · req {meta.get('req_id') or 'n/a'} "
                  f"· v{meta['version']} · [posting]({meta.get('url') or '#'})")
@@ -104,6 +104,9 @@ with tabs[2]:
 
         if (d / "open_issues.md").exists():
             st.warning((d / "open_issues.md").read_text())
+        if (d / 'injection_warnings.json').exists():
+            for warning in json.loads((d / 'injection_warnings.json').read_text()):
+                st.warning(warning)
         sub = st.tabs(["Review", "Resume", "Cover letter", "Answers", "changes.diff", "Checks", "Panel"])
         with sub[6]:
             st.markdown((d / "panel.md").read_text() if (d / "panel.md").exists()
@@ -137,20 +140,19 @@ with tabs[2]:
 
         st.divider()
         b1, b2, b3 = st.columns(3)
+        recorded = choice['status'] in tracker.OUTCOMES
         if b1.button("Mark applied", type="primary",
+                     disabled=recorded,
                      help="Click after YOU submitted it. Records the resume hash."):
             tracker.mark_applied(choice["id"])
             st.success("Recorded. Follow-up scheduled in 10 days.")
         with b2:
             note = st.text_area("Requested changes", key="changes")
-            if st.button("Request changes") and note.strip():
-                (d / "requested_changes.md").write_text(note.strip() + "\n")
-                core.set_status(conn, choice["id"], "shortlisted")
-                core.log_decision("me", choice["id"], "request_changes", note.strip())
+            if st.button("Request changes", disabled=recorded) and note.strip():
+                tracker.edit_draft(choice['id'], changes=note)
                 st.info(f"Saved. Rebuild with: python jobbot.py packet {choice['id']}")
-        if b3.button("Skip"):
-            core.set_status(conn, choice["id"], "skipped")
-            core.log_decision("me", choice["id"], "skip", "skipped from dashboard")
+        if b3.button("Skip", disabled=recorded):
+            tracker.edit_draft(choice['id'])
             st.rerun()
 
 # ------------------------------------------------------------------- Gaps
@@ -177,8 +179,9 @@ with tabs[CONTACTS]:
                          f"next: {c['next_followup'] or '-'}"):
             st.write(f"**Reason:** {c['reason']}  \n**Channel:** {c['channel']}")
             st.write("**Sources:** " + ", ".join(json.loads(c["sources_json"] or "[]")))
-            draft = core.job_dir(c["job_id"] or "", conn) / "outreach" / f"{core.slugify(c['name'])}.md"
-            if draft.exists():
+            draft = (core.job_dir(c['job_id'], conn, create=False) / 'outreach' / f"{core.slugify(c['name'])}.md"
+                     if c['job_id'] else None)
+            if draft and draft.exists():
                 st.code(draft.read_text(), language=None)
             cols = st.columns(3)
             if c["status"] == "drafted" and cols[0].button("Mark sent", key=f"s{c['id']}"):
