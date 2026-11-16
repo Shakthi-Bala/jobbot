@@ -15,7 +15,7 @@ if str(ROOT) not in sys.path:
 
 from agents import core  # noqa: E402
 
-NUMBER_RE = re.compile(r"(?<![\w.])(?:\d[\d,]*(?:\.\d+)?|\.\d+)")
+NUMBER_RE = re.compile(r"(?<![\w.])(?:(?:\d{1,3}(?:,\d{3})+(?!\d)|\d+)(?:\.\d+)?|\.\d+)")
 # Cardinal words use the same representation in sources and generated prose.
 # Match valid compounds rather than adding unrelated adjacent words ("one two").
 _SMALL = "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen".split()
@@ -41,6 +41,11 @@ _NUMBER_IDIOMS_RE = re.compile(
     r"\b(?:one\s+of|no\s+one(?:\s+else)?|(?:one|zero)[-‐‑ ](?:hot|shot)|zero[-‐‑ ]copy)\b", re.I)
 
 
+_MAGNITUDES = {'k': 1000, 'thousand': 1000, 'm': 1000000, 'million': 1000000,
+               'b': 1000000000, 'billion': 1000000000, 'dozen': 12}
+_MAGNITUDE_RE = re.compile(rf"({NUMBER_RE.pattern})[ \t]*(k|K|M|B|thousand|million|billion|dozen)\b")
+
+
 def numeric_text(text: str) -> str:
     """Normalize English cardinal numbers, including hyphenated compounds."""
     def convert(match):
@@ -62,12 +67,20 @@ def numeric_text(text: str) -> str:
             else:
                 group += 1 if word == 'a' else _WORD_VALUES[word]
         return str(total + group) + decimal
-    return _WORD_NUMBER_RE.sub(convert, _NUMBER_IDIOMS_RE.sub(' ', text or ''))
+    text = _NUMBER_IDIOMS_RE.sub(' ', text or '')
+    text = re.sub(r'\ba dozen\b', '12', text, flags=re.I)
+    text = _WORD_NUMBER_RE.sub(convert, text)
+    # Lowercase m is metres unless attached to an explicit currency amount.
+    text = re.sub(r'([$£€]\s*\d+(?:\.\d+)?)m\b', r'\1M', text)
+    return _MAGNITUDE_RE.sub(
+        lambda m: format(float(m[1].replace(',', '')) * _MAGNITUDES[m[2].lower()], '.15g'), text)
 
 
 MULTIPLIERS = {"doubled": 2, "doubling": 2, "twofold": 2, "tripled": 3,
                "tripling": 3, "threefold": 3, "quadrupled": 4, "fourfold": 4,
-               "halved": 0.5, "halving": 0.5}
+               "halved": 0.5, "halving": 0.5, "twice": 2, "thrice": 3,
+               "fivefold": 5, "sixfold": 6, "sevenfold": 7, "eightfold": 8,
+               "ninefold": 9, "tenfold": 10}
 UNIT_RE = re.compile(
     r"[\s\-‐‑–]*(%|percent\b|percentage[\s\-‐‑–]+points?\b|fps\b|frames?[\s\-‐‑–]+per[\s\-‐‑–]+second\b|"
     r"ms\b|milliseconds?\b|[µμu]s\b|microseconds?\b|s\b|seconds?\b|"
@@ -88,6 +101,10 @@ def quantities(text: str) -> set[tuple[float, str]]:
     text = numeric_text(text)
     out = set()
     for match in NUMBER_RE.finditer(text):
+        currency = re.search(r'([$£€])\s*$', text[:match.start()])
+        if currency:
+            out.add((float(match[0].replace(',', '')), {'$': 'usd', '£': 'gbp', '€': 'eur'}[currency[1]]))
+            continue
         unit = UNIT_RE.match(text, match.end())
         if unit:
             name = re.sub(r'[\s\-‐‑–]+', ' ', unit[1].lower())
@@ -96,6 +113,9 @@ def quantities(text: str) -> set[tuple[float, str]]:
     for word, value in MULTIPLIERS.items():
         if re.search(rf'\b{word}\b', text or '', re.I):
             out.add((value, 'factor'))
+    for word, value in [('hundreds', 100), ('thousands', 1000), ('millions', 1000000)]:
+        if re.search(rf'\b{word} of\b', text, re.I):
+            out.add((value, 'approximate count'))
     return out
 
 
@@ -149,7 +169,7 @@ def numbers(text: str) -> set[float]:
             out.add(float(m.replace(",", "")))
         except ValueError:
             pass
-    out.update(value for value, unit in quantities(text) if unit == 'factor')
+    out.update(value for value, unit in quantities(text) if unit in ('factor', 'approximate count'))
     return out
 
 
