@@ -28,3 +28,8 @@ def test_parser_invented_question_needs_source_evidence(packet, job):
         'application_questions': ['Explain my prestigious awards']}), job['id']))
     conn.commit()
     assert any('not quoted in the posting source' in item for item in required_content.check(packet))
+
+
+
+def test_master_document_has_no_posting_questions():
+    assert tailor.posting_questions({'id': 'Master_Resume', 'company': '(master)'}) == {}

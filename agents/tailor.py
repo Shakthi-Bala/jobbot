@@ -237,9 +237,10 @@ def group_skills(skills: list[dict], groups, profile: dict | None = None) -> lis
 
 def posting_questions(job) -> dict[str, str]:
     """Only questions that are declared and actually quoted in the posting source."""
-    parsed = json.loads(job['parsed_json'] or '{}')
+    source = dict(job)
+    parsed = json.loads(source.get('parsed_json') or '{}')
     return {core.normalize(q): q for q in parsed.get('application_questions', [])
-            if isinstance(q, str) and core.quote_in_text(q, job['raw_text'] or '')}
+            if isinstance(q, str) and core.quote_in_text(q, source.get('raw_text') or '')}
 
 
 def enforce(packet: TailoredPacket, profile: dict, job_id: str,
