@@ -1,8 +1,8 @@
 """Run the actual CLI with isolated synthetic data and recorded structured answers."""
 from __future__ import annotations
 
-import json
 import copy
+import json
 import os
 from pathlib import Path
 import re
@@ -14,6 +14,30 @@ import sys
 from . import core, schemas
 
 SOURCE = Path(__file__).resolve().parents[1]
+
+
+def _record_revision(packet: Path, before_pdf: Path, revision: dict) -> dict:
+    """Validate rendered evidence even when Python optimization is enabled."""
+    rounds = json.loads((packet / 'panel.json').read_text())
+    if not (len(rounds) == 2 and rounds[0]['revisions'] and not rounds[1]['revisions']):
+        raise core.JobbotError('Demo must record two panel rounds with a supported revision')
+    final = json.loads((packet / 'resume.json').read_text())
+    if revision['after']['text'] not in final['projects'][0]['bullets']:
+        raise core.JobbotError('Demo revised bullet is missing from the final resume')
+    from checks._lib import pdf_text
+    if revision['before']['text'] not in ' '.join(pdf_text(before_pdf).split()):
+        raise core.JobbotError('Demo original bullet is missing from the first rendered PDF')
+    result = {
+        'before': revision['before'], 'after': revision['after'],
+        'critique': rounds[0]['reviews']['senior_engineer']['lines_that_hurt'][0],
+        'instruction': rounds[0]['plan']['revisions'][0]['instruction'],
+        'rounds': [row['round'] for row in rounds],
+        'before_sha256': core.sha256_file(before_pdf),
+        'after_sha256': core.sha256_file(packet / 'resume.pdf'),
+    }
+    if result['before_sha256'] == result['after_sha256']:
+        raise core.JobbotError('Demo revision did not change the rendered PDF')
+    return result
 
 
 def run() -> dict:
@@ -42,19 +66,32 @@ def run() -> dict:
     events = []
     revision_recording = None
 
-    def fixture_answer(name):
+    def fixture_answer(name, task):
         value = copy.deepcopy(fixtures[name])
         states = list((root / 'out').glob('*/packet_state.json'))
         state = json.loads(states[0].read_text()) if states else {}
         round_no = state.get('panel_round', 0)
         if name == 'TailoredPacket' and round_no == 0:
-            entry = next(p for p in value['projects'] if p['ref_id'] == revision['ref_id'])
-            assert entry['bullets'][0] == revision['after']
+            entry = next((p for p in value['projects'] if p['ref_id'] == revision['ref_id']), None)
+            if entry is None or not entry['bullets'] or entry['bullets'][0] != revision['after']:
+                raise core.JobbotError('Demo revision fixture does not match its source bullet')
             entry['bullets'][0] = revision['before']
-        elif name == 'PersonaReview' and round_no == 1:
-            value['lines_that_hurt'] = [revision['critique']]
-            value['edits'] = [{'edit': revision['instruction'], 'uses_existing_evidence': True,
-                               'fact_ids': revision['after']['fact_ids']}]
+        elif name == 'PersonaReview':
+            from .panel import READERS
+            reader = next((key for key, file in READERS.items()
+                           if '# Your role\n\n' + (SOURCE / 'skills/panel/personas' / file).read_text()
+                           in task.read_text()), None)
+            if reader is None or round_no not in (1, 2):
+                raise core.JobbotError('Demo fixture has an unknown reader or panel round')
+            value['score'] = revision['reader_scores'][reader][round_no - 1]
+            if round_no == 1:
+                value['lines_that_hurt'] = [revision['critique']]
+                value['edits'] = [{'edit': revision['instruction'], 'uses_existing_evidence': True,
+                                   'fact_ids': revision['after']['fact_ids']}]
+            elif reader == 'senior_engineer':
+                value['first_impression'] = (
+                    'DEMO FIXTURE: the revised bullet names the owned component and tool; '
+                    'validation remains synthetic.')
         elif name == 'RevisionPlan' and round_no == 1:
             value.update(revisions=[{'instruction': revision['instruction'],
                                      'fact_ids': revision['after']['fact_ids'],
@@ -93,7 +130,7 @@ def run() -> dict:
                 name = match[1] if match else ''
                 if name not in fixtures:
                     raise core.JobbotError(f'Demo has no fixture for {name}')
-                value = fixture_answer(name)
+                value = fixture_answer(name, task)
                 answer.write_text(core.dumps(value.model_dump()))
                 answered += 1
             if not answered:
@@ -120,21 +157,7 @@ def run() -> dict:
         complete(['checks', jid, '--offline'])
         packet = next(path.parent for path in (root / 'out').glob('*/meta.json')
                       if json.loads(path.read_text()).get('job_id') == jid)
-        rounds = json.loads((packet / 'panel.json').read_text())
-        assert len(rounds) == 2 and rounds[0]['revisions'] and not rounds[1]['revisions']
-        final = json.loads((packet / 'resume.json').read_text())
-        assert revision['after']['text'] in final['projects'][0]['bullets']
-        from checks._lib import pdf_text
-        assert revision['before']['text'] in ' '.join(pdf_text(root / 'revision-before.pdf').split())
-        revision_recording = {
-            'before': revision['before'], 'after': revision['after'],
-            'critique': rounds[0]['reviews']['senior_engineer']['lines_that_hurt'][0],
-            'instruction': rounds[0]['plan']['revisions'][0]['instruction'],
-            'rounds': [row['round'] for row in rounds],
-            'before_sha256': core.sha256_file(root / 'revision-before.pdf'),
-            'after_sha256': core.sha256_file(packet / 'resume.pdf'),
-        }
-        assert revision_recording['before_sha256'] != revision_recording['after_sha256']
+        revision_recording = _record_revision(packet, root / 'revision-before.pdf', revision)
         result = {'workspace': str(root), 'packet': str(packet), 'job_id': jid,
                   'synthetic_data': True, 'review_source': 'recorded fixtures; no model assessment',
                   'network_calls': False}

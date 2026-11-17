@@ -39,12 +39,12 @@
     },
     {
       "command": "python jobbot.py packet 367f8769b0be --offline",
-      "output": "waiting for a task answer: out/tasks/cffbdbd8243f8526.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n7 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
+      "output": "waiting for a task answer: out/tasks/91a641504145a5ab.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n7 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
       "exit_code": 3
     },
     {
       "command": "python jobbot.py packet 367f8769b0be --offline",
-      "output": "waiting for a task answer: out/tasks/04183fddae5b67ed.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n1 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
+      "output": "waiting for a task answer: out/tasks/243786f75ee38582.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n1 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
       "exit_code": 3
     },
     {
@@ -59,12 +59,12 @@
     },
     {
       "command": "python jobbot.py packet 367f8769b0be --offline",
-      "output": "waiting for a task answer: out/tasks/f3c916aaae6e5bc5.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n7 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
+      "output": "waiting for a task answer: out/tasks/4f2997329d5296fc.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n7 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
       "exit_code": 3
     },
     {
       "command": "python jobbot.py packet 367f8769b0be --offline",
-      "output": "waiting for a task answer: out/tasks/69c588c98f5fd042.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n1 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
+      "output": "waiting for a task answer: out/tasks/5dc40bff3f45b8d8.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n1 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
       "exit_code": 3
     },
     {
@@ -100,7 +100,7 @@
       1,
       2
     ],
-    "before_sha256": "bd1202c3ae3c5008c782375cab6c2dab22d910c19ac368a8878ce6455751c20b",
-    "after_sha256": "ccc38a98db82382272d054c5f2baa59fbc5c43d85cbd8b8bc0fd1582079d5a20"
+    "before_sha256": "3636b1091fd92092dd8567ae0ff7f4e7f181799f4173acf61c09cbd90fb99792",
+    "after_sha256": "639a430ba45cfed69d1f308e941588b556c0370dc753b9b6ce355dee5aa8ef71"
   }
 }

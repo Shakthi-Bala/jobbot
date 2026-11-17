@@ -1,5 +1,12 @@
 {
   "ref_id": "P001",
+  "reader_scores": {
+    "team_lead": [7.3, 7.3],
+    "competing_applicant": [6.8, 6.8],
+    "ceo": [6.9, 6.9],
+    "senior_engineer": [7.0, 7.4],
+    "recruiter": [7.6, 7.6]
+  },
   "before": {
     "text": "Worked on a point-cloud filter and evaluated it on 120 synthetic warehouse scenes",
     "fact_ids": ["F001"]
