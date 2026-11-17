@@ -1,10 +1,11 @@
 """Every number in the output appears in the facts it cites. A null metric means no number."""
 import sys
 import re
+import json
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from checks._lib import claim_lines, cli, core, json_strings, meta, numbers, quantities, tagged_files  # noqa: E402
+from checks._lib import UNIT_RE, count_noun, numeric_text, claim_lines, cli, core, json_strings, meta, numbers, quantities, tagged_files  # noqa: E402
 
 
 def source_texts(profile: dict) -> dict[str, str]:
@@ -22,6 +23,38 @@ def source_texts(profile: dict) -> dict[str, str]:
 
 def source_numbers(profile: dict) -> dict[str, set[float]]:
     return {key: numbers(text) for key, text in source_texts(profile).items()}
+
+
+def claim_prose(prose: str, profile: dict, cited: list[str], sources: list[str], project_count: int) -> str:
+    """Exclude version/date labels and supported document descriptions, not metrics."""
+    skill_names = [s.get('skill', '') for s in profile.get('skills', [])]
+    verified = ' '.join(sources + skill_names)
+    for tool in ('Python', 'OpenCV', 'CUDA', 'ROS', 'PyTorch', 'TensorFlow', 'TensorRT', 'NumPy', 'Ubuntu', 'C++'):
+        if re.search(rf'(?<!\w){re.escape(tool)}(?!\w)', verified, re.I):
+            prose = re.sub(rf'(?<!\w){re.escape(tool)}\s*v?\s*\d+(?:\.\d+)*(?![\w.])', '', prose, flags=re.I)
+    months = ('January February March April May June July August September October November December').split()
+    for entry in profile.get('education', []):
+        if entry['id'] not in cited:
+            continue
+        for key in ('start', 'end'):
+            value = str(entry.get(key) or '')
+            match = re.match(r'^(\d{4})-(\d{2})(?:-|$)', value)
+            if not match or not 1 <= int(match[2]) <= 12:
+                continue
+            month, year = months[int(match[2]) - 1], match[1]
+            pattern = rf'\b(?:{month}|{month[:3]}\.?)\s+{year}\b'
+            def calendar_label(found):
+                after = prose[found.end():]
+                return found[0] if UNIT_RE.match(after) or count_noun(after) else ''
+            prose = re.sub(pattern, calendar_label, prose, flags=re.I)
+            if key == 'end':
+                pattern = (rf'\b(?:graduating|graduation|graduate|expected|finishing|completing)'
+                           rf'(?:\s+(?:my|the|a|degree|m\.s\.|b\.s\.|in|by|on|of)){{0,5}}\s+{year}\b')
+                prose = re.sub(pattern, calendar_label, prose, flags=re.I)
+    prose = numeric_text(prose, contextual=True)
+    def document_count(match):
+        return '' if 0 < int(match[1]) <= project_count else match[0]
+    return re.sub(r'\b(\d+) projects? (?:show|illustrate|demonstrate|highlight)\b', document_count, prose, flags=re.I)
 
 
 def check(d: Path) -> list[str]:
@@ -49,6 +82,8 @@ def check(d: Path) -> list[str]:
             pass  # A detached packet still receives strict numerical checks.
         finally:
             conn.close()
+    resume = d / 'resume.json'
+    project_count = len(json.loads(resume.read_text()).get('projects', [])) if resume.exists() else len(profile.get('projects', []))
     bad = []
     for path in tagged_files(d):
         claims = list(claim_lines(path))
@@ -70,17 +105,17 @@ def check(d: Path) -> list[str]:
                 sources.append(json_strings(_bank_get(bank, k)))
             if path.name == 'resume.tagged.md' and line in education_headers:
                 sources.append(education_headers[line])
-            prose = core.strip_tags(line)
+            prose = claim_prose(core.strip_tags(line), profile, core.FACT_TAG_RE.findall(line), sources, project_count)
             # A number in a product name permits that name, not an unrelated metric.
             for name in sorted(filter(None, names), key=len, reverse=True):
                 prose = re.sub(rf'(?<!\w){re.escape(name)}(?!\w)', '', prose, flags=re.I)
             allowed = set().union(*(numbers(s) for s in sources))
-            extra = numbers(prose) - allowed
+            extra = numbers(prose, contextual=True) - allowed
             if extra:
                 shown = ", ".join(f"{x:g}" for x in sorted(extra))
                 bad.append(f"{path.name}:{n} numbers not in cited facts ({shown}): {line[:120]}")
             allowed_units = set().union(*(quantities(s) for s in sources))
-            unsupported = quantities(prose) - allowed_units
+            unsupported = quantities(prose, contextual=True) - allowed_units
             if unsupported:
                 shown = ', '.join(f'{value:g} {unit}' for value, unit in sorted(unsupported))
                 bad.append(f"{path.name}:{n} quantities not in cited facts ({shown}): {line[:120]}")

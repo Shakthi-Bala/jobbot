@@ -38,7 +38,7 @@ _WORD_NUMBER_RE = re.compile(
 
 
 _NUMBER_IDIOMS_RE = re.compile(
-    r"\b(?:one\s+of|no\s+one(?:\s+else)?|(?:one|zero)[-‐‑ ](?:hot|shot)|zero[-‐‑ ]copy)\b", re.I)
+    r"\b(?:one\s+of|no\s+one(?:\s+else)?|(?:one|zero)[-‐‑– ](?:hot|shot)|zero[-‐‑– ]copy|one\s+at\s+a\s+time|one[-‐‑– ]stage)\b", re.I)
 
 
 _MAGNITUDES = {'k': 1000, 'thousand': 1000, 'm': 1000000, 'million': 1000000,
@@ -46,9 +46,17 @@ _MAGNITUDES = {'k': 1000, 'thousand': 1000, 'm': 1000000, 'million': 1000000,
 _MAGNITUDE_RE = re.compile(rf"({NUMBER_RE.pattern})[ \t]*(k|K|M|B|thousand|million|billion|dozen)\b")
 
 
-def numeric_text(text: str) -> str:
+def numeric_text(text: str, *, contextual: bool = False) -> str:
     """Normalize English cardinal numbers, including hyphenated compounds."""
     def convert(match):
+        if contextual:
+            remainder = (text or '')[match.end():]
+            unit = UNIT_RE.match(remainder)
+            # Procedural distribution is not a measured scale of achievement.
+            distributive = match[0].lower() == 'one' and re.match(
+                r'(?:\s+[A-Za-z-]+){1,3}\s+per\b', remainder, re.I) and not unit
+            if distributive or not (unit or count_noun(remainder) or re.match(r'\s+dozen\b', remainder, re.I)):
+                return match[0]
         total = group = 0
         tokens = re.split(_WORD_SEP, match[0].lower())
         decimal = ''
@@ -96,9 +104,23 @@ UNIT_ALIASES = {'hertz': 'hz', 'percent': '%', 'frame per second': 'fps', 'frame
                 'x': 'factor', '×': 'factor', 'times': 'factor', 'time': 'factor'}
 
 
-def quantities(text: str) -> set[tuple[float, str]]:
+def count_noun(remainder: str) -> str | None:
+    phrase = re.match(r'[\s\-‐‑–]*([A-Za-z]+(?:[\s\-]+[A-Za-z]+){0,2})', remainder)
+    if not phrase:
+        return None
+    for word in re.split(r'[\s\-]+', phrase[1].lower()):
+        if word in {'at', 'on', 'in', 'of', 'to', 'and', 'or', 'with', 'from', 'per', 'by', 'for', 'across', 'over'}:
+            break
+        if (word.endswith('s') and word not in {'as', 'is', 'was', 'this', 'has'}) or word in {
+                'site', 'customer', 'scene', 'frame', 'user', 'engineer', 'attempt', 'sequence',
+                'image', 'sample', 'camera', 'robot', 'object', 'trial', 'target', 'project', 'case'}:
+            return word[:-3] + 'y' if word.endswith('ies') else word.removesuffix('s')
+    return None
+
+
+def quantities(text: str, *, contextual: bool = False) -> set[tuple[float, str]]:
     """Measured numbers keep their units; multiplicative prose is a claim too."""
-    text = numeric_text(text)
+    text = numeric_text(text, contextual=contextual)
     out = set()
     for match in NUMBER_RE.finditer(text):
         currency = re.search(r'([$£€])\s*$', text[:match.start()])
@@ -113,23 +135,19 @@ def quantities(text: str) -> set[tuple[float, str]]:
         else:
             # Preserve count nouns as well as physical units. Modifiers may vary
             # ("synthetic warehouse scenes" vs "scenes"); the counted noun must agree.
-            phrase = re.match(r'[\s\-‐‑–]*([A-Za-z]+(?:[\s\-]+[A-Za-z]+){0,2})', text[match.end():])
-            if phrase:
-                for word in re.split(r'[\s\-]+', phrase[1].lower()):
-                    if word in {'at', 'on', 'in', 'of', 'to', 'and', 'or', 'with', 'from', 'per', 'by', 'for', 'across', 'over'}:
-                        break
-                    if (word.endswith('s') and word not in {'as', 'is', 'was', 'this', 'has'}) or word in {
-                            'site', 'customer', 'scene', 'frame', 'user', 'engineer', 'attempt', 'sequence',
-                            'image', 'sample', 'camera', 'robot', 'object', 'trial', 'target', 'project'}:
-                        noun = word[:-3] + 'y' if word.endswith('ies') else word.removesuffix('s')
-                        out.add((float(match[0].replace(',', '')), 'count:' + noun))
-                        break
+            noun = count_noun(text[match.end():])
+            if noun:
+                out.add((float(match[0].replace(',', '')), 'count:' + noun))
     for word, value in MULTIPLIERS.items():
         if re.search(rf'\b{word}\b', text or '', re.I):
             out.add((value, 'factor'))
-    for word, value in [('hundreds', 100), ('thousands', 1000), ('millions', 1000000)]:
+    for word, value in [('dozens', 12), ('hundreds', 100), ('thousands', 1000), ('millions', 1000000)]:
         if re.search(rf'\b{word} of\b', text, re.I):
             out.add((value, 'approximate count'))
+    if re.search(r'\bby half\b', text, re.I):
+        out.add((0.5, 'factor'))
+    if re.search(r'\b(?:an? )?order of magnitude\b', text, re.I):
+        out.add((10, 'factor'))
     return out
 
 
@@ -173,17 +191,17 @@ def claim_lines(path: Path):
             yield i, s
 
 
-def numbers(text: str) -> set[float]:
+def numbers(text: str, *, contextual: bool = False) -> set[float]:
     out = set()
     # Dimensional labels name a technical domain, not a measured result.
     # Keep quantities such as 45 FPS or 2 days subject to numerical provenance.
-    text = re.sub(r"\b[234][dD]\b", "", numeric_text(text))
+    text = re.sub(r"\b[234][dD]\b", "", numeric_text(text, contextual=contextual))
     for m in NUMBER_RE.findall(text):
         try:
             out.add(float(m.replace(",", "")))
         except ValueError:
             pass
-    out.update(value for value, unit in quantities(text) if unit in ('factor', 'approximate count'))
+    out.update(value for value, unit in quantities(text, contextual=contextual) if unit in ('factor', 'approximate count'))
     return out
 
 
