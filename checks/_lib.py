@@ -95,6 +95,12 @@ def numeric_text(text: str, *, contextual: bool = False) -> str:
     text = re.sub(rf'\bdegrees?{_WORD_SEP}of{_WORD_SEP}freedom\b', 'DOF', text, flags=re.I)
     # A half-dozen is six, before the generic "a dozen" expansion runs.
     text = re.sub(rf'\bhalf{_WORD_SEP}(?:(?:of{_WORD_SEP})?a{_WORD_SEP})?dozen\b', '6', text, flags=re.I)
+    # Ordinal digits and words share rank evidence in the same contexts.
+    text = re.sub(r'\b(placed|ranked|finished|came)\s+(\d+)(?:st|nd|rd|th)\b',
+                  r'\1 \2 rank', text, flags=re.I)
+    text = re.sub(r'\b(\d+)(?:st|nd|rd|th)(?=\s+of\s+\d)', r'\1 rank', text, flags=re.I)
+    text = re.sub(r'\b(' + '|'.join(_ORDINALS) + r')(?=\s+of\s+\d)',
+                  lambda m: str(_ORDINALS[m[1].lower()]) + ' rank', text, flags=re.I)
     text = re.sub(r'\b(placed|ranked|finished|came)\s+(' + '|'.join(_ORDINALS) + r')\b',
                   lambda m: m[1] + ' ' + str(_ORDINALS[m[2].lower()]) + ' rank', text, flags=re.I)
     text = _ORDINAL_RE.sub(lambda m: str(_ORDINALS[m[1].lower()]), text)
