@@ -1,0 +1,175 @@
+[
+  {
+    "id": "i01",
+    "text": "Reached Python 99% test coverage",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i02",
+    "text": "Achieved PyTorch 95% accuracy",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i03",
+    "text": "Shipped ROS 30 robot deployments",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i04",
+    "text": "Reached Python 3.10% test coverage",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i05",
+    "text": "Shipped ROS 2 robot deployments",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i06",
+    "text": "CUDA 12% faster inference",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i07",
+    "text": "Led a team of eight",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i08",
+    "text": "Mentored eight",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i09",
+    "text": "Won first place",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i10",
+    "text": "Won third place",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i11",
+    "text": "Ranked 1st place",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i12",
+    "text": "Served dozens of labs",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i13",
+    "text": "Reduced latency by half",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i14",
+    "text": "Improved by an order of magnitude",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i15",
+    "text": "Led forty engineers",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i16",
+    "text": "Served three million users",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i17",
+    "text": "Processed 24k frames",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i18",
+    "text": "Processed 24 thousand frames",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i19",
+    "text": "Reached 99% accuracy",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i20",
+    "text": "Ran at 99 FPS",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i21",
+    "text": "Achieved tenfold speedup",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i22",
+    "text": "Processed 2027 scenes",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i23",
+    "text": "Graduating in June 2027",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i24",
+    "text": "Expected 2027 FPS",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i25",
+    "text": "Five projects show how I work",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i26",
+    "text": "Ported to Python 99",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i27",
+    "text": "Integrated ROS 30",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i28",
+    "text": "Used OpenCV 99",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i29",
+    "text": "Led a team of 8",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i30",
+    "text": "Mentored 8",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i31",
+    "text": "Reached Python 3.10 at 99 FPS",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i32",
+    "text": "Won second place while achieving 99% accuracy",
+    "cite": "F003 F004 F090 F091 F092 E001"
+  },
+  {
+    "id": "i33",
+    "text": "Reached Python 99% test coverage",
+    "cite": "F090",
+    "metadata": {
+      "title": "Python 99% test coverage"
+    }
+  },
+  {
+    "id": "i34",
+    "text": "Deployed ROS 2 cameras",
+    "cite": "F090"
+  }
+]

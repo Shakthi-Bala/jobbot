@@ -1,0 +1,502 @@
+[
+  {
+    "id": "r01",
+    "text": "The US base salary range for this full-time position is $170,000 to $220,000 per year",
+    "expected": [
+      170000,
+      220000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4719239006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r02",
+    "text": "The US base salary range for this full-time position is $120,000 to $180,000 per year",
+    "expected": [
+      120000,
+      180000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4674403006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r03",
+    "text": "The US base salary range for this full-time position is $125,000 to $185,000 per year",
+    "expected": [
+      125000,
+      185000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4696724006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r04",
+    "text": "The US base salary range for this full-time position is $120,000 to $250,000 per year",
+    "expected": [
+      120000,
+      250000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4688381006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r05",
+    "text": "The US base salary range for this full-time position is $120,000 to $250,000 per year",
+    "expected": [
+      120000,
+      250000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4313470006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r06",
+    "text": "The US base salary range for this full-time position is $140,000 to $220,000 per year",
+    "expected": [
+      140000,
+      220000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4648671006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r07",
+    "text": "The US base salary range for this full-time position is $130,000 to $180,000 per year",
+    "expected": [
+      130000,
+      180000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4719235006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r08",
+    "text": "The US base salary range for this full-time position is $200,000 to $400,000 per year",
+    "expected": [
+      200000,
+      400000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4660876006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r09",
+    "text": "The US base salary range for this full-time position is $200,000 - $400,000 per year",
+    "expected": [
+      200000,
+      400000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4685172006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r10",
+    "text": "The US base salary range for this full-time position is $150,000 to $400,000 per year",
+    "expected": [
+      150000,
+      400000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4345915006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r11",
+    "text": "The US base salary range for this full-time position is $200,000 to $400,000 per year",
+    "expected": [
+      200000,
+      400000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4696533006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r12",
+    "text": "The US base salary range for this full-time position is $200,000 - $400,000 per year",
+    "expected": [
+      200000,
+      400000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4007375006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r13",
+    "text": "The US base salary range for this full-time position is $200,000 to $400,000 per year",
+    "expected": [
+      200000,
+      400000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4705296006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r14",
+    "text": "The US base salary range for this full-time position is $200,000 to $400,000 per year",
+    "expected": [
+      200000,
+      400000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4671703006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r15",
+    "text": "The US base salary range for this full-time position is $200,000 to $240,000 per year",
+    "expected": [
+      200000,
+      240000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4720671006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r16",
+    "text": "The US base salary range for this full-time position is $130,000 to $300,000 per year",
+    "expected": [
+      130000,
+      300000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4573670006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r17",
+    "text": "The US base salary range for this full-time position is $115,000 to $250,000 per year",
+    "expected": [
+      115000,
+      250000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4375064006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r18",
+    "text": "The US base salary range for this full-time position is $150,000 to $250,000 per year",
+    "expected": [
+      150000,
+      250000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4724194006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r19",
+    "text": "The US base salary range for this full-time position is $130,000 to $300,000 per year",
+    "expected": [
+      130000,
+      300000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4414646006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r20",
+    "text": "The US base salary range for this full-time position is $120,000 to $250,000 per year",
+    "expected": [
+      120000,
+      250000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4410831006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r21",
+    "text": "The US base salary range for this full-time position is $120,000 to $250,000 per year",
+    "expected": [
+      120000,
+      250000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4694160006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r22",
+    "text": "The US base salary range for this full-time position is $120,000 - $180,000 per year",
+    "expected": [
+      120000,
+      180000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4596418006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r23",
+    "text": "The US base salary range for this full-time position is $120,000 to $180,000 per year",
+    "expected": [
+      120000,
+      180000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4596421006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r24",
+    "text": "The US base salary range for this full-time position is between $120,000 - $250,000",
+    "expected": [
+      120000,
+      250000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4679601006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r25",
+    "text": "The US base salary range for this full-time position is $120,000 to $180,000 per year",
+    "expected": [
+      120000,
+      180000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4724920006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r26",
+    "text": "The US base salary range for this full-time position is $120,000 to $250,000 per year",
+    "expected": [
+      120000,
+      250000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4728462006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r27",
+    "text": "The US base salary range for this full-time position is $150,000 to $250,000 per year",
+    "expected": [
+      150000,
+      250000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4718506006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r28",
+    "text": "The US base salary range for this full-time position is between $150,000 - $250,000",
+    "expected": [
+      150000,
+      250000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4333397006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r29",
+    "text": "The US base salary range for this full-time position is $150,000 to $250,000 per year",
+    "expected": [
+      150000,
+      250000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4315521006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r30",
+    "text": "The US base salary range for this full-time position is between $80,000 - $105,000",
+    "expected": [
+      80000,
+      105000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4717229006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r31",
+    "text": "The US base salary range for this full-time position is $80,000 to $105,000 per year",
+    "expected": [
+      80000,
+      105000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4595829006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r32",
+    "text": "The US base salary range for this full-time position is $150,000 to $350,000 per year",
+    "expected": [
+      150000,
+      350000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4671442006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r33",
+    "text": "The US base salary range for this full-time position is between $150,000 - $190,000",
+    "expected": [
+      150000,
+      190000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4681405006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r34",
+    "text": "The US base salary range for this full-time position is $150,000 to $350,000 per year",
+    "expected": [
+      150000,
+      350000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4620050006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r35",
+    "text": "The US base salary range for this full-time position is $150,000 - $300,000 per year",
+    "expected": [
+      150000,
+      300000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4720675006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r36",
+    "text": "The US base salary range for this full-time position is $150,000 to $250,000 per year",
+    "expected": [
+      150000,
+      250000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4714390006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r37",
+    "text": "The US base salary range for this full-time position is $150,000 to $350,000 per year",
+    "expected": [
+      150000,
+      350000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4555450006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r38",
+    "text": "The US base salary range for this f ull -time position is $160,000 to $250,000 per year",
+    "expected": [
+      160000,
+      250000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4705588006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r39",
+    "text": "The US base salary range for this full-time position is $110,000 to $200,000 per year",
+    "expected": [
+      110000,
+      200000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4708750006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r40",
+    "text": "The US base salary range for this full-time position is $180,000 to $250,000 per year",
+    "expected": [
+      180000,
+      250000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4609306006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r41",
+    "text": "The US base salary range for this full-time position is $150,000 to $350,000 per year",
+    "expected": [
+      150000,
+      350000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4690871006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r42",
+    "text": "The US base salary range for this full-time position is $160,000 to $250,000 per year",
+    "expected": [
+      160000,
+      250000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4713838006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r43",
+    "text": "The US base salary range for this full-time position is $130,000 to $250,000 per year",
+    "expected": [
+      130000,
+      250000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4618234006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r44",
+    "text": "The US base salary range for this full-time position is $180,000 to $275,000 per year",
+    "expected": [
+      180000,
+      275000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4692572006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r45",
+    "text": "The US base salary range for this full-time position is $150,000 to $300,000 per year",
+    "expected": [
+      150000,
+      300000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4706280006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r46",
+    "text": "The US base salary range for this full-time position is $150,000 to $250,000 per year",
+    "expected": [
+      150000,
+      250000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4660300006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r47",
+    "text": "The US base salary range for this full-time position is $150,000 - $250,000 per year",
+    "expected": [
+      150000,
+      250000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4613433006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r48",
+    "text": "The US base salary range for this full-time position is $150,000 to $220,000 per year",
+    "expected": [
+      150000,
+      220000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4729233006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r49",
+    "text": "The US base salary range for this full-time position is $125,000 to $225,000 per year",
+    "expected": [
+      125000,
+      225000
+    ],
+    "source": "https://job-boards.greenhouse.io/figureai/jobs/4697402006",
+    "snapshot_date": "2026-11-16"
+  },
+  {
+    "id": "r50",
+    "text": "the reasonably expected base pay range is between $153,000 to $176,000",
+    "expected": [
+      153000,
+      176000
+    ],
+    "source": "https://job-boards.greenhouse.io/nuro/jobs/7351066",
+    "snapshot_date": "2026-11-16"
+  }
+]

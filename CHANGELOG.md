@@ -4,6 +4,12 @@
 
 ### Correctness and reliability
 
+- Require documented tool/version pairs for version exemptions; preserve percentages and count nouns, and prevent version-label source numbers from supporting unrelated metrics.
+- Check bare-word team/mentorship counts and ordinals in ranking contexts. Keep technical version modifiers distinct from deployment counts.
+- Classify salary ranges independently so bonus mentions cannot suppress base pay; exclude RSUs/OTE/equity and preserve currency metadata during ATS fallback.
+- Use a shared diagnostic formatter for reflected source/document fields. Allow one day of application-date timezone slack and treat whitespace dates as blank.
+- Gate CI on fixed positive/adversarial sentence corpora and authored/public salary snapshots before the full suite; retain regression expectations for future changes.
+
 - Check spelled-out quantities in measurement/count context while allowing procedural one-at-a-time wording, verified tool versions, supported document counts, and cited education dates in calendar/graduation prose. Detect plural dozens, “by half,” and “order of magnitude.”
 - Wrap source questions, live titles, and restriction quotations as untrusted excerpts within deterministic diagnostics. Print only declared application questions verified against posting text; block unknown labels and missing question provenance.
 - Keep annual-sized pay from being multiplied by monthly payment cadence; exclude stipends, allowances, and bonuses from base-pay ranges. Preserve salary ranges followed by `M&A` or `B.S.` labels.

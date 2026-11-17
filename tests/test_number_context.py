@@ -13,7 +13,7 @@ def test_honest_nonmeasurement_wording_passes(env, tmp_path, claim):
 @pytest.mark.parametrize('tool', ['Python 3', 'OpenCV 4', 'CUDA 12'])
 def test_verified_tool_version_is_not_a_measurement(env, tmp_path, monkeypatch, tool):
     profile = core.load_profile()
-    profile['facts'].append({'id': 'F099', 'text': 'Ported Python, OpenCV and CUDA workflows'})
+    profile['facts'].append({'id': 'F099', 'text': 'Ported Python 3, OpenCV 4 and CUDA 12.'})
     monkeypatch.setattr(core, 'load_profile', lambda: profile)
     (tmp_path / 'resume.tagged.md').write_text(f'- Ported to {tool} [F099]')
     assert numbers_match.check(tmp_path) == []

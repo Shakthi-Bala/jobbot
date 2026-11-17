@@ -43,8 +43,8 @@ def mark_applied(job_id: str, applied_on: str | None = None) -> int | None:
         submitted = date.fromisoformat(applied_on or core.today())
     except ValueError as invalid_date:
         raise core.JobbotError('Date applied must be an ISO date (YYYY-MM-DD)') from invalid_date
-    if submitted > date.fromisoformat(core.today()):
-        raise core.JobbotError('Date applied cannot be in the future')
+    if submitted > date.fromisoformat(core.today()) + timedelta(days=1):
+        raise core.JobbotError('Date applied cannot be in the future beyond the one-day timezone allowance')
     conn = core.connect()
     job = core.get_job(conn, job_id)
     existing = conn.execute("SELECT doc_id FROM actions WHERE job_id=? AND action='applied' "

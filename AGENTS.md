@@ -32,6 +32,11 @@ Validate the answers and rerun the paused command. Report any evidence gaps.”
   applications or send recruiter outreach.
 - Run the relevant tests for behavioral changes. `python -m pytest` runs the
   suite; the demo and tests must work without an API key.
+- Changes to numerical claims or salary parsing must pass the fixed corpora in
+  `tests/test_regression_corpora.py` and the full suite. Preserve acceptance and
+  rejection expectations; add regression cases rather than weakening an expected
+  result to make a new heuristic pass. Frozen public pay excerpts are offline
+  fixtures, not live network tests.
 - Keep private profiles, task answers, credentials, reports, and generated real
   application packets out of Git. The pre-push privacy check inspects committed
   contents; public binary examples need a reviewed hash in the asset manifest.

@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from checks._lib import cli, core, db, json_strings, meta, pdf_text  # noqa: E402
+from checks._lib import cli, core, db, diagnostic, json_strings, meta, pdf_text  # noqa: E402
 
 
 def check(d: Path) -> list[str]:
@@ -31,11 +31,11 @@ def check(d: Path) -> list[str]:
         m = re.search(rf"^[ \t]*{pattern}[ \t]*$", raw, re.I | re.M)
         pos = m.start() if m else -1
         if pos < 0:
-            bad.append(f"section header missing in parsed PDF: {s}")
+            bad.append(diagnostic('section header missing in parsed PDF', section=s))
         positions.append(pos)
     found = [p for p in positions if p >= 0]
     if found != sorted(found):
-        bad.append(f"sections out of reading order: {sections}")
+        bad.append(diagnostic('sections out of reading order', sections=sections))
 
     if data.get('layout', {}).get('coursework_in_education') and data.get('courses'):
         start = positions[sections.index('education')] if 'education' in sections else -1
@@ -43,12 +43,12 @@ def check(d: Path) -> list[str]:
         education_text = core.normalize(raw[start:end]) if start >= 0 else ''
         for course in data['courses']:
             if core.normalize(course) not in education_text:
-                bad.append(f'coursework missing from education in parsed PDF: {course}')
+                bad.append(diagnostic('coursework missing from education in parsed PDF', course=course))
 
     person = data["person"]
     for field in ("name", "email"):
         if person.get(field) and core.normalize(person[field]) not in text:
-            bad.append(f"{field} not found in parsed PDF: {person[field]}")
+            bad.append(diagnostic(f"{field} not found in parsed PDF", value=person[field]))
 
     job = db().execute("SELECT parsed_json FROM jobs WHERE id=?", (meta(d).get("job_id"),)).fetchone()
     keywords = json.loads((job and job["parsed_json"]) or "{}").get("keywords", [])[:15]
@@ -56,7 +56,7 @@ def check(d: Path) -> list[str]:
     for kw in keywords:
         k = core.normalize(kw)
         if k and k in source and k not in text:
-            bad.append(f"keyword lost in rendering: {kw}")
+            bad.append(diagnostic('keyword lost in rendering', keyword=kw))
     return bad
 
 

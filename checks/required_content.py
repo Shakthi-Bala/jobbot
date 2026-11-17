@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from checks._lib import cli, core, db, meta  # noqa: E402
+from checks._lib import cli, core, db, diagnostic, meta  # noqa: E402
 
 
 def check(d: Path) -> list[str]:
@@ -32,7 +32,7 @@ def check(d: Path) -> list[str]:
             bullets = {b.strip() for b in project.get('bullets', []) if isinstance(b, str) and b.strip()}
             if len(bullets) < minimum_bullets:
                 label = project.get('heading') or project.get('ref_id') or 'unnamed project'
-                bad.append(f'{label} has {len(bullets)} distinct bullets; candidate requires at least {minimum_bullets}')
+                bad.append(diagnostic(f'project has {len(bullets)} distinct bullets; candidate requires at least {minimum_bullets}', project=label))
     letter = d / 'cover_letter.md'
     from agents.tailor import wants_cover_letter
     if wants_cover_letter(parsed, {'preferences': prefs}) and (
@@ -41,7 +41,7 @@ def check(d: Path) -> list[str]:
                    'but the packet has none')
     if letter.exists() and info.get('company') and core.normalize(info['company']) not in core.normalize(
             letter.read_text()):
-        bad.append(f"cover letter never names the company: {info['company']}")
+        bad.append(diagnostic('cover letter never names the company', company=info['company']))
     answers = d / 'answers.tagged.md'
     present = {core.normalize(line.removeprefix('## Q:').strip())
                for line in (answers.read_text().splitlines() if answers.exists() else [])

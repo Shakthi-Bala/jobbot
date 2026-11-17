@@ -112,6 +112,8 @@ def apply_edits(conn, edits: dict[str, dict], errors: dict[str, str] | None = No
                 applied_on = e.get('date_applied')
                 if isinstance(applied_on, datetime):
                     applied_on = applied_on.date()
+                if isinstance(applied_on, str):
+                    applied_on = applied_on.strip()
                 if applied_on:
                     try:
                         applied_on = date.fromisoformat(str(applied_on).strip()).isoformat()
