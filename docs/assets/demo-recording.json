@@ -9,12 +9,12 @@
     },
     {
       "command": "python jobbot.py add-jd '<demo>/posting.txt' --company 'Example Robotics' --title 'Perception Engineer' --location 'Boston, MA'",
-      "output": "waiting for a task answer: out/tasks/f7740a85eee82014.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py add-jd <demo>/posting.txt --company 'Example Robotics' --title 'Perception Engineer' --location 'Boston, MA'\n\n1 AI step(s) waiting for Claude in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
+      "output": "waiting for a task answer: out/tasks/5dc564172be93680.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py add-jd <demo>/posting.txt --company 'Example Robotics' --title 'Perception Engineer' --location 'Boston, MA'\n\n1 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
       "exit_code": 3
     },
     {
       "command": "python jobbot.py add-jd '<demo>/posting.txt' --company 'Example Robotics' --title 'Perception Engineer' --location 'Boston, MA'",
-      "output": "waiting for a task answer: out/tasks/d1546482186c172d.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py add-jd <demo>/posting.txt --company 'Example Robotics' --title 'Perception Engineer' --location 'Boston, MA'\n\n1 AI step(s) waiting for Claude in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
+      "output": "waiting for a task answer: out/tasks/08041becfbbf536e.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py add-jd <demo>/posting.txt --company 'Example Robotics' --title 'Perception Engineer' --location 'Boston, MA'\n\n1 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
       "exit_code": 3
     },
     {
@@ -24,32 +24,52 @@
     },
     {
       "command": "python jobbot.py packet 367f8769b0be --offline",
-      "output": "waiting for a task answer: out/tasks/b14903a389a39be9.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n1 AI step(s) waiting for Claude in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
+      "output": "waiting for a task answer: out/tasks/f59bc9bec8d74716.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n1 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
       "exit_code": 3
     },
     {
       "command": "python jobbot.py packet 367f8769b0be --offline",
-      "output": "waiting for a task answer: out/tasks/cafb1468ef9e91ca.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n1 AI step(s) waiting for Claude in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
+      "output": "waiting for a task answer: out/tasks/e979d41fb0d717f8.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n1 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
       "exit_code": 3
     },
     {
       "command": "python jobbot.py packet 367f8769b0be --offline",
-      "output": "waiting for a task answer: out/tasks/21f89f20b26a5000.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n1 AI step(s) waiting for Claude in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
+      "output": "waiting for a task answer: out/tasks/d35a6f49c842feaa.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n1 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
       "exit_code": 3
     },
     {
       "command": "python jobbot.py packet 367f8769b0be --offline",
-      "output": "waiting for a task answer: out/tasks/1f9f800c1c07ed14.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n7 AI step(s) waiting for Claude in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
+      "output": "waiting for a task answer: out/tasks/cffbdbd8243f8526.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n7 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
       "exit_code": 3
     },
     {
       "command": "python jobbot.py packet 367f8769b0be --offline",
-      "output": "waiting for a task answer: out/tasks/26bf0aa04ff68b62.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n1 AI step(s) waiting for Claude in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
+      "output": "waiting for a task answer: out/tasks/04183fddae5b67ed.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n1 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
       "exit_code": 3
     },
     {
       "command": "python jobbot.py packet 367f8769b0be --offline",
-      "output": "367f8769b0be: ready_for_review\nreview it in <demo>/out/Example-Robotics_Perception-Engineer/ (wording.md and review.md first).\nhappy with the wording?  python jobbot.py approve 367f8769b0be   (reused for later jobs)\nsubmitted it yourself?   python jobbot.py mark-applied 367f8769b0be\n",
+      "output": "waiting for a task answer: out/tasks/49c6fa8351aec6df.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n1 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
+      "exit_code": 3
+    },
+    {
+      "command": "python jobbot.py packet 367f8769b0be --offline",
+      "output": "waiting for a task answer: out/tasks/5586a4ba3241d68f.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n1 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
+      "exit_code": 3
+    },
+    {
+      "command": "python jobbot.py packet 367f8769b0be --offline",
+      "output": "waiting for a task answer: out/tasks/f3c916aaae6e5bc5.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n7 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
+      "exit_code": 3
+    },
+    {
+      "command": "python jobbot.py packet 367f8769b0be --offline",
+      "output": "waiting for a task answer: out/tasks/69c588c98f5fd042.task.md\nAnswer the pending tasks in out/tasks with your coding assistant, then re-run: python jobbot.py packet 367f8769b0be --offline\n\n1 AI step(s) waiting for your coding assistant in out/tasks/ (answer them with your coding assistant, then re-run this command)\n",
+      "exit_code": 3
+    },
+    {
+      "command": "python jobbot.py packet 367f8769b0be --offline",
+      "output": "367f8769b0be: needs_input (Unresolved review issues; see open_issues.md)\nreview it in <demo>/out/Example-Robotics_Perception-Engineer/ (wording.md and review.md first).\nhappy with the wording?  python jobbot.py approve 367f8769b0be   (reused for later jobs)\nsubmitted it yourself?   python jobbot.py mark-applied 367f8769b0be\n",
       "exit_code": 0
     },
     {
@@ -57,5 +77,30 @@
       "output": "ok   required_content\nok   fact_ids\nok   numbers_match\nok   restriction_quotes\nok   req_match\nok   ats_parse\nok   banned_phrases\nok   length_limits\nok   page_layout\nok   consistency\nok   injection_scan\n",
       "exit_code": 0
     }
-  ]
+  ],
+  "revision": {
+    "before": {
+      "text": "Worked on a point-cloud filter and evaluated it on 120 synthetic warehouse scenes",
+      "fact_ids": [
+        "F001"
+      ]
+    },
+    "after": {
+      "text": "Implemented an Open3D point-cloud filter and evaluated it on 120 synthetic warehouse scenes",
+      "fact_ids": [
+        "F001"
+      ]
+    },
+    "critique": {
+      "quote": "Worked on a point-cloud filter and evaluated it on 120 synthetic warehouse scenes",
+      "why": "DEMO FIXTURE: 'Worked on' hides the implemented component and its tool. State the ownership already supported by F001."
+    },
+    "instruction": "Replace 'Worked on a point-cloud filter' with 'Implemented an Open3D point-cloud filter'; preserve the synthetic evaluation scope and F001 citation.",
+    "rounds": [
+      1,
+      2
+    ],
+    "before_sha256": "bd1202c3ae3c5008c782375cab6c2dab22d910c19ac368a8878ce6455751c20b",
+    "after_sha256": "ccc38a98db82382272d054c5f2baa59fbc5c43d85cbd8b8bc0fd1582079d5a20"
+  }
 }

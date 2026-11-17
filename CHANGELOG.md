@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Show a supported wording revision across two real offline-demo panel rounds; include the reviewer feedback and redraft in the README recording, with fixture scores clearly labeled.
+
 ## 1.0.0 — 2026-11-17
 
 ### Correctness and reliability

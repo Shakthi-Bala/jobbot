@@ -6,9 +6,10 @@ These are stored fixture responses, not actual model, human, or employer ratings
 
 | Round | ATS gate | ATS keywords | Hiring manager | Readers (avg /10) | Revisions |
 |---|---|---|---|---|---|
-| 1 | pass_to_human (80) | 100% (max 100%) | maybe | 7.2 | 0 |
+| 1 | pass_to_human (80) | 100% (max 100%) | maybe | 7.2 | 1 |
+| 2 | pass_to_human (80) | 100% (max 100%) | maybe | 7.2 | 0 |
 
-## Latest round (1)
+## Latest round (2)
 
 **ATS gate: pass_to_human** (80). DEMO FIXTURE: illustrates the screening report format; eligibility remains to be confirmed.
 

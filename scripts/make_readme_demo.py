@@ -68,7 +68,7 @@ def pdf_frame(page, bottom=False):
 
 
 def panel_frame(panel, checks):
-    image = canvas('Generated panel report  /  scores are fixture examples')
+    image = canvas(f"Final panel report  /  round {panel['round']}  /  fixture scores")
     draw = ImageDraw.Draw(image)
     draw.rounded_rectangle((26, 108, 814, 548), radius=14, fill=PANEL, outline=BORDER)
     draw.text((47, 128), f"Checks: {len(checks)} passed  |  Hiring manager: {panel['hiring_manager']}",
@@ -84,6 +84,26 @@ def panel_frame(panel, checks):
     return image
 
 
+def revision_frame(revision, after=False):
+    title = 'Round 2: writer applies the supported edit' if after else 'Round 1: reviewer flags vague ownership'
+    image = canvas(title)
+    draw = ImageDraw.Draw(image)
+    draw.rounded_rectangle((26, 108, 814, 548), radius=14, fill=PANEL, outline=BORDER)
+    label = 'AFTER / explicit implementation' if after else 'BEFORE / vague contribution'
+    draw.text((47, 131), label, font=font(20, bold=True), fill=ACCENT)
+    bullet = revision['after' if after else 'before']
+    for i, line in enumerate(textwrap.wrap(bullet['text'], width=61)):
+        draw.text((47, 183 + i * 29), line, font=font(20), fill=WHITE)
+    draw.text((47, 294), 'Supported revision' if after else 'Reviewer feedback',
+              font=font(18, bold=True), fill=ACCENT)
+    note = revision['instruction'] if after else revision['critique']['why'].removeprefix('DEMO FIXTURE: ')
+    for i, line in enumerate(textwrap.wrap(note, width=73)):
+        draw.text((47, 333 + i * 27), line, font=font(17), fill=WHITE)
+    draw.text((47, 490), 'Same F001 evidence and synthetic evaluation scope.',
+              font=font(17), fill=MUTED)
+    return image
+
+
 def main():
     latest = json.loads((ROOT / 'out/demo/latest.json').read_text())
     if not latest.get('synthetic_data') or latest.get('network_calls') is not False:
@@ -93,7 +113,14 @@ def main():
         raise SystemExit('Demo workspace must be inside out/demo')
     recording = json.loads((workspace / 'demo-recording.json').read_text())
     checks = json.loads((packet / 'checks.json').read_text())
-    panel = json.loads((packet / 'panel.json').read_text())[-1]
+    rounds = json.loads((packet / 'panel.json').read_text())
+    panel = rounds[-1]
+    revision = recording['revision']
+    assert revision and revision['rounds'] == [1, 2] and len(rounds) == 2
+    assert rounds[0]['revisions'] and not rounds[1]['revisions']
+    assert revision['critique'] == rounds[0]['reviews']['senior_engineer']['lines_that_hurt'][0]
+    assert revision['after']['text'] in json.loads((packet / 'resume.json').read_text())['projects'][0]['bullets']
+    assert revision['after_sha256'] == hashlib.sha256((packet / 'resume.pdf').read_bytes()).hexdigest()
     assert checks and all(not errors for errors in checks.values())
     assert 'DEMO FIXTURE' in panel['reviews']['ats_gate']['reason']
     from pypdf import PdfReader
@@ -136,14 +163,19 @@ def main():
             frames.append(terminal(event, len(event['command']), line))
             durations.append(110)
         frames.append(terminal(event, len(event['command']), count))
-        durations.append(1500)
+        durations.append(2200)
+        if name == 'packet':
+            frames += [revision_frame(revision), revision_frame(revision, after=True)]
+            durations += [7500, 6500]
     frames += [pdf_frame(page), pdf_frame(page, bottom=True), panel_frame(panel, checks)]
-    durations += [2600, 2600, 3400]
+    durations += [3000, 3000, 4000]
     gif = ASSETS / 'jobbot-workflow.gif'
     frames[0].save(gif, save_all=True, append_images=frames[1:], duration=durations,
                    loop=0, optimize=True, disposal=1)
     frames[-1].save(staging / 'panel-preview.png')
     frames[12].save(staging / 'terminal-preview.png')
+    revision_frame(revision).save(staging / 'review-before.png')
+    revision_frame(revision, after=True).save(staging / 'review-after.png')
     manifest_path = ASSETS / 'public-assets.json'
     manifest = json.loads(manifest_path.read_text())
     for path in (gif, ASSETS / 'example-resume.png'):
