@@ -10,8 +10,12 @@ from urllib.parse import urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import httpx  # noqa: E402
+import tldextract  # noqa: E402
 
 from checks._lib import cli, core  # noqa: E402
+
+# Use the bundled Public Suffix List only; never fetch arbitrary suffix URLs.
+_DOMAIN_EXTRACTOR = tldextract.TLDExtract(suffix_list_urls=(), cache_dir=None, include_psl_private_domains=True)
 
 DISALLOWED = ("linkedin.com", "glassdoor.com", "dice.com")
 
@@ -22,7 +26,8 @@ def domain(url: str) -> str:
     # Independent tenants publish on these shared hosting suffixes.
     if host.endswith(('.github.io', '.gitlab.io', '.pages.dev', '.netlify.app', '.vercel.app')):
         return '.'.join(parts[-3:])
-    return ".".join(parts[-2:]) if len(parts) >= 2 else host
+    extracted = _DOMAIN_EXTRACTOR(host.rstrip('.'))
+    return f'{extracted.domain}.{extracted.suffix}' if extracted.domain and extracted.suffix else host.rstrip('.')
 
 
 def public_target(url: str) -> tuple[httpx.URL, str]:

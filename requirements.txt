@@ -7,6 +7,7 @@ streamlit>=1.49
 pandas>=2.0
 beautifulsoup4>=4.12
 rapidfuzz>=3.6
+tldextract>=5.1
 pypdf>=4.0
 openpyxl>=3.1
 # Python bindings for Typst; used when the `typst` CLI is not on PATH
