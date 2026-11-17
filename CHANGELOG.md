@@ -4,6 +4,10 @@
 
 ### Correctness and reliability
 
+- Preserve currency-anchored pay ranges after level/band/tier/step labels; a dollar sign on a later endpoint cannot anchor an earlier table number. Keep valid shared-code and trailing-USD ranges.
+- Treat total-compensation/OTE labels before base-pay explanatory wording, and keep delimiter commas outside monetary amounts.
+- Normalize numeric and spelled-out ordinal ranks after ranking verbs and before “of N,” so unrelated cardinal values cannot supply rank evidence and equivalent honest ranks compare consistently.
+
 - Distinguish degrees of freedom from angles; check hyphenated rankings, placement verbs, half-dozen counts, and large number words without a following noun.
 - Honor bracketed and trailing-only currency codes, keep foreign ranges separate from US pay, and retain base ranges that explicitly exclude bonus or equity.
 - Keep all outreach failures in the check report and log every failing check's count and report path instead of truncating diagnostic wrappers.

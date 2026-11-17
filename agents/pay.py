@@ -8,13 +8,15 @@ import re
 
 _CODES = r'USD|CAD|AUD|NZD|SGD|HKD|EUR|GBP|CHF|JPY|CNY|INR'
 _CURRENCY = rf'(?:US\$|CA\$|C\$|AU\$|A\$|NZ\$|SG\$|HK\$|(?:{_CODES})\s*\$?|[$£€])'
+_MONEY = r'(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?'
 _RANGE = re.compile(
-    rf'(?<![\w.,])(?P<c1>{_CURRENCY})?\s*(?P<lo>\d[\d,]*(?:\.\d+)?)\s*(?P<lk>[kK])?'
+    rf'(?<![\w.,])(?P<c1>{_CURRENCY})?\s*(?P<lo>{_MONEY})\s*(?P<lk>[kK])?'
     rf'\s*(?P<middle>{_CODES})?\s*(?:-|–|—|to)\s*'
-    rf'(?P<c2>{_CURRENCY})?\s*(?P<hi>\d[\d,]*(?:\.\d+)?)(?:[ \t]*(?P<hk>[kK]))?'
+    rf'(?P<c2>{_CURRENCY})?\s*(?P<hi>{_MONEY})(?:[ \t]*(?P<hk>[kK]))?'
     rf'[ \t]*(?:[\[(][ \t]*(?P<bracket>{_CODES})[ \t]*[\])]|(?P<end>{_CODES})\b)?', re.I)
 _CLAUSE = re.compile(r'[;,+\n]|\.(?!\d)')
 _BASE = re.compile(r'\b(?:base(?:\s+(?:salary|pay|compensation))?|salary|wages?)\b', re.I)
+_TOTAL = re.compile(r'\b(?:total\s+compensation|ote|on[- ]target\s+earnings)\b', re.I)
 _NONBASE = re.compile(
     r'\b(?:bonus(?:es)?|stipends?|allowances?|reimbursements?|rsus?|equity|stock|'
     r'ote|on[- ]target(?:\s+earnings)?|total\s+compensation)\b', re.I)
@@ -36,13 +38,20 @@ def _component(prefix: str, suffix: str) -> tuple[str, str]:
 
 
 def _is_base(prefix: str, suffix: str) -> bool:
-    if _BASE.search(prefix) or _BASE.search(suffix):
+    # Excluded benefits do not own the preceding amount. A total-compensation
+    # label, however, stays total even if its explanation mentions base pay.
+    suffix = re.split(r'\b(?:excluding|exclusive\s+of|not\s+including|without)\b',
+                      suffix, maxsplit=1, flags=re.I)[0]
+    if _TOTAL.search(prefix):
+        return False
+    if _BASE.search(prefix):
+        return True
+    if _TOTAL.search(suffix):
+        return False
+    if _BASE.search(suffix):
         return True
     # "bonus eligible" describes benefits, not the ownership of an amount.
     suffix = re.sub(r'\bbonus\s+eligible\b', '', suffix, flags=re.I)
-    # Excluded benefits do not change which component the preceding range is.
-    suffix = re.split(r'\b(?:excluding|exclusive\s+of|not\s+including|without)\b',
-                      suffix, maxsplit=1, flags=re.I)[0]
     return not (_NONBASE.search(prefix) or _NONBASE.search(suffix))
 
 
@@ -61,11 +70,29 @@ def _usd(match, prefix: str, suffix: str, default: str) -> bool:
     return _currency(match['c1'] or '$', default) == 'USD'
 
 
+def _ranges(text: str):
+    """Reject unanchored candidates without consuming a later real pay range."""
+    offset = 0
+    while (match := _RANGE.search(text, offset)) is not None:
+        has_code = any(match[name] for name in ('middle', 'bracket', 'end')) or re.search(
+            r'[A-Za-z]', match['c2'] or '')
+        if not match['c1'] and not has_code:
+            offset = match.start() + 1
+            continue
+        if not match['c1'] and match['c2']:
+            # In "Level 2 - $150k USD - $180k USD", the second endpoint
+            # starts the salary range; the leading 2 is a table label.
+            anchored = _RANGE.match(text, match.start('c2'))
+            if anchored and anchored['c1'] and anchored.end() > match.end():
+                match = anchored
+        yield match
+        offset = match.end()
+
+
 def parse_pay_text(text: str, *, hours_per_year: int = 2080, default_currency: str = 'USD') -> tuple[int, int] | None:
     # Bare numerical ranges are not salary evidence. A marker can occur at
     # either endpoint, including a trailing-only or bracketed currency code.
-    matches = [m for m in _RANGE.finditer(text or '')
-               if any(m[name] for name in ('c1', 'c2', 'middle', 'bracket', 'end'))]
+    matches = list(_ranges(text or ''))
     lows, highs = [], []
     for i, match in enumerate(matches):
         raw_after = text[match.end():]

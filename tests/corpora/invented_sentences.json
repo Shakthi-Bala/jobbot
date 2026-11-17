@@ -207,5 +207,17 @@
     "category": "robotics_units",
     "text": "Rotated the arm by 6 degrees",
     "cite": "F092"
+  },
+  {
+    "id": "i41",
+    "category": "rank_unit",
+    "text": "Ranked 2nd of 60 teams",
+    "cite": "F094"
+  },
+  {
+    "id": "i42",
+    "category": "rank_unit",
+    "text": "Placed 2nd in the competition",
+    "cite": "F094"
   }
 ]

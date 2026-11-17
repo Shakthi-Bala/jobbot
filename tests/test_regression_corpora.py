@@ -16,7 +16,9 @@ def corpus_profile(env, monkeypatch):
     profile['facts'] += [
         {'id': 'F090', 'text': 'Used Python 3.10, OpenCV 4, CUDA 12, PyTorch 2.1, ROS 2, TensorRT 8, NumPy 1.26, Ubuntu 22.04, C++17 and TensorFlow 2.15.'},
         {'id': 'F091', 'text': 'Worked in a team of four, mentored four interns and finished in the Top 5%; won second place.'},
-        {'id': 'F092', 'text': 'Programmed a 6-DOF arm.'}]
+        {'id': 'F092', 'text': 'Programmed a 6-DOF arm.'},
+        {'id': 'F093', 'text': 'Finished 4th of 60 teams.'},
+        {'id': 'F094', 'text': 'Built a two-stage pipeline for 60 teams.'}]
     monkeypatch.setattr(core, 'load_profile', lambda: profile)
     return profile
 

@@ -428,5 +428,111 @@
     "id": "p55",
     "text": "120,000 - 150,000 CAD",
     "expected": null
+  },
+  {
+    "id": "p56",
+    "text": "Level 2 - $150,000 to $180,000",
+    "expected": [
+      150000,
+      180000
+    ]
+  },
+  {
+    "id": "p57",
+    "text": "Band 5 – $140k–$170k",
+    "expected": [
+      140000,
+      170000
+    ]
+  },
+  {
+    "id": "p58",
+    "text": "Tier 3 - $120,000 - $140,000",
+    "expected": [
+      120000,
+      140000
+    ]
+  },
+  {
+    "id": "p59",
+    "text": "Step 1 – $95,000–$105,000",
+    "expected": [
+      95000,
+      105000
+    ]
+  },
+  {
+    "id": "p60",
+    "text": "Level 1 - $100,000 to $130,000\nLevel 2 - $150,000 to $180,000",
+    "expected": [
+      100000,
+      180000
+    ]
+  },
+  {
+    "id": "p61",
+    "text": "Band 5 – 140k–170k USD",
+    "expected": [
+      140000,
+      170000
+    ]
+  },
+  {
+    "id": "p62",
+    "text": "Level 2 - $150,000 USD - $180,000 USD",
+    "expected": [
+      150000,
+      180000
+    ]
+  },
+  {
+    "id": "p63",
+    "text": "150,000 - $180,000 USD",
+    "expected": [
+      150000,
+      180000
+    ]
+  },
+  {
+    "id": "p64",
+    "text": "150,000 USD - $180,000",
+    "expected": [
+      150000,
+      180000
+    ]
+  },
+  {
+    "id": "p65",
+    "text": "Total compensation range $200,000-$260,000, including base and bonus",
+    "expected": null
+  },
+  {
+    "id": "p66",
+    "text": "Base salary $150,000-$180,000; total compensation range $200,000-$260,000, including base and bonus",
+    "expected": [
+      150000,
+      180000
+    ]
+  },
+  {
+    "id": "p67",
+    "text": "Total compensation range $200,000-$260,000 including base and bonus; base salary $150,000-$180,000",
+    "expected": [
+      150000,
+      180000
+    ]
+  },
+  {
+    "id": "p68",
+    "text": "On Target Staffing base salary $120,000-$140,000",
+    "expected": [
+      120000,
+      140000
+    ]
+  },
+  {
+    "id": "p69",
+    "text": "On-target earnings $200,000-$260,000 including base salary and bonus",
+    "expected": null
   }
 ]

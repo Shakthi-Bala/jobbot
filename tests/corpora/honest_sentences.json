@@ -340,5 +340,17 @@
     "category": "robotics_units",
     "text": "Programmed an arm with 6 degrees of freedom",
     "cite": "F092"
+  },
+  {
+    "id": "h58",
+    "category": "rank_paraphrase",
+    "text": "Finished fourth among 60 teams",
+    "cite": "F093"
+  },
+  {
+    "id": "h59",
+    "category": "rank_paraphrase",
+    "text": "Ranked 4th of 60 teams",
+    "cite": "F093"
   }
 ]

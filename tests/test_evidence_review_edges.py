@@ -58,3 +58,14 @@ def test_unrelated_or_missing_evidence_fails(env, tmp_path, monkeypatch, claim, 
     monkeypatch.setattr(core, 'load_profile', lambda: profile)
     (tmp_path / 'resume.tagged.md').write_text(f'- {claim} [F099]\n')
     assert numbers_match.check(tmp_path)
+
+
+@pytest.mark.parametrize('text,value', [('Ranked 2nd of 60 teams', 2),
+    ('Placed 4th in the competition', 4), ('Finished fourth of 60 teams', 4),
+    ('fourth among 60 teams', 4), ('4th of 60 teams', 4)])
+def test_ordinal_rank_context_has_a_rank_unit(text, value):
+    assert (value, 'rank') in quantities(text, contextual=True)
+
+
+def test_cardinal_subset_is_not_a_rank():
+    assert (2, 'rank') not in quantities('Completed 2 of 60 tests', contextual=True)
