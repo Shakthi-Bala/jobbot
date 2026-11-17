@@ -72,8 +72,8 @@ def _pay(lo, hi, text: str, source: str) -> dict:
             "comp_source": source if listed else None}
 
 
-def _pay_from_text(text: str) -> dict:
-    found = core.parse_pay_text(text)
+def _pay_from_text(text: str, currency_hint: str = 'USD') -> dict:
+    found = core.parse_pay_text(text, default_currency=currency_hint)
     if not found:
         return _pay(None, None, None, None)
     return _pay(*found, f"${found[0]:,} - ${found[1]:,} (from posting text)", "text")
@@ -122,7 +122,7 @@ def _lever_job(slug: str, j: dict) -> dict:
         pay = _board_pay(sr.get('min'), sr['max'], sr.get('interval'),
                          f"{sr.get('min')}-{sr['max']} {sr.get('interval', '')}", raw_text)
     else:
-        pay = _pay_from_text(raw_text)
+        pay = _pay_from_text(raw_text, currency_hint=sr.get('currency') or 'USD')
     return pay | {
         "company": slug, "title": j["text"],
         "location": (j.get("categories") or {}).get("location", ""),
@@ -145,7 +145,9 @@ def _ashby_job(slug: str, j: dict) -> dict:
         pay = _board_pay(c.get('minValue'), c['maxValue'], c.get('interval'),
                          comp.get('compensationTierSummary'), raw_text)
     else:
-        pay = _pay_from_text(raw_text)
+        currency_hint = next((c.get('currencyCode') for c in comp.get('summaryComponents', [])
+                              if c.get('compensationType') == 'Salary' and c.get('currencyCode')), 'USD')
+        pay = _pay_from_text(raw_text, currency_hint=currency_hint)
     return pay | {
         "company": slug, "title": j["title"], "location": j.get("location", ""),
         "req_id": j["id"], "url": j.get("jobUrl"), "source": "ashby",

@@ -1,0 +1,398 @@
+[
+  {
+    "id": "p01",
+    "text": "$150,000 - $200,000 + bonus",
+    "expected": [
+      150000,
+      200000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p02",
+    "text": "$150,000-$200,000 base salary, bonus eligible",
+    "expected": [
+      150000,
+      200000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p03",
+    "text": "Base salary plus bonus: $150,000 - $200,000",
+    "expected": [
+      150000,
+      200000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p04",
+    "text": "Salary $150,000-$180,000. Signing bonus $10,000-$20,000.",
+    "expected": [
+      150000,
+      180000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p05",
+    "text": "Salary $150,000-$180,000, plus RSUs $50,000-$100,000",
+    "expected": [
+      150000,
+      180000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p06",
+    "text": "Base salary $150,000-$180,000; OTE $200,000-$300,000",
+    "expected": [
+      150000,
+      180000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p07",
+    "text": "CAD $150,000-$180,000",
+    "expected": null,
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p08",
+    "text": "$150,000-$180,000 CAD",
+    "expected": null,
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p09",
+    "text": "C$150,000-C$180,000",
+    "expected": null,
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p10",
+    "text": "$150,000-$180,000 Canadian dollars",
+    "expected": null,
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p11",
+    "text": "$100,000-$120,000 USD",
+    "expected": [
+      100000,
+      120000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p12",
+    "text": "US$100,000-US$120,000",
+    "expected": [
+      100000,
+      120000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p13",
+    "text": "USD $100,000-$120,000",
+    "expected": [
+      100000,
+      120000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p14",
+    "text": "$120-150K",
+    "expected": [
+      120000,
+      150000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p15",
+    "text": "$120K to $150K",
+    "expected": [
+      120000,
+      150000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p16",
+    "text": "$120K - 150K",
+    "expected": [
+      120000,
+      150000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p17",
+    "text": "$90,000-$110,000 m/w/d",
+    "expected": [
+      90000,
+      110000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p18",
+    "text": "$90,000-$110,000 M-F",
+    "expected": [
+      90000,
+      110000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p19",
+    "text": "$90,000-$110,000 M&A focus",
+    "expected": [
+      90000,
+      110000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p20",
+    "text": "$90,000-$110,000 B.S. required",
+    "expected": [
+      90000,
+      110000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p21",
+    "text": "Salary paid monthly $120,000-$150,000",
+    "expected": [
+      120000,
+      150000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p22",
+    "text": "$120,000-$150,000 per month",
+    "expected": [
+      120000,
+      150000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p23",
+    "text": "$8000-$10000 per month",
+    "expected": [
+      96000,
+      120000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p24",
+    "text": "Monthly salary: $8000-$10000",
+    "expected": [
+      96000,
+      120000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p25",
+    "text": "$8000-$10000/month",
+    "expected": [
+      96000,
+      120000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p26",
+    "text": "$60-$75 per hour",
+    "expected": [
+      124800,
+      156000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p27",
+    "text": "$60-$75/hr",
+    "expected": [
+      124800,
+      156000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p28",
+    "text": "Housing stipend $2000-$3000 per month",
+    "expected": null,
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p29",
+    "text": "Salary $120,000-$150,000; housing stipend $2000-$3000 per month",
+    "expected": [
+      120000,
+      150000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p30",
+    "text": "$2000-$3000 per month housing stipend; salary $120,000-$150,000",
+    "expected": [
+      120000,
+      150000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p31",
+    "text": "Signing bonus of $10,000-$20,000",
+    "expected": null,
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p32",
+    "text": "Bonus $40,000-$60,000",
+    "expected": null,
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p33",
+    "text": "RSUs $50,000-$100,000",
+    "expected": null,
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p34",
+    "text": "OTE $200,000-$300,000",
+    "expected": null,
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p35",
+    "text": "Raised $10-20M",
+    "expected": null,
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p36",
+    "text": "Raised $10-20mm",
+    "expected": null,
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p37",
+    "text": "Raised $10-20mil",
+    "expected": null,
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p38",
+    "text": "Valuation $1-2B",
+    "expected": null,
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p39",
+    "text": "Salary not listed",
+    "expected": null,
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p40",
+    "text": "$180,000-$150,000",
+    "expected": null,
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p41",
+    "text": "Salary $0-$0",
+    "expected": null,
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p42",
+    "text": "Base $90,000-$110,000 plus bonus",
+    "expected": [
+      90000,
+      110000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p43",
+    "text": "Bonus eligible. Salary $90,000-$110,000",
+    "expected": [
+      90000,
+      110000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p44",
+    "text": "Base salary $90,000-$110,000 with an annual bonus",
+    "expected": [
+      90000,
+      110000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p45",
+    "text": "Base salary and bonus: $90,000-$110,000",
+    "expected": [
+      90000,
+      110000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p46",
+    "text": "Base salary $90,000-$110,000 + equity $50,000-$70,000",
+    "expected": [
+      90000,
+      110000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p47",
+    "text": "CAD $100,000-$120,000; USD $90,000-$110,000",
+    "expected": [
+      90000,
+      110000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p48",
+    "text": "USD $90,000-$110,000; CAD $100,000-$120,000",
+    "expected": [
+      90000,
+      110000
+    ],
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p49",
+    "text": "London GBP $90,000-$110,000",
+    "expected": null,
+    "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p50",
+    "text": "AUD $90,000-$110,000",
+    "expected": null,
+    "source": "review examples and authored representative patterns"
+  }
+]

@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import httpx  # noqa: E402
 import tldextract  # noqa: E402
 
-from checks._lib import cli, core  # noqa: E402
+from checks._lib import cli, core, diagnostic  # noqa: E402
 
 # Use the bundled Public Suffix List only; never fetch arbitrary suffix URLs.
 _DOMAIN_EXTRACTOR = tldextract.TLDExtract(suffix_list_urls=(), cache_dir=None, include_psl_private_domains=True)
@@ -123,8 +123,8 @@ def check(d: Path) -> list[str]:
         c = json.loads(p.read_text())
         ok = verified_sources(c.get("sources", []), c["name"], c["company"])
         if len(ok) < 2:
-            bad.append(f"{p.stem}: only {len(ok)} independent source(s) confirm "
-                       f"{c['name']} at {c['company']}")
+            bad.append(diagnostic(f"only {len(ok)} independent source(s) confirm the contact",
+                                  contact=c['name'], company=c['company'], file=p.stem))
     return bad
 
 

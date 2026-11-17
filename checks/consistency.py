@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from checks._lib import cli, core, json_strings, meta, rendered_texts  # noqa: E402
+from checks._lib import cli, core, diagnostic, json_strings, meta, rendered_texts  # noqa: E402
 
 YEAR_RE = re.compile(r"\b(19[5-9]\d|20[0-4]\d)\b")
 
@@ -19,12 +19,12 @@ def check(d: Path) -> list[str]:
         r = json.loads((d / "resume.json").read_text())
         for k in ("name", "email", "phone"):
             if (r["person"].get(k) or "") != (person.get(k) or ""):
-                bad.append(f"resume {k} {r['person'].get(k)!r} != profile {person.get(k)!r}")
+                bad.append(diagnostic(f"resume {k} differs from profile", document=r["person"].get(k), profile=person.get(k)))
     if (d / "cover_letter.json").exists():
         c = json.loads((d / "cover_letter.json").read_text())
         for k in ("company", "title"):
             if c.get(k) != m.get(k):
-                bad.append(f"cover letter {k} {c.get(k)!r} != job {m.get(k)!r}")
+                bad.append(diagnostic(f"cover letter {k} differs from job", document=c.get(k), target=m.get(k)))
         if c["person"].get("name") != person.get("name"):
             bad.append("cover letter signature name differs from profile")
 
@@ -43,7 +43,7 @@ def check(d: Path) -> list[str]:
         # Whole words: "Robotics Engineering" (a degree) is not "Robotics Engineer" (a role).
         named = re.search(rf"\b{re.escape(t.lower())}\b", letter.lower())
         if named and t.lower() not in job_title:
-            bad.append(f"cover letter names a different role title: {t!r}")
+            bad.append(diagnostic('cover letter names a different role title', title=t))
     return bad
 
 

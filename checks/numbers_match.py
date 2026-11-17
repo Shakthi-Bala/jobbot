@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from checks._lib import UNIT_RE, count_noun, numeric_text, claim_lines, cli, core, json_strings, meta, numbers, quantities, tagged_files  # noqa: E402
+from checks._lib import UNIT_RE, count_noun, numeric_text, diagnostic, claim_lines, cli, core, json_strings, meta, numbers, quantities, tagged_files  # noqa: E402
 
 
 def source_texts(profile: dict) -> dict[str, str]:
@@ -25,13 +25,43 @@ def source_numbers(profile: dict) -> dict[str, set[float]]:
     return {key: numbers(text) for key, text in source_texts(profile).items()}
 
 
+TOOLS = ('Python', 'OpenCV', 'CUDA', 'ROS', 'PyTorch', 'TensorFlow', 'TensorRT', 'NumPy', 'Ubuntu', 'C++')
+
+
+def version_metric_suffix(after: str) -> bool:
+    if UNIT_RE.match(after):
+        return True
+    # In "ROS 2 camera processing", camera modifies an uncountable technical
+    # activity. In "ROS 2 cameras" or "ROS 2 robot deployments", it is a count.
+    if re.match(r'\s+(?:camera|robot|frame|image|sensor)\s+(?:processing|calibration|perception|mapping|localization|software|firmware|tooling)\b', after, re.I):
+        return False
+    return bool(count_noun(after))
+
+
+def documented_versions(profile: dict, sources: list[str]) -> set[tuple[str, str]]:
+    labels = set()
+    for text in sources + [s.get('skill', '') for s in profile.get('skills', [])]:
+        for tool in TOOLS:
+            for match in re.finditer(rf'(?<!\w){re.escape(tool)}\s*v?\s*(\d+(?:\.\d+)*)(?!\w|\.\d)', text, re.I):
+                after = text[match.end():]
+                if not version_metric_suffix(after):
+                    labels.add((tool.casefold(), match[1]))
+    return labels
+
+
+def without_versions(text: str, labels: set[tuple[str, str]], *, claim: bool) -> str:
+    for tool in TOOLS:
+        def replace(match):
+            after = text[match.end():]
+            measured = version_metric_suffix(after) if claim else UNIT_RE.match(after)
+            return '' if (tool.casefold(), match[1]) in labels and not measured else match[0]
+        text = re.sub(rf'(?<!\w){re.escape(tool)}\s*v?\s*(\d+(?:\.\d+)*)(?!\w|\.\d)', replace, text, flags=re.I)
+    return text
+
+
 def claim_prose(prose: str, profile: dict, cited: list[str], sources: list[str], project_count: int) -> str:
-    """Exclude version/date labels and supported document descriptions, not metrics."""
-    skill_names = [s.get('skill', '') for s in profile.get('skills', [])]
-    verified = ' '.join(sources + skill_names)
-    for tool in ('Python', 'OpenCV', 'CUDA', 'ROS', 'PyTorch', 'TensorFlow', 'TensorRT', 'NumPy', 'Ubuntu', 'C++'):
-        if re.search(rf'(?<!\w){re.escape(tool)}(?!\w)', verified, re.I):
-            prose = re.sub(rf'(?<!\w){re.escape(tool)}\s*v?\s*\d+(?:\.\d+)*(?![\w.])', '', prose, flags=re.I)
+    """Exclude documented version/date labels, never their trailing quantities."""
+    prose = without_versions(prose, documented_versions(profile, sources), claim=True)
     months = ('January February March April May June July August September October November December').split()
     for entry in profile.get('education', []):
         if entry['id'] not in cited:
@@ -108,17 +138,24 @@ def check(d: Path) -> list[str]:
             prose = claim_prose(core.strip_tags(line), profile, core.FACT_TAG_RE.findall(line), sources, project_count)
             # A number in a product name permits that name, not an unrelated metric.
             for name in sorted(filter(None, names), key=len, reverse=True):
-                prose = re.sub(rf'(?<!\w){re.escape(name)}(?!\w)', '', prose, flags=re.I)
-            allowed = set().union(*(numbers(s) for s in sources))
+                def known_name(match):
+                    after = prose[match.end():]
+                    if quantities(match[0]) or (numbers(match[0]) and version_metric_suffix(after)):
+                        return match[0]
+                    return ''
+                prose = re.sub(rf'(?<!\w){re.escape(name)}(?!\w)', known_name, prose, flags=re.I)
+            labels = documented_versions(profile, sources)
+            metric_sources = [without_versions(s, labels, claim=False) for s in sources]
+            allowed = set().union(*(numbers(s) for s in metric_sources))
             extra = numbers(prose, contextual=True) - allowed
             if extra:
                 shown = ", ".join(f"{x:g}" for x in sorted(extra))
-                bad.append(f"{path.name}:{n} numbers not in cited facts ({shown}): {line[:120]}")
-            allowed_units = set().union(*(quantities(s) for s in sources))
+                bad.append(diagnostic(f"{path.name}:{n} numbers not in cited facts ({shown})", claim=line[:120]))
+            allowed_units = set().union(*(quantities(s) for s in metric_sources))
             unsupported = quantities(prose, contextual=True) - allowed_units
             if unsupported:
                 shown = ', '.join(f'{value:g} {unit}' for value, unit in sorted(unsupported))
-                bad.append(f"{path.name}:{n} quantities not in cited facts ({shown}): {line[:120]}")
+                bad.append(diagnostic(f"{path.name}:{n} quantities not in cited facts ({shown})", claim=line[:120]))
     return bad
 
 

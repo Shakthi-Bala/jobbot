@@ -1,0 +1,332 @@
+[
+  {
+    "id": "h01",
+    "category": "procedural",
+    "text": "Wrote one regression case per category",
+    "cite": "F004"
+  },
+  {
+    "id": "h02",
+    "category": "procedural",
+    "text": "Processed one at a time",
+    "cite": "F004"
+  },
+  {
+    "id": "h03",
+    "category": "procedural",
+    "text": "Implemented a one-stage detector",
+    "cite": "F004"
+  },
+  {
+    "id": "h04",
+    "category": "procedural",
+    "text": "One of the core developers maintained the pipeline",
+    "cite": "F004"
+  },
+  {
+    "id": "h05",
+    "category": "procedural",
+    "text": "No one else owned the replay tooling",
+    "cite": "F004"
+  },
+  {
+    "id": "h06",
+    "category": "procedural",
+    "text": "Used one-hot encoding",
+    "cite": "F004"
+  },
+  {
+    "id": "h07",
+    "category": "procedural",
+    "text": "Implemented zero-copy transport",
+    "cite": "F004"
+  },
+  {
+    "id": "h08",
+    "category": "procedural",
+    "text": "Evaluated zero-shot classification",
+    "cite": "F004"
+  },
+  {
+    "id": "h09",
+    "category": "tool_version",
+    "text": "Ported to Python 3.10",
+    "cite": "F090"
+  },
+  {
+    "id": "h10",
+    "category": "tool_version",
+    "text": "Implemented tooling in Python 3.10",
+    "cite": "F090"
+  },
+  {
+    "id": "h11",
+    "category": "tool_version",
+    "text": "Tested on Ubuntu 22.04",
+    "cite": "F090"
+  },
+  {
+    "id": "h12",
+    "category": "tool_version",
+    "text": "Built with CUDA 12",
+    "cite": "F090"
+  },
+  {
+    "id": "h13",
+    "category": "tool_version",
+    "text": "Compiled with C++17",
+    "cite": "F090"
+  },
+  {
+    "id": "h14",
+    "category": "tool_version",
+    "text": "Integrated ROS 2",
+    "cite": "F090"
+  },
+  {
+    "id": "h15",
+    "category": "tool_version",
+    "text": "Trained with PyTorch 2.1",
+    "cite": "F090"
+  },
+  {
+    "id": "h16",
+    "category": "tool_version",
+    "text": "Used OpenCV 4",
+    "cite": "F090"
+  },
+  {
+    "id": "h17",
+    "category": "tool_version",
+    "text": "Exported for TensorRT 8",
+    "cite": "F090"
+  },
+  {
+    "id": "h18",
+    "category": "tool_version",
+    "text": "Processed arrays with NumPy 1.26",
+    "cite": "F090"
+  },
+  {
+    "id": "h19",
+    "category": "tool_version",
+    "text": "Trained with TensorFlow 2.15",
+    "cite": "F090"
+  },
+  {
+    "id": "h20",
+    "category": "tool_version",
+    "text": "Replayed logs under Ubuntu 22.04",
+    "cite": "F090"
+  },
+  {
+    "id": "h21",
+    "category": "education",
+    "text": "Finishing my M.S. in May 2027",
+    "cite": "E001"
+  },
+  {
+    "id": "h22",
+    "category": "education",
+    "text": "Graduate in May 2027",
+    "cite": "E001"
+  },
+  {
+    "id": "h23",
+    "category": "education",
+    "text": "Graduating in 2027",
+    "cite": "E001"
+  },
+  {
+    "id": "h24",
+    "category": "education",
+    "text": "Expected 2027",
+    "cite": "E001"
+  },
+  {
+    "id": "h25",
+    "category": "education",
+    "text": "Completing my degree in May 2027",
+    "cite": "E001"
+  },
+  {
+    "id": "h26",
+    "category": "education",
+    "text": "My expected graduation is May 2027",
+    "cite": "E001"
+  },
+  {
+    "id": "h27",
+    "category": "education",
+    "text": "Enrolled in August 2025",
+    "cite": "E001"
+  },
+  {
+    "id": "h28",
+    "category": "education",
+    "text": "M.S. expected May 2027",
+    "cite": "E001"
+  },
+  {
+    "id": "h29",
+    "category": "document",
+    "text": "Two projects show how I work",
+    "cite": "F004"
+  },
+  {
+    "id": "h30",
+    "category": "document",
+    "text": "These two projects illustrate my approach",
+    "cite": "F004"
+  },
+  {
+    "id": "h31",
+    "category": "document",
+    "text": "Two projects demonstrate my implementation style",
+    "cite": "F004"
+  },
+  {
+    "id": "h32",
+    "category": "document",
+    "text": "Two projects highlight my debugging process",
+    "cite": "F004"
+  },
+  {
+    "id": "h33",
+    "category": "supported_metric",
+    "text": "Worked in a team of four",
+    "cite": "F091"
+  },
+  {
+    "id": "h34",
+    "category": "supported_metric",
+    "text": "Mentored four",
+    "cite": "F091"
+  },
+  {
+    "id": "h35",
+    "category": "supported_metric",
+    "text": "Mentored four interns",
+    "cite": "F091"
+  },
+  {
+    "id": "h36",
+    "category": "supported_metric",
+    "text": "Finished in the Top 5%",
+    "cite": "F091"
+  },
+  {
+    "id": "h37",
+    "category": "supported_metric",
+    "text": "Won second place",
+    "cite": "F091"
+  },
+  {
+    "id": "h38",
+    "category": "supported_metric",
+    "text": "Programmed a 6-DOF arm",
+    "cite": "F092"
+  },
+  {
+    "id": "h39",
+    "category": "supported_metric",
+    "text": "Ran the pipeline at 24 FPS",
+    "cite": "F003"
+  },
+  {
+    "id": "h40",
+    "category": "supported_metric",
+    "text": "Processed frames at twenty-four frames-per-second",
+    "cite": "F003"
+  },
+  {
+    "id": "h41",
+    "category": "supported_metric",
+    "text": "Reached 72 percent validation mIoU",
+    "cite": "F002"
+  },
+  {
+    "id": "h42",
+    "category": "supported_metric",
+    "text": "Achieved seventy-two-percent validation mIoU",
+    "cite": "F002"
+  },
+  {
+    "id": "h43",
+    "category": "supported_metric",
+    "text": "Evaluated 120 synthetic warehouse scenes",
+    "cite": "F001"
+  },
+  {
+    "id": "h44",
+    "category": "supported_metric",
+    "text": "Evaluated one hundred and twenty scenes",
+    "cite": "F001"
+  },
+  {
+    "id": "h45",
+    "category": "supported_metric",
+    "text": "Compared filtering on 120 scenes",
+    "cite": "F001"
+  },
+  {
+    "id": "h46",
+    "category": "supported_metric",
+    "text": "Maintained a 24-FPS camera pipeline",
+    "cite": "F003"
+  },
+  {
+    "id": "h47",
+    "category": "supported_metric",
+    "text": "Built a point-cloud filter",
+    "cite": "F004"
+  },
+  {
+    "id": "h48",
+    "category": "supported_metric",
+    "text": "Compared runtime and retention",
+    "cite": "F004"
+  },
+  {
+    "id": "h49",
+    "category": "supported_metric",
+    "text": "Added deterministic replay tooling",
+    "cite": "F004"
+  },
+  {
+    "id": "h50",
+    "category": "supported_metric",
+    "text": "Separated training and validation scenes",
+    "cite": "F005"
+  },
+  {
+    "id": "h51",
+    "category": "supported_metric",
+    "text": "Implemented timestamp consistency checks",
+    "cite": "F006"
+  },
+  {
+    "id": "h52",
+    "category": "supported_metric",
+    "text": "Tested Python 3.10 and CUDA 12",
+    "cite": "F090"
+  },
+  {
+    "id": "h53",
+    "category": "supported_metric",
+    "text": "A team of four built the demonstration",
+    "cite": "F091"
+  },
+  {
+    "id": "h54",
+    "category": "supported_metric",
+    "text": "The team size was four",
+    "cite": "F091"
+  },
+  {
+    "id": "h55",
+    "category": "version_modifier",
+    "text": "Built ROS 2 camera processing",
+    "cite": "F090"
+  }
+]

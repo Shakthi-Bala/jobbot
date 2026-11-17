@@ -35,6 +35,8 @@ jobs:
           sudo apt-get install -y poppler-utils fonts-dejavu-core
           python -m pip install -r requirements.txt
           python -c "import typst; print('Typst renderer available')"
+      - name: Fixed writing and salary regression corpora
+        run: python -m pytest -q tests/test_regression_corpora.py --junitxml=corpus-results.xml
       - name: Test
         run: python -m pytest -q --junitxml=test-results.xml
       - name: Save test results
@@ -42,4 +44,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pytest-python-${{ matrix.python }}
-          path: test-results.xml
+          path: |
+            test-results.xml
+            corpus-results.xml
