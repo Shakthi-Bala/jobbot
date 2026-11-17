@@ -394,5 +394,39 @@
     "text": "AUD $90,000-$110,000",
     "expected": null,
     "source": "review examples and authored representative patterns"
+  },
+  {
+    "id": "p51",
+    "text": "$150,000 - $180,000 (CAD)",
+    "expected": null
+  },
+  {
+    "id": "p52",
+    "text": "Toronto (CAD): $110,000-$140,000; US: $160,000-$205,000",
+    "expected": [
+      160000,
+      205000
+    ]
+  },
+  {
+    "id": "p53",
+    "text": "$150,000 - $200,000 excluding bonus and equity",
+    "expected": [
+      150000,
+      200000
+    ]
+  },
+  {
+    "id": "p54",
+    "text": "120,000 - 150,000 USD",
+    "expected": [
+      120000,
+      150000
+    ]
+  },
+  {
+    "id": "p55",
+    "text": "120,000 - 150,000 CAD",
+    "expected": null
   }
 ]

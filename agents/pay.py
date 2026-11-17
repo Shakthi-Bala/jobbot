@@ -9,9 +9,10 @@ import re
 _CODES = r'USD|CAD|AUD|NZD|SGD|HKD|EUR|GBP|CHF|JPY|CNY|INR'
 _CURRENCY = rf'(?:US\$|CA\$|C\$|AU\$|A\$|NZ\$|SG\$|HK\$|(?:{_CODES})\s*\$?|[$£€])'
 _RANGE = re.compile(
-    rf'(?P<c1>{_CURRENCY})\s*(?P<lo>\d[\d,]*(?:\.\d+)?)\s*(?P<lk>[kK])?'
+    rf'(?<![\w.,])(?P<c1>{_CURRENCY})?\s*(?P<lo>\d[\d,]*(?:\.\d+)?)\s*(?P<lk>[kK])?'
     rf'\s*(?P<middle>{_CODES})?\s*(?:-|–|—|to)\s*'
-    rf'(?P<c2>{_CURRENCY})?\s*(?P<hi>\d[\d,]*(?:\.\d+)?)\s*(?P<hk>[kK])?', re.I)
+    rf'(?P<c2>{_CURRENCY})?\s*(?P<hi>\d[\d,]*(?:\.\d+)?)(?:[ \t]*(?P<hk>[kK]))?'
+    rf'[ \t]*(?:[\[(][ \t]*(?P<bracket>{_CODES})[ \t]*[\])]|(?P<end>{_CODES})\b)?', re.I)
 _CLAUSE = re.compile(r'[;,+\n]|\.(?!\d)')
 _BASE = re.compile(r'\b(?:base(?:\s+(?:salary|pay|compensation))?|salary|wages?)\b', re.I)
 _NONBASE = re.compile(
@@ -30,7 +31,7 @@ def _currency(tag: str, default: str) -> str:
 def _component(prefix: str, suffix: str) -> tuple[str, str]:
     before = _CLAUSE.split(prefix)[-1]
     after = _CLAUSE.split(suffix)[0]
-    after = re.split(r'\b(?:plus|and|with|including|alongside)\b', after, maxsplit=1, flags=re.I)[0]
+    after = re.split(r'\b(?:plus|and|with|alongside)\b', after, maxsplit=1, flags=re.I)[0]
     return before, after
 
 
@@ -39,26 +40,32 @@ def _is_base(prefix: str, suffix: str) -> bool:
         return True
     # "bonus eligible" describes benefits, not the ownership of an amount.
     suffix = re.sub(r'\bbonus\s+eligible\b', '', suffix, flags=re.I)
+    # Excluded benefits do not change which component the preceding range is.
+    suffix = re.split(r'\b(?:excluding|exclusive\s+of|not\s+including|without)\b',
+                      suffix, maxsplit=1, flags=re.I)[0]
     return not (_NONBASE.search(prefix) or _NONBASE.search(suffix))
 
 
 def _usd(match, prefix: str, suffix: str, default: str) -> bool:
-    tags = [match['c1'], match['c2'], match['middle']]
+    tags = [match[name] for name in ('c1', 'c2', 'middle', 'bracket', 'end')]
     # Explicit markers beside a bare-dollar range override its default currency.
     before = list(_CURRENCY_WORD.finditer(prefix))
-    if before and re.fullmatch(r'[\s:]*', prefix[before[-1].end():]):
+    if before and re.fullmatch(r'[\s:)\]]*', _BASE.sub('', prefix[before[-1].end():])):
         tags.append(before[-1][1])
-    after = _CURRENCY_WORD.match(suffix.lstrip())
+    after = _CURRENCY_WORD.match(suffix.lstrip(' \t\r\n(['))
     if after:
         tags.append(after[1])
     explicit = [tag for tag in tags if tag and tag != '$']
     if explicit:
         return all(_currency(tag, default) == 'USD' for tag in explicit)
-    return _currency(match['c1'], default) == 'USD'
+    return _currency(match['c1'] or '$', default) == 'USD'
 
 
 def parse_pay_text(text: str, *, hours_per_year: int = 2080, default_currency: str = 'USD') -> tuple[int, int] | None:
-    matches = list(_RANGE.finditer(text or ''))
+    # Bare numerical ranges are not salary evidence. A marker can occur at
+    # either endpoint, including a trailing-only or bracketed currency code.
+    matches = [m for m in _RANGE.finditer(text or '')
+               if any(m[name] for name in ('c1', 'c2', 'middle', 'bracket', 'end'))]
     lows, highs = [], []
     for i, match in enumerate(matches):
         raw_after = text[match.end():]
