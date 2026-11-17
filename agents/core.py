@@ -269,7 +269,7 @@ def parse_pay_text(text: str) -> tuple[int, int] | None:
     lows, highs = [], []
     for m in _RANGE_RE.finditer(text or ""):
         # Funding/valuation suffixes may apply to both ends ($10-20M).
-        if re.match(r"\s*(?:mm|mil|million|billion|[mb])\b(?![-/])", text[m.end():], re.I):
+        if re.match(r"\s*(?:mm|mil|million|billion|[mb])\b(?![-/.&])", text[m.end():], re.I):
             continue
         lo, hi = _amount(m.group(1), m.group(2)), _amount(m.group(3), m.group(4))
         # A shared K suffix/prefix applies to both small endpoints: $120-150K.
@@ -277,12 +277,22 @@ def parse_pay_text(text: str) -> tuple[int, int] | None:
             lo *= 1000
         elif m.group(2) and not m.group(4) and hi < 1000:
             hi *= 1000
+        # Treat each range as its own compensation component. Benefits next to
+        # a base range must not widen that range or lower its minimum.
+        before = text[max(0, m.start() - 80):m.start()].lower()
+        after = text[m.end():m.end() + 80].lower()
+        labels = list(re.finditer(r'\b(stipend|allowance|reimbursement|bonus|salary|wages?|pay)\b', before))
+        last_label = labels[-1][1] if labels else ''
+        after_component = re.split(r'\b(?:plus|and|with|including|alongside)\b|[;$\n]', after)[0]
+        if last_label in ('stipend', 'allowance', 'reimbursement', 'bonus') or re.search(
+                r'\b(?:stipend|allowance|reimbursement|bonus)\b', after_component):
+            continue
         context = text[max(0, m.start() - 60): m.end() + 40].lower()
         suffix = text[m.end():].lower().lstrip()
         prefix = text[max(0, m.start() - 60):m.start()].lower()
         monthly = (re.match(r"(?:usd\s*)?(?:per\s+month\b|/\s*(?:month|mo)\b|monthly\b)", suffix)
                    or re.search(r"monthly(?:\s+base)?(?:\s+(?:salary|pay))?\s*:?\s*$", prefix))
-        if monthly:
+        if monthly and hi <= 30_000:
             lo, hi = lo * 12, hi * 12
         elif hi < 1000 and ("hour" in context or "/hr" in context or hi < 300):
             lo, hi = lo * HOURS_PER_YEAR, hi * HOURS_PER_YEAR
