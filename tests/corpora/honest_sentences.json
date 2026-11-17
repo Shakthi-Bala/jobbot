@@ -328,5 +328,17 @@
     "category": "version_modifier",
     "text": "Built ROS 2 camera processing",
     "cite": "F090"
+  },
+  {
+    "id": "h56",
+    "category": "robotics_units",
+    "text": "Programmed a six-degree-of-freedom arm",
+    "cite": "F092"
+  },
+  {
+    "id": "h57",
+    "category": "robotics_units",
+    "text": "Programmed an arm with 6 degrees of freedom",
+    "cite": "F092"
   }
 ]

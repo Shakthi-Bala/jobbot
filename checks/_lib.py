@@ -55,20 +55,12 @@ def leading_count(text: str) -> str | None:
 
 
 _ORDINALS = dict(zip('first second third fourth fifth sixth seventh eighth ninth tenth eleventh twelfth thirteenth fourteenth fifteenth sixteenth seventeenth eighteenth nineteenth twentieth'.split(), range(1, 21)))
-_ORDINAL_RE = re.compile(r'\b(' + '|'.join(_ORDINALS) + r')\b(?=\s+(?:place|prize|rank|position)\b)', re.I)
+_ORDINAL_RE = re.compile(r'\b(' + '|'.join(_ORDINALS) + rf')\b(?={_WORD_SEP}(?:place|prize|rank|position|finish|among)\b)', re.I)
 
 
 def numeric_text(text: str, *, contextual: bool = False) -> str:
     """Normalize English cardinal numbers, including hyphenated compounds."""
     def convert(match):
-        if contextual:
-            remainder = (text or '')[match.end():]
-            unit = UNIT_RE.match(remainder)
-            # Procedural distribution is not a measured scale of achievement.
-            distributive = match[0].lower() == 'one' and re.match(
-                r'(?:\s+[A-Za-z-]+){1,3}\s+per\b', remainder, re.I) and not unit
-            if distributive or not (unit or count_noun(remainder) or leading_count((text or '')[:match.start()]) or re.match(r'\s+dozen\b', remainder, re.I)):
-                return match[0]
         total = group = 0
         tokens = re.split(_WORD_SEP, match[0].lower())
         decimal = ''
@@ -86,12 +78,31 @@ def numeric_text(text: str, *, contextual: bool = False) -> str:
                 group = 0
             else:
                 group += 1 if word == 'a' else _WORD_VALUES[word]
+        if contextual:
+            remainder = text[match.end():]
+            prefix = text[:match.start()]
+            unit = UNIT_RE.match(remainder)
+            # Small words can be idiomatic; larger cardinals remain numerical
+            # claims even when their count noun is omitted (e.g. a leaderboard).
+            distributive = match[0].lower() == 'one' and re.match(
+                r'(?:\s+[A-Za-z-]+){1,3}\s+per\b', remainder, re.I) and not unit
+            if distributive or not (total + group >= 20 or decimal or unit or count_noun(remainder)
+                    or leading_count(prefix) or re.search(r'\btop[\s\-‐‑–]*$', prefix, re.I)
+                    or re.match(r'\s+dozen\b', remainder, re.I)):
+                return match[0]
         return str(total + group) + decimal
     text = _NUMBER_IDIOMS_RE.sub(' ', text or '')
+    text = re.sub(rf'\bdegrees?{_WORD_SEP}of{_WORD_SEP}freedom\b', 'DOF', text, flags=re.I)
+    # A half-dozen is six, before the generic "a dozen" expansion runs.
+    text = re.sub(rf'\bhalf{_WORD_SEP}(?:(?:of{_WORD_SEP})?a{_WORD_SEP})?dozen\b', '6', text, flags=re.I)
+    text = re.sub(r'\b(placed|ranked|finished|came)\s+(' + '|'.join(_ORDINALS) + r')\b',
+                  lambda m: m[1] + ' ' + str(_ORDINALS[m[2].lower()]) + ' rank', text, flags=re.I)
     text = _ORDINAL_RE.sub(lambda m: str(_ORDINALS[m[1].lower()]), text)
-    text = re.sub(r'\b(\d+)(?:st|nd|rd|th)(?=\s+(?:place|prize|rank|position)\b)', r'\1', text, flags=re.I)
+    text = re.sub(rf'\b(\d+)(?:st|nd|rd|th)(?={_WORD_SEP}(?:place|prize|rank|position|finish|among)\b)', r'\1', text, flags=re.I)
     text = re.sub(r'\ba dozen\b', '12', text, flags=re.I)
     text = _WORD_NUMBER_RE.sub(convert, text)
+    text = re.sub(r'\btop[\s\-‐‑–]+(\d+)\b(?![\d.]|\s*(?:%|percent\b))', r'\1 rank', text, flags=re.I)
+    text = re.sub(r'\b(\d+)(?=\s+among\b)', r'\1 rank', text, flags=re.I)
     # Lowercase m is metres unless attached to an explicit currency amount.
     text = re.sub(r'([$£€]\s*\d+(?:\.\d+)?)m\b', r'\1M', text)
     return _MAGNITUDE_RE.sub(
@@ -104,14 +115,14 @@ MULTIPLIERS = {"doubled": 2, "doubling": 2, "twofold": 2, "tripled": 3,
                "fivefold": 5, "sixfold": 6, "sevenfold": 7, "eightfold": 8,
                "ninefold": 9, "tenfold": 10}
 UNIT_RE = re.compile(
-    r"[\s\-‐‑–]*(place\b|prize\b|rank\b|position\b|%|percent\b|percentage[\s\-‐‑–]+points?\b|fps\b|frames?[\s\-‐‑–]+per[\s\-‐‑–]+second\b|"
+    r"[\s\-‐‑–]*(place\b|prize\b|rank\b|position\b|finish\b|dof\b|%|percent\b|percentage[\s\-‐‑–]+points?\b|fps\b|frames?[\s\-‐‑–]+per[\s\-‐‑–]+second\b|"
     r"ms\b|milliseconds?\b|[µμu]s\b|microseconds?\b|s\b|seconds?\b|"
     r"mins?\b|minutes?\b|hrs?\b|hours?\b|days?\b|weeks?\b|months?\b|years?\b|"
     r"khz\b|mhz\b|ghz\b|hz\b|hertz\b|kb\b|mb\b|gb\b|tb\b|"
     r"m/s\b|km/h\b|mm\b|cm\b|meters?\b|km\b|m\b|kg\b|g\b|"
     r"pixels?\b|px\b|db\b|degrees?\b|°|watts?\b|kw\b|w\b|"
     r"times\b|x\b|×)", re.I)
-UNIT_ALIASES = {'place': 'rank', 'prize': 'rank', 'position': 'rank', 'hertz': 'hz', 'percent': '%', 'frame per second': 'fps', 'frames per second': 'fps',
+UNIT_ALIASES = {'place': 'rank', 'prize': 'rank', 'position': 'rank', 'finish': 'rank', 'hertz': 'hz', 'percent': '%', 'frame per second': 'fps', 'frames per second': 'fps',
                 'millisecond': 'ms', 'microsecond': 'us', 'µs': 'us', 'μs': 'us',
                 'second': 's', 'min': 'minute', 'hr': 'hour', 'meter': 'm',
                 'pixel': 'px', 'degree': '°', 'watt': 'w',
