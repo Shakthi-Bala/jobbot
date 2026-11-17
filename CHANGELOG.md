@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Use a dynamic release badge; permit only the configured public repository's badge URL in privacy scans.
+- Vary fictional reader scores, show review rounds before the packet result in the GIF, and retain demo validation when Python runs with optimization.
 - Show a supported wording revision across two real offline-demo panel rounds; include the reviewer feedback and redraft in the README recording, with fixture scores clearly labeled.
 
 ## 1.0.0 — 2026-11-17

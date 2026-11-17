@@ -158,15 +158,15 @@ def main():
         for step in range(1, 9):
             frames.append(terminal(event, round(len(event['command']) * step / 8), 0))
             durations.append(70)
+        if name == 'packet':
+            frames += [revision_frame(revision), revision_frame(revision, after=True)]
+            durations += [7500, 6500]
         count = len(event['output'].strip().splitlines())
         for line in range(1, count + 1):
             frames.append(terminal(event, len(event['command']), line))
             durations.append(110)
         frames.append(terminal(event, len(event['command']), count))
         durations.append(2200)
-        if name == 'packet':
-            frames += [revision_frame(revision), revision_frame(revision, after=True)]
-            durations += [7500, 6500]
     frames += [pdf_frame(page), pdf_frame(page, bottom=True), panel_frame(panel, checks)]
     durations += [3000, 3000, 4000]
     gif = ASSETS / 'jobbot-workflow.gif'

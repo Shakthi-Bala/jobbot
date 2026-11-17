@@ -6,7 +6,7 @@ These are stored fixture responses, not actual model, human, or employer ratings
 
 | Round | ATS gate | ATS keywords | Hiring manager | Readers (avg /10) | Revisions |
 |---|---|---|---|---|---|
-| 1 | pass_to_human (80) | 100% (max 100%) | maybe | 7.2 | 1 |
+| 1 | pass_to_human (80) | 100% (max 100%) | maybe | 7.1 | 1 |
 | 2 | pass_to_human (80) | 100% (max 100%) | maybe | 7.2 | 0 |
 
 ## Latest round (2)
@@ -20,11 +20,11 @@ These are stored fixture responses, not actual model, human, or employer ratings
 
 | Reader | Verdict | Score | First impression |
 |---|---|---|---|
-| Team lead | maybe | 7.2 | DEMO FIXTURE: fictional perception projects with explicit validation scope. |
-| Competing applicant | maybe | 7.2 | DEMO FIXTURE: fictional perception projects with explicit validation scope. |
-| CEO | maybe | 7.2 | DEMO FIXTURE: fictional perception projects with explicit validation scope. |
-| Senior engineer | maybe | 7.2 | DEMO FIXTURE: fictional perception projects with explicit validation scope. |
-| Recruiter | maybe | 7.2 | DEMO FIXTURE: fictional perception projects with explicit validation scope. |
+| Team lead | maybe | 7.3 | DEMO FIXTURE: fictional perception projects with explicit validation scope. |
+| Competing applicant | maybe | 6.8 | DEMO FIXTURE: fictional perception projects with explicit validation scope. |
+| CEO | maybe | 6.9 | DEMO FIXTURE: fictional perception projects with explicit validation scope. |
+| Senior engineer | maybe | 7.4 | DEMO FIXTURE: the revised bullet names the owned component and tool; validation remains synthetic. |
+| Recruiter | maybe | 7.6 | DEMO FIXTURE: fictional perception projects with explicit validation scope. |
 
 ## Editor's plan
 
