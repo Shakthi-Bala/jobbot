@@ -1,5 +1,7 @@
 # Review follow-up: 2026-11-16
 
+For the subsequent review of `ae03621`, see the [latest follow-up](review-at-ae03621.md).
+
 This follow-up checks the report against the code merged at `5daa579` (the source tree from `73e212d`). Fixes are committed incrementally on `dev`. Tests use fictional evidence, temporary trackers, mocked services, and actual local document rendering. Test and rendering jobs run through Slurm.
 
 | Finding | Outcome and regression coverage |

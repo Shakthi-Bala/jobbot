@@ -83,3 +83,8 @@ Return to the [README](../README.md).
 
 
 For a Greenhouse board hosted in the EU, set `region: eu` beside its `ats: greenhouse` and `slug` in local company configuration. The default region is `us`. Imported EU posting URLs retain their regional API and public hosts. Board refreshes deactivate only postings belonging to that board, even when several boards use the same company name.
+
+
+Application dates cannot be in the future. The sheet command prints row errors to stderr and leaves failed imports available for correction. The hidden `Saved edits` tab keeps at most 1,000 meaningful filtered rows; default blank/“No” rows are discarded. Overflow notes and dates are preserved in a private `applications.edits.json` beside the workbook, merged back during refresh, and excluded from Git. Keep that archive with the workbook when moving it.
+
+Include the actual application-question wording in the posting source when importing a JD. Question labels must match both the declared question list and that source; the writer omits invented labels and checks report missing provenance. Numerical checks recognize verified tool/version labels and cited education calendar dates, while continuing to check unrelated measurements on the same line.
