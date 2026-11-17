@@ -197,8 +197,17 @@ def inspect_blob(data: bytes, path: str, ids: dict[str, str], assets: dict,
         problems.append(f'{path}: PDF has no extractable text; review required')
     for number, line in enumerate(text.splitlines(), 1):
         # The configured public repository URL is intentional project attribution.
-        folded = (re.sub(re.escape(repository) + r'''(?=$|[/\s?#)"'])''',
-                         '<public-repository>', line, flags=re.I) if repository else line).casefold()
+        if repository:
+            line = re.sub(re.escape(repository) + r'''(?=$|[/\s?#)"'])''',
+                          '<public-repository>', line, flags=re.I)
+            repo = re.fullmatch(r'https://github\.com/([\w.-]+/[\w.-]+)', repository, re.I)
+            if repo:
+                # Only this repository's release badge is public attribution.
+                # Leave query strings and any other identities visible to the scan.
+                badge = 'https://img.shields.io/github/v/release/' + repo[1]
+                line = re.sub(re.escape(badge) + r'''(?:\.svg)?(?=$|[\s?#)"'])''',
+                              '<public-release-badge>', line, flags=re.I)
+        folded = line.casefold()
         folded = ' '.join(folded.split())
         labels = sorted({label for needle, label in ids.items() if needle in folded})
         for needle, label in ids.items():
