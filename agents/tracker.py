@@ -39,6 +39,12 @@ def edit_draft(job_id: str, *, changes: str | None = None) -> None:
 
 def mark_applied(job_id: str, applied_on: str | None = None) -> int | None:
     """Record exactly which resume version you sent (by hash)."""
+    try:
+        submitted = date.fromisoformat(applied_on or core.today())
+    except ValueError as invalid_date:
+        raise core.JobbotError('Date applied must be an ISO date (YYYY-MM-DD)') from invalid_date
+    if submitted > date.fromisoformat(core.today()):
+        raise core.JobbotError('Date applied cannot be in the future')
     conn = core.connect()
     job = core.get_job(conn, job_id)
     existing = conn.execute("SELECT doc_id FROM actions WHERE job_id=? AND action='applied' "
@@ -62,10 +68,6 @@ def mark_applied(job_id: str, applied_on: str | None = None) -> int | None:
         if draft.exists() and core.sha256_file(draft) != doc["sha256"]:
             raise core.JobbotError("Current resume differs from the recorded version; finish the packet before marking applied")
     detail = f"resume v{doc['version']} sha256={doc['sha256'][:16]}" if doc else "no resume on file"
-    try:
-        submitted = date.fromisoformat(applied_on or core.today())
-    except ValueError as invalid_date:
-        raise core.JobbotError('Date applied must be an ISO date (YYYY-MM-DD)') from invalid_date
     due = (submitted + timedelta(days=10)).isoformat()
     recorded_at = submitted.isoformat() if applied_on else core.now()
     with conn:

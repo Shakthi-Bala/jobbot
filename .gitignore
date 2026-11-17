@@ -43,3 +43,6 @@ htmlcov/
 *.swp
 .DS_Store
 Thumbs.db
+
+# Private overflow/backup of application spreadsheet inputs
+*.edits.json

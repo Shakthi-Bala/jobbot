@@ -59,5 +59,51 @@ def test_invalid_applied_date_is_reported_without_recording(job, capsys):
     conn = core.connect()
     assert sheet.apply_edits(conn, {job['id']: {'applied': 'Yes', 'date_applied': 'yesterday'}}, errors) == []
     assert job['id'] in errors
-    assert 'Date applied' in capsys.readouterr().err
+    assert 'Date applied' in errors[job['id']]
     assert conn.execute('SELECT COUNT(*) FROM actions').fetchone()[0] == 0
+
+
+
+def test_future_applied_date_is_not_recorded(job):
+    errors = {}
+    conn = core.connect()
+    assert sheet.apply_edits(conn, {job['id']: {'applied': 'Yes', 'date_applied': '2099-01-01'}}, errors) == []
+    assert 'future' in errors[job['id']]
+    assert conn.execute('SELECT COUNT(*) FROM actions').fetchone()[0] == 0
+    assert conn.execute('SELECT COUNT(*) FROM followups').fetchone()[0] == 0
+
+
+def test_sheet_command_prints_returned_row_errors(monkeypatch, capsys):
+    import jobbot
+    monkeypatch.setattr(sheet, 'build', lambda: {'path': core.ROOT / 'data/applications.xlsx',
+        'rows': 0, 'recorded_applied': [], 'errors': {'example': 'Date applied cannot be in the future'}})
+    jobbot.cmd_sheet(None)
+    assert 'example' in capsys.readouterr().err
+
+
+def test_hidden_saved_edits_are_bounded_without_losing_notes(job, tmp_path, monkeypatch):
+    import json
+    import stat
+    path = tmp_path / 'applications.xlsx'
+    monkeypatch.setattr(sheet, 'SAVED_EDIT_LIMIT', 2)
+    original_read = sheet.read_user_edits
+    edits = {f'old-{i}': {'applied': 'No', 'notes': f'Referral {i}', 'date_applied': None} for i in range(5)}
+    monkeypatch.setattr(sheet, 'read_user_edits', lambda p: edits)
+    sheet.build(path)
+    wb = load_workbook(path)
+    assert wb[sheet.SAVED_EDITS_SHEET].max_row == 3
+    archive = path.with_suffix('.edits.json')
+    assert len(json.loads(archive.read_text())) == 5
+    assert stat.S_IMODE(archive.stat().st_mode) == 0o600
+    monkeypatch.setattr(sheet, 'read_user_edits', original_read)
+    restored = sheet.read_user_edits(path)
+    assert all(restored[f'old-{i}']['notes'] == f'Referral {i}' for i in range(5))
+
+
+def test_blank_default_rows_are_not_archived(job, tmp_path, monkeypatch):
+    path = tmp_path / 'applications.xlsx'
+    monkeypatch.setattr(sheet, 'read_user_edits', lambda p: {
+        'old': {'applied': 'No', 'notes': None, 'date_applied': None}})
+    sheet.build(path)
+    assert sheet.SAVED_EDITS_SHEET not in load_workbook(path).sheetnames
+    assert not path.with_suffix('.edits.json').exists()

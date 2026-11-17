@@ -238,6 +238,8 @@ def cmd_sheet(_):
     print(f"{r['rows']} job(s) -> {r['path'].relative_to(core.ROOT)}")
     for jid in r["recorded_applied"]:
         print(f"  recorded as applied (from the sheet): {jid}")
+    for jid, message in r.get('errors', {}).items():
+        core.warn(f"sheet {jid}: {message}")
 
 
 def cmd_privacy(a):

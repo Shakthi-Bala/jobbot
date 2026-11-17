@@ -58,6 +58,7 @@ COL = {key or header: i + 1 for i, (header, _, key) in enumerate(COLUMNS)}
 USER_KEYS = ("applied", "date_applied", "notes")
 FIRST_ROW = 6   # rows 1-4: title and legend, row 5: headers
 SAVED_EDITS_SHEET = "Saved edits"
+SAVED_EDIT_LIMIT = 1000
 
 
 def _posted(value: str | None) -> date | None:
@@ -82,7 +83,8 @@ def read_user_edits(path: Path = PATH) -> dict[str, dict]:
     if not path.exists():
         return {}
     wb = load_workbook(path)
-    edits = {}
+    archive = path.with_suffix('.edits.json')
+    edits = json.loads(archive.read_text()) if archive.exists() else {}
     # Filtered rows retain their inputs in the workbook. Visible edits take precedence.
     if SAVED_EDITS_SHEET in wb.sheetnames:
         for job_id, applied, date_applied, notes in wb[SAVED_EDITS_SHEET].iter_rows(
@@ -119,9 +121,10 @@ def apply_edits(conn, edits: dict[str, dict], errors: dict[str, str] | None = No
                 else:
                     tracker.mark_applied(job_id)
             except core.JobbotError as e:
-                core.warn(f"sheet {job_id}: {e}")
                 if errors is not None:
                     errors[job_id] = str(e)
+                else:
+                    core.warn(f"sheet {job_id}: {e}")
             else:
                 recorded.append(job_id)
     return recorded
@@ -367,7 +370,21 @@ def build(path: Path = PATH) -> dict:
     _projects(wb.create_sheet("Projects"), rows)
     _summary(wb.create_sheet("Summary"), len(rows))
     visible = {r["job_id"] for r in rows}
-    filtered_edits = {jid: e for jid, e in edits.items() if jid not in visible}
+    meaningful = {jid: e for jid, e in edits.items() if (
+        str(e.get('applied') or '').strip().lower() == 'yes'
+        or e.get('date_applied') or str(e.get('notes') or '').strip())}
+    filtered_edits = {jid: e for jid, e in meaningful.items() if jid not in visible}
+    archive = path.with_suffix('.edits.json')
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if len(filtered_edits) > SAVED_EDIT_LIMIT or archive.exists():
+        # Keep all meaningful inputs in a private atomic archive before saving
+        # the workbook, so overflow and workbook-save failures cannot lose notes.
+        def scalar(value):
+            return value.date().isoformat() if isinstance(value, datetime) else (
+                value.isoformat() if isinstance(value, date) else value)
+        core.write_private(archive, core.dumps({jid: {k: scalar(v) for k, v in e.items()}
+                                               for jid, e in meaningful.items()}))
+    filtered_edits = dict(list(filtered_edits.items())[-SAVED_EDIT_LIMIT:])
     if filtered_edits:
         saved = wb.create_sheet(SAVED_EDITS_SHEET)
         saved.append(["job_id", *USER_KEYS])
