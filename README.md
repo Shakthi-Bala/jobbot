@@ -3,7 +3,7 @@
 **Find robotics and ML roles ranked by pay. Build fact-checked applications with a seven-reader review panel. Never auto-apply.**
 
 [![Tests](https://github.com/Shakthi-Bala/jobbot/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/Shakthi-Bala/jobbot/actions/workflows/tests.yml)
-[![Release: v1.0.0](https://img.shields.io/badge/release-v1.0.0-blue)](https://github.com/Shakthi-Bala/jobbot/releases)
+[![Release](https://img.shields.io/github/v/release/Shakthi-Bala/jobbot)](https://github.com/Shakthi-Bala/jobbot/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ![Animated jobbot workflow: verified facts and a job description become tailored documents, checks, and a human review queue.](docs/assets/jobbot-workflow.gif)

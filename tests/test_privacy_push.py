@@ -110,6 +110,23 @@ def test_public_repository_exception_is_limited_to_that_repository():
     assert inspect('https://github.com/alex-example/profile')
 
 
+def test_release_badge_exception_only_covers_the_configured_public_repository():
+    ids = {'alex-example': 'account handle'}
+    repository = 'https://github.com/alex-example/jobbot'
+    badge = 'https://img.shields.io/github/v/release/alex-example/jobbot'
+
+    def inspect(text):
+        return privacy.inspect_blob(text.encode(), 'README.md', ids, {}, [], repository)
+
+    assert inspect(f'[![Release]({badge})]({repository}/releases)') == []
+    assert inspect(badge.upper() + '.svg?style=flat') == []
+    for text in (badge + '-private', badge + '/private', badge.replace('/jobbot', '/notes'),
+                 badge + '?label=alex-example', badge + ' alex-example',
+                 badge.replace('img.shields.io', 'img.shields.io.evil.test')):
+        assert inspect(text), text
+    assert privacy.inspect_blob(badge.encode(), 'README.md', ids, {}, [], '')
+
+
 def test_oversized_worktree_files_are_not_loaded_into_memory(repo, monkeypatch):
     large = repo / 'large.bin'
     with large.open('wb') as file:
