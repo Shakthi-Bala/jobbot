@@ -1,0 +1,16 @@
+{
+  "ref_id": "P001",
+  "before": {
+    "text": "Worked on a point-cloud filter and evaluated it on 120 synthetic warehouse scenes",
+    "fact_ids": ["F001"]
+  },
+  "after": {
+    "text": "Implemented an Open3D point-cloud filter and evaluated it on 120 synthetic warehouse scenes",
+    "fact_ids": ["F001"]
+  },
+  "critique": {
+    "quote": "Worked on a point-cloud filter and evaluated it on 120 synthetic warehouse scenes",
+    "why": "DEMO FIXTURE: 'Worked on' hides the implemented component and its tool. State the ownership already supported by F001."
+  },
+  "instruction": "Replace 'Worked on a point-cloud filter' with 'Implemented an Open3D point-cloud filter'; preserve the synthetic evaluation scope and F001 citation."
+}

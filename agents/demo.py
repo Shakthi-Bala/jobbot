@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import copy
 import os
 from pathlib import Path
 import re
@@ -35,9 +36,30 @@ def run() -> dict:
     posting = root / 'posting.txt'
     shutil.copy(SOURCE / 'data/evals/example-perception/posting.txt', posting)
     fixtures = json.loads((SOURCE / 'data/demo/answers.json').read_text())
+    revision = json.loads((SOURCE / 'data/demo/revision.json').read_text())
     env = dict(os.environ, JOBBOT_ROOT=str(root), JOBBOT_MODE='manual')
     # Force the recorded offline route; inherited provider keys are never used.
     events = []
+    revision_recording = None
+
+    def fixture_answer(name):
+        value = copy.deepcopy(fixtures[name])
+        states = list((root / 'out').glob('*/packet_state.json'))
+        state = json.loads(states[0].read_text()) if states else {}
+        round_no = state.get('panel_round', 0)
+        if name == 'TailoredPacket' and round_no == 0:
+            entry = next(p for p in value['projects'] if p['ref_id'] == revision['ref_id'])
+            assert entry['bullets'][0] == revision['after']
+            entry['bullets'][0] = revision['before']
+        elif name == 'PersonaReview' and round_no == 1:
+            value['lines_that_hurt'] = [revision['critique']]
+            value['edits'] = [{'edit': revision['instruction'], 'uses_existing_evidence': True,
+                               'fact_ids': revision['after']['fact_ids']}]
+        elif name == 'RevisionPlan' and round_no == 1:
+            value.update(revisions=[{'instruction': revision['instruction'],
+                                     'fact_ids': revision['after']['fact_ids'],
+                                     'raised_by': ['senior_engineer']}], needs_new_evidence=[])
+        return getattr(schemas, name).model_validate(value)
 
     def execute(args):
         command = [sys.executable, str(SOURCE / 'jobbot.py'), *args]
@@ -55,6 +77,11 @@ def run() -> dict:
     def complete(args):
         for _ in range(25):
             result = execute(args)
+            # Preserve the first rendered draft before the real packet loop revises it.
+            before = root / 'revision-before.pdf'
+            drafts = list((root / 'out').glob('*/resume.pdf'))
+            if drafts and not before.exists():
+                shutil.copy(drafts[0], before)
             if result.returncode == 0:
                 return
             answered = 0
@@ -66,7 +93,7 @@ def run() -> dict:
                 name = match[1] if match else ''
                 if name not in fixtures:
                     raise core.JobbotError(f'Demo has no fixture for {name}')
-                value = getattr(schemas, name).model_validate(fixtures[name])
+                value = fixture_answer(name)
                 answer.write_text(core.dumps(value.model_dump()))
                 answered += 1
             if not answered:
@@ -93,6 +120,21 @@ def run() -> dict:
         complete(['checks', jid, '--offline'])
         packet = next(path.parent for path in (root / 'out').glob('*/meta.json')
                       if json.loads(path.read_text()).get('job_id') == jid)
+        rounds = json.loads((packet / 'panel.json').read_text())
+        assert len(rounds) == 2 and rounds[0]['revisions'] and not rounds[1]['revisions']
+        final = json.loads((packet / 'resume.json').read_text())
+        assert revision['after']['text'] in final['projects'][0]['bullets']
+        from checks._lib import pdf_text
+        assert revision['before']['text'] in ' '.join(pdf_text(root / 'revision-before.pdf').split())
+        revision_recording = {
+            'before': revision['before'], 'after': revision['after'],
+            'critique': rounds[0]['reviews']['senior_engineer']['lines_that_hurt'][0],
+            'instruction': rounds[0]['plan']['revisions'][0]['instruction'],
+            'rounds': [row['round'] for row in rounds],
+            'before_sha256': core.sha256_file(root / 'revision-before.pdf'),
+            'after_sha256': core.sha256_file(packet / 'resume.pdf'),
+        }
+        assert revision_recording['before_sha256'] != revision_recording['after_sha256']
         result = {'workspace': str(root), 'packet': str(packet), 'job_id': jid,
                   'synthetic_data': True, 'review_source': 'recorded fixtures; no model assessment',
                   'network_calls': False}
@@ -102,4 +144,5 @@ def run() -> dict:
         return result
     finally:
         (root / 'demo-recording.json').write_text(core.dumps({
-            'synthetic_data': True, 'review_source': 'recorded fixtures', 'events': events}))
+            'synthetic_data': True, 'review_source': 'recorded fixtures', 'events': events,
+            'revision': revision_recording}))

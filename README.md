@@ -8,7 +8,7 @@
 
 ![Animated jobbot workflow: verified facts and a job description become tailored documents, checks, and a human review queue.](docs/assets/jobbot-workflow.gif)
 
-*Replay of actual offline CLI output, with synthetic data and fixture review answers.*
+*Replay of actual offline CLI output, including a reviewer-flagged bullet and its revision. Synthetic data and fixture review answers; no live model ratings.*
 
 [Quick start](#quick-start) · [Example output](#example-output) · [Workflow](#workflow) · [Review panel](#review-panel) · [Configuration](docs/configuration.md)
 
@@ -38,7 +38,7 @@ python -m pip install -r requirements.txt
 python jobbot.py demo
 ```
 
-The offline demo runs the real import, packet, PDF-rendering, checks, and panel-report commands using the [example posting](data/evals/example-perception/posting.txt) and fictional profile. It supplies recorded JSON answers instead of calling a model. No API key, browser login, job-board request, or application submission is needed.
+The offline demo runs the real import, packet, PDF-rendering, checks, and panel-report commands using the [example posting](data/evals/example-perception/posting.txt) and fictional profile. It supplies recorded JSON answers instead of calling a model. A fixture reviewer flags a vague contribution, the writer revises it using the same evidence, and the panel records both rounds. No API key, browser login, job-board request, or application submission is needed.
 
 Open the résumé, cover letter, `checks.json`, and `panel.md` in the packet directory printed at the end. Each run gets a fresh directory under `out/demo/`; `out/demo/latest.json` records the latest paths. Scores in this demo are fixtures, not assessments of an applicant. Your existing profile and tracker are untouched.
 
