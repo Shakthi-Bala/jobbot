@@ -120,3 +120,16 @@ def test_oversized_worktree_files_are_not_loaded_into_memory(repo, monkeypatch):
         return original(path)
     monkeypatch.setattr(type(large), 'read_bytes', read)
     assert 'size limit' in privacy.scan([large], {}, repo)[0]
+
+
+def test_forced_notes_archive_is_blocked_without_profile(repo, monkeypatch):
+    from agents import core
+    monkeypatch.setattr(core, 'DATA', repo / 'data')
+    (repo / '.gitignore').write_text('data/applications.edits.json\n')
+    data = repo / 'data'
+    data.mkdir()
+    (data / 'applications.edits.json').write_text('{"role": {"notes": "follow up"}}')
+    git(repo, 'add', '-f', 'data/applications.edits.json')
+    head = commit(repo, 'forced notes archive')
+    findings = privacy.scan_push(update(head), repo)
+    assert any('data/applications.edits.json: private file' in line for line in findings)

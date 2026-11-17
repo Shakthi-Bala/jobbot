@@ -39,6 +39,7 @@ PRIVATE_PATHS = ('.env', 'data/profile.yaml', 'data/answers_bank.yaml', 'data/cr
                  'data/token.json', 'data/tracker.db', 'data/master_resume.yaml',
                  'data/approved_bullets.yaml', 'data/decisions.tsv', 'data/daily_log.md',
                  'data/weekly_review.md', 'data/run.log', 'data/applications.xlsx',
+                 'data/applications.edits.json',
                  '.streamlit/secrets.toml', 'my_resume/', 'data/uploads/', 'out/')
 
 

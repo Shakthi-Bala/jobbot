@@ -4,6 +4,10 @@
 
 ### Correctness and reliability
 
+- Distinguish degrees of freedom from angles; check hyphenated rankings, placement verbs, half-dozen counts, and large number words without a following noun.
+- Honor bracketed and trailing-only currency codes, keep foreign ranges separate from US pay, and retain base ranges that explicitly exclude bonus or equity.
+- Keep all outreach failures in the check report and log every failing check's count and report path instead of truncating diagnostic wrappers.
+- Run the full CI suite even when the separate regression-corpus step fails.
 - Require documented tool/version pairs for version exemptions; preserve percentages and count nouns, and prevent version-label source numbers from supporting unrelated metrics.
 - Check bare-word team/mentorship counts and ordinals in ranking contexts. Keep technical version modifiers distinct from deployment counts.
 - Classify salary ranges independently so bonus mentions cannot suppress base pay; exclude RSUs/OTE/equity and preserve currency metadata during ATS fallback.
@@ -47,6 +51,7 @@
 
 ### Input and privacy checks
 
+- Block the private spreadsheet notes archive (`data/applications.edits.json`) in outgoing commits, including forced additions of this ignored file.
 - Ignore root-level PDFs without naming private files; protect runtime logs and Streamlit secrets and detect phone separator variants.
 - Install the privacy hook with the current Python interpreter and distinguish scan failures from detected private data.
 - Escape untrusted data wrappers and separate posting warnings from generated-output contamination checks.
@@ -56,6 +61,8 @@
 
 ### Contributor experience
 
+- Consolidate review fixes here and remove internal process notes from public documentation.
+- Preserve API mode for existing model configurations; use the explicit manual example when local configuration is absent.
 - Ship `models.example.yaml` and retain ignored local `models.yaml` settings; point the CI badge at `main`.
 - Add an MIT license and Python 3.10/3.12 CI with Typst and PDF tools.
 - Require Streamlit 1.49 or newer for the dashboard's `width="stretch"` API ([release notes](https://docs.streamlit.io/develop/quick-reference/release-notes/2025#version-1490)).
@@ -73,7 +80,7 @@
 
 ## Validation
 
-The revised suite passes **256 tests**, including adversarial claim-generation cases, the offline CLI demo, actual PDF rendering and extraction, a Streamlit dashboard integration check, outgoing-history privacy scans, network-target restrictions, and application-state regressions. This local run used Python 3.13 with a LaTeX compiler available. The synthetic demo also passes all 11 packet checks. GitHub Actions is configured for Python 3.10 and 3.12; hosted run status is reported by the workflow badge.
+The revised suite passes **720 tests**, including the fixed numerical and salary corpora, adversarial claim-generation cases, the offline CLI demo, actual PDF rendering and extraction, a Streamlit dashboard integration check, outgoing-history privacy scans, network-target restrictions, and application-state regressions. This local run used Python 3.13 with a LaTeX compiler available. The synthetic demo also passes all 11 packet checks. GitHub Actions is configured for Python 3.10 and 3.12; hosted run status is reported by the workflow badge.
 
 ## Known limits
 
