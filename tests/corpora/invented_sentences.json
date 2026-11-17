@@ -171,5 +171,41 @@
     "id": "i34",
     "text": "Deployed ROS 2 cameras",
     "cite": "F090"
+  },
+  {
+    "id": "i35",
+    "category": "rank",
+    "text": "Achieved a top-three finish",
+    "cite": "F004"
+  },
+  {
+    "id": "i36",
+    "category": "rank",
+    "text": "Placed first among 400 teams",
+    "cite": "F004"
+  },
+  {
+    "id": "i37",
+    "category": "scaled_count",
+    "text": "Mentored half-dozen engineers",
+    "cite": "F004"
+  },
+  {
+    "id": "i38",
+    "category": "scaled_count",
+    "text": "Mentored half a dozen engineers",
+    "cite": "F004"
+  },
+  {
+    "id": "i39",
+    "category": "nounless_number",
+    "text": "Scored ninety-five on the leaderboard",
+    "cite": "F004"
+  },
+  {
+    "id": "i40",
+    "category": "robotics_units",
+    "text": "Rotated the arm by 6 degrees",
+    "cite": "F092"
   }
 ]
