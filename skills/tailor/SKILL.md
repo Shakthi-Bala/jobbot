@@ -101,3 +101,6 @@ Short sentences.
 ## rationale
 Three to five sentences: what you emphasised and why, and what you left out.
 Separate edits completed with existing evidence from unresolved requests requiring measurements or candidate clarification. Confidentiality is a constraint, not an invitation to seek or invent substitute accuracy. Do not promise a target rating or first-round success after editorial changes.
+
+
+Application question labels must be copied from declared application questions found verbatim in the posting source. Do not invent extra questions or turn candidate claims into question headings. Leave unsupported questions out; checks will report declared questions whose source is missing.

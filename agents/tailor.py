@@ -235,6 +235,13 @@ def group_skills(skills: list[dict], groups, profile: dict | None = None) -> lis
     return out
 
 
+def posting_questions(job) -> dict[str, str]:
+    """Only questions that are declared and actually quoted in the posting source."""
+    parsed = json.loads(job['parsed_json'] or '{}')
+    return {core.normalize(q): q for q in parsed.get('application_questions', [])
+            if isinstance(q, str) and core.quote_in_text(q, job['raw_text'] or '')}
+
+
 def enforce(packet: TailoredPacket, profile: dict, job_id: str,
             must_have: list[str], posting_text: str = "") -> dict:
     """Apply no-unsourced-claims in code. Returns a plain dict ready to render."""
@@ -274,14 +281,23 @@ def enforce(packet: TailoredPacket, profile: dict, job_id: str,
     paragraphs = [{"text": core.claim_text(p.text), "fact_ids": p.fact_ids} for p in packet.cover_letter
                   if p.fact_ids and set(p.fact_ids) <= known]
 
+    conn = core.connect()
+    try:
+        questions = posting_questions(core.get_job(conn, job_id))
+    finally:
+        conn.close()
     answers = []
     for a in packet.answers:
+        question = questions.get(core.normalize(a.question))
+        if question is None:
+            core.log_decision('tailor', job_id, 'dropped_question', 'question is not supported by the posting source')
+            continue
         keys = [k for k in a.answer_bank_keys
                 if isinstance(_bank_get(bank, k), (str, bool, int, float))]
         ids = [f for f in a.fact_ids if f in known]
         invalid = len(keys) != len(a.answer_bank_keys) or len(ids) != len(a.fact_ids)
         if a.need_input or invalid or not (keys or ids):
-            answers.append({"question": a.question, "answer": "", "fact_ids": [],
+            answers.append({"question": question, "answer": "", "fact_ids": [],
                             "keys": [], "need_input": a.need_input or "no supporting fact"})
         else:
             answer = core.claim_text(a.answer)
@@ -289,7 +305,7 @@ def enforce(packet: TailoredPacket, profile: dict, job_id: str,
             # answer (especially self-identification). Use the stored value.
             if keys:
                 answer = " ".join(core.claim_text(str(_bank_get(bank, k))) for k in keys)
-            answers.append({"question": a.question, "answer": answer,
+            answers.append({"question": question, "answer": answer,
                             "fact_ids": ids, "keys": keys, "need_input": None})
 
     return {
@@ -324,6 +340,9 @@ def write_packet(job, content: dict, profile: dict, version: int, pages: int = 1
     # Every renderer and check sees identical, single-line claim text, including
     # master-resume material and the final unslop rewrite.
     content = copy.deepcopy(content)
+    questions = posting_questions(job)
+    content['answers'] = [dict(a, question=questions[core.normalize(a['question'])])
+                          for a in content['answers'] if core.normalize(a['question']) in questions]
     if content.get('summary'):
         content['summary']['text'] = core.claim_text(content['summary']['text'])
     for entry in content['experience'] + content['projects']:

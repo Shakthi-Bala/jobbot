@@ -31,7 +31,11 @@ def env(tmp_path, monkeypatch):
 POSTING = """Perception Engineer
 Required: visual-inertial odometry, PyTorch, ROS 2.
 This position requires access to export-controlled information; applicants must be
-U.S. persons as defined by ITAR."""
+U.S. persons as defined by ITAR.
+Application questions:
+Why robotics?
+Gender
+Describe your FPGA experience"""
 
 
 @pytest.fixture
@@ -43,7 +47,8 @@ def job(env):
     jid = discover.upsert_jobs(conn, [j], targets={}, parse=False)[0]
     parsed = {"must_have": ["ROS 2"], "restrictions": [
         {"type": "export_control", "quote": "applicants must be U.S. persons as defined by ITAR"}],
-        "keywords": ["ROS 2", "PyTorch"], "injection_flags": []}
+        "keywords": ["ROS 2", "PyTorch"], "injection_flags": [],
+        "application_questions": ["Why robotics?", "Gender", "Describe your FPGA experience"]}
     conn.execute("UPDATE jobs SET parsed_json=? WHERE id=?", (core.dumps(parsed), jid))
     conn.commit()
     return core.get_job(conn, jid)
