@@ -169,9 +169,12 @@ def _draft_all(conn, job_id: str, job, profile: dict, net: dict, room: int,
                                "answer the tasks, then re-run outreach")
     if drafted:
         results = run_all.run(d.parent, outreach=True, offline=offline_review)
-        failed = run_all.failures(results)
+        failed = {name: len(problems) for name, problems in results.items() if problems}
         if failed:
-            core.log_decision("outreach", job_id, "checks_failed", "; ".join(failed)[:500])
+            # Keep every category visible without clipping diagnostic wrappers.
+            # run_all has saved all messages, intact, in the referenced report.
+            core.log_decision("outreach", job_id, "checks_failed", core.dumps({
+                "failures": failed, "report": str(d / "checks.json")}))
         try:
             from . import review
             review.review(conn, job_id, d.parent, results, outreach=True)

@@ -38,6 +38,7 @@ jobs:
       - name: Fixed writing and salary regression corpora
         run: python -m pytest -q tests/test_regression_corpora.py --junitxml=corpus-results.xml
       - name: Test
+        if: always()
         run: python -m pytest -q --junitxml=test-results.xml
       - name: Save test results
         if: always()
