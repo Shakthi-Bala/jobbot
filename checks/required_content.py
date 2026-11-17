@@ -48,7 +48,7 @@ def check(d: Path) -> list[str]:
                if line.startswith('## Q:')}
     for question in parsed.get('application_questions', []):
         if core.normalize(question) not in present:
-            bad.append(f'required application question missing: {question}')
+            bad.append('required application question missing:\n' + core.untrusted('application_question', question))
     return bad
 
 

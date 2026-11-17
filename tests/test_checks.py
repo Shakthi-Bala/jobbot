@@ -137,7 +137,9 @@ def test_restriction_quote_must_be_verbatim(packet):
                  "VALUES (?, 80, ?, 'shortlist')",
                  (jid, json.dumps([{"type": "citizenship", "quote": "US citizens only"}])))
     conn.commit()
-    assert restriction_quotes.check(packet) == ['quote not in posting: "US citizens only"']
+    problems = restriction_quotes.check(packet)
+    assert len(problems) == 1 and 'US citizens only' in problems[0]
+    assert '<restriction_quote trust="untrusted">' in problems[0]
 
 
 def test_wrong_company_in_letter(packet, monkeypatch):

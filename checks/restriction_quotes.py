@@ -20,7 +20,7 @@ def check(d: Path) -> list[str]:
     fit = conn.execute("SELECT restrictions_json FROM fit WHERE job_id=?", (job_id,)).fetchone()
     if fit:
         quotes += [r["quote"] for r in json.loads(fit["restrictions_json"] or "[]")]
-    return [f"quote not in posting: \"{q[:150]}\"" for q in quotes
+    return ['quote not in posting:\n' + core.untrusted('restriction_quote', q[:150]) for q in quotes
             if not core.quote_in_text(q, posting)]
 
 

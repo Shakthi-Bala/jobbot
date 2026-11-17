@@ -29,7 +29,8 @@ def check(d: Path, live: bool = True) -> list[str]:
             bad.append(f"posting is no longer live: {job['url']}")
         else:
             if fuzz.ratio(core.normalize(posting["title"]), core.normalize(job["title"])) < 90:
-                bad.append(f"live title {posting['title']!r} != {job['title']!r}")
+                bad.append('live title differs from stored title:\n' + core.untrusted(
+                    'posting_titles', core.dumps({'live': posting['title'], 'stored': job['title']})))
             if job["req_id"] and posting["req_id"] != job["req_id"]:
                 bad.append(f"live req ID {posting['req_id']!r} != {job['req_id']!r}")
 
