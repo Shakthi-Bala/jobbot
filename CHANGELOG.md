@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased — dev
+## Unreleased
+
+## 1.0.0 — 2026-11-17
 
 ### Correctness and reliability
 
