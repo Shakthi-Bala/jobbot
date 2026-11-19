@@ -15,6 +15,7 @@ Produce one revision plan:
   hiring decision. Don't keep polishing for the sake of it.
 
 Before approving the copy, check these concrete failure modes:
+- Accomplishment bullets omit one of XYZ: what was achieved, the verified measurement/evidence, or the candidate's method/contribution. Rephrase using existing facts where possible. If a publishable measurement is absent, retain an honest capability-and-method bullet and record the evidence gap; do not demand an invented metric. Preserve caveats, team attribution and the exact comparison scope when editing approved wording.
 - Repeated employer headings obscure distinct labs/roles that could be grouped with accurate titles and dates.
 - A bullet bundles several independent activities or slash-heavy phrases instead of one clear contribution.
 - A project reads like a benchmark log: multiple raw timings and configuration details overwhelm the engineering result. Preserve essential conditions; move secondary detail to the linked artifact.
