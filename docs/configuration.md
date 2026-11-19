@@ -72,6 +72,32 @@ Configure mode and models in local `models.yaml`, copied from the tracked [examp
 
 The panel's minimum score is an editorial gate. A high average cannot override a reader below the configured threshold. If stronger evidence is needed, the pipeline stops rather than inventing a result. See [the review guide](resume-review-loop.md) for scoring and visual-review limitations.
 
+## Contacts with resume requests
+
+To ask the assistant to include professional contacts and outreach drafts whenever
+you request a resume or application batch, save this preference in your private
+profile:
+
+```yaml
+networking:
+  include_with_resume: true
+  max_contacts_per_company: 3
+  channels: ["email", "linkedin_message"]
+```
+
+The assistant follows the [combined delivery playbook](../skills/jobbot-mode/playbooks/resume-with-contacts.md).
+The delivery README links the contact sheet, verification sources and dates, related
+jobs and short message drafts. Batch ZIPs include these companion files. Missing or
+unverified contacts are reported explicitly; they do not prevent delivery of a
+completed resume. Contact limits and existing outreach history still apply.
+
+This is an assistant-workflow preference. The standalone CLI commands remain
+separate: `python jobbot.py packet JOB_ID` prepares documents, and
+`python jobbot.py outreach JOB_ID` researches contacts and drafts messages. Nothing
+is sent automatically. Two independent professional sources must confirm each
+contact; LinkedIn may be a contact route but is not a verification source. Use only
+published professional emails and never infer affiliations or contact details.
+
 ## Optional integrations
 
 - **Gmail alerts:** use a read-only OAuth client, save credentials in ignored `data/credentials.json`, and run `python jobbot.py gmail-auth` interactively. Label alerts `jobbot/alerts`. Scheduled discovery only uses existing credentials and never opens a browser. Board discovery can run with `--no-alerts`.
