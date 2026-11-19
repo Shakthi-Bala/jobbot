@@ -14,6 +14,12 @@ scope and outcome must be supported by cited facts. Keyword diagnostics do not e
 an employer's screening rules or justify adding repetitive labels. Do not claim unsupported skills.
 
 ## Bullets
+- Use XYZ for accomplishment bullets: relevant accomplishment, verified measurement
+  or evidence, and the candidate's method/contribution. Use natural concise wording.
+  When no publishable measurement exists, use the verified delivered capability and
+  method and retain the evidence gap. Never invent a metric, causal improvement or
+  baseline, disclose confidential results, or strip scope/attribution to fit XYZ.
+  Supporting bullets may explain implementation or evaluation without a new outcome.
 - Cover useful evidence under the entry whose `facts` list contains it. Related facts
   can support one coherent contribution; do not force each fact into a separate chore.
   `fact_ids` must come from that entry. Selection for a one-page resume happens later.

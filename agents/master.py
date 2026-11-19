@@ -32,7 +32,8 @@ def draft() -> Path:
         "## Profile (the ONLY source of facts)\n" + core.dumps({
             k: profile.get(k) for k in
             ("person", "education", "experience", "projects", "skills", "facts", "targets")})
-        + "\n\n## Preferences\n" + core.dumps(profile.get("preferences", {})),
+        + "\n\n## Preferences\n" + core.dumps(profile.get("preferences", {}))
+        + "\n\n" + tailor.XYZ_GUIDANCE,
         MasterResume, max_tokens=32000)
     data = enforce(result, profile)
     PATH.write_text("# Master resume: written by the master agent, checked against profile.yaml.\n"

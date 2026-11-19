@@ -19,6 +19,22 @@ from .schemas import ParagraphRewrites, TailoredPacket
 
 MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
 
+XYZ_GUIDANCE = (
+    "## Resume bullets: XYZ (standing writing rule)\n"
+    "Use accomplishment (X), evidence or measurement (Y), and the candidate's method or "
+    "contribution (Z). Lead with the relevant outcome, show how it was measured, and "
+    "explain what the candidate did. When a metric is available, retain its verified "
+    "baseline, units, evaluation scope and attribution. A count or runtime alone is "
+    "not evidence of improvement; do not invent causality or a comparison. "
+    "When no publishable measurement exists, state the verified delivered capability "
+    "and method; never invent a metric, expose confidential results or insert XYZ "
+    "placeholders in the resume. Record missing outcome evidence in rationale. "
+    "Write naturally in one or two rendered lines, without repeating the literal "
+    "formula. Supporting bullets may explain implementation or evaluation conditions "
+    "without manufacturing another outcome. Preserve team credit, benchmark "
+    "limitations, ongoing-work status and physical versus simulated boundaries.\n"
+)
+
 
 def fmt_month(value) -> str:
     s = str(value or "").strip()
@@ -99,6 +115,7 @@ def draft(conn, job_id: str, feedback: list[dict | str] | None = None) -> Tailor
     )
     from . import ats, master
     pages, why = decide_pages(job, parsed, profile)
+    user += "\n\n" + XYZ_GUIDANCE
     user += (f"\n\n## Page budget: {pages} page(s) ({why}). "
              + ((f"Include at least {prefs['resume_min_projects']} distinct relevant projects; "
                  "balance their detail with experience and the requested skills/coursework."
@@ -123,11 +140,13 @@ def draft(conn, job_id: str, feedback: list[dict | str] | None = None) -> Tailor
     approved = bank.load(profile)
     if approved:
         user += ("\n\n## Approved wording (the candidate accepted these bullets on a rendered page)\n"
-                 "This is the quality bar and the default text. When you select an entry, reuse its "
-                 "approved bullets verbatim; choose and order them for this posting. Write a new "
-                 "bullet only where the posting needs evidence that no approved bullet covers, or "
-                 "an entry has none; hold new bullets to the same scope, attribution and "
-                 "measurement boundaries. Never loosen a caveat an approved bullet carries.\n"
+                 "This is the quality bar and the default source wording. Reuse approved bullets "
+                 "verbatim when they already communicate XYZ clearly for this posting. You may "
+                 "rephrase or combine supported wording into XYZ while preserving every factual "
+                 "claim, attribution, measurement boundary and caveat. Keep citations attached to "
+                 "the claims they support. New or rephrased text remains a candidate for review, "
+                 "not automatically approved wording. Write new bullets for relevant evidence "
+                 "that approved wording does not cover; never invent missing outcomes or metrics.\n"
                  + core.dumps({ref: [{"text": b["text"], "fact_ids": b["fact_ids"]} for b in bullets]
                                for ref, bullets in approved.items()}))
     m = master.load()

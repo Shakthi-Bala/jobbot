@@ -6,6 +6,14 @@ Read `skills/jobbot-mode/SKILL.md` and the relevant files in `principles/` befor
 working on a real application. Follow the matching playbook. The candidate's
 verified facts are the source of claims; missing evidence remains a gap.
 
+For all future resume drafting, including manual tasks and batch scripts, follow
+the XYZ guidance in `skills/tailor/SKILL.md`: accomplishment, verified measurement
+or evidence, and the candidate's method/contribution. When a publishable measurement
+is unavailable, state the supported capability and method and record the evidence
+gap. Never invent metrics or remove attribution, disclosure or evaluation limits
+to fill the formula. Existing bullets may be rephrased while preserving their facts
+and caveats; new wording still requires review.
+
 ## Answering manual-mode tasks
 
 1. Run `python jobbot.py tasks` to list pending tasks in `out/tasks/`.

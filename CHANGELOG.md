@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Apply evidence-bounded XYZ guidance to tailored and master-resume drafting and editor review; allow approved wording to be rephrased without losing facts, caveats or candidate review.
 - Use a dynamic release badge; permit only the configured public repository's badge URL in privacy scans.
 - Vary fictional reader scores, show review rounds before the packet result in the GIF, and retain demo validation when Python runs with optimization.
 - Show a supported wording revision across two real offline-demo panel rounds; include the reviewer feedback and redraft in the README recording, with fixture scores clearly labeled.
