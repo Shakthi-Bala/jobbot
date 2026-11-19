@@ -14,6 +14,19 @@ gap. Never invent metrics or remove attribution, disclosure or evaluation limits
 to fill the formula. Existing bullets may be rephrased while preserving their facts
 and caveats; new wording still requires review.
 
+When `networking.include_with_resume` is true in the candidate's private profile,
+every request for resumes or application packets also includes relevant professional
+contacts and short personalized outreach drafts. Use the `resume-with-contacts`
+playbook, including for batches and manual drafting scripts. Bundle the contact
+sheet, source links, verification dates, related job links and message drafts with
+the resumes, and link them from the delivery README. Respect contact limits and
+existing outreach history. If no contact can be verified, record that gap and still
+deliver the resume; never invent a person, affiliation, profile URL or email.
+Contacts require two independent professional sources confirming identity and role.
+LinkedIn can be a verified contact route, but does not count as a verification source
+and must not be scraped. Use only published professional email addresses. Drafting
+does not authorize sending, uploading, applying or marking anything as sent.
+
 ## Answering manual-mode tasks
 
 1. Run `python jobbot.py tasks` to list pending tasks in `out/tasks/`.

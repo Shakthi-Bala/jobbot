@@ -156,6 +156,7 @@ preferences:
 writing_samples: []                   # 2-3 short emails/letters that sound like you
 
 networking:
+  include_with_resume: false         # assistant bundles contacts/drafts with resume requests
   max_contacts_per_company: 3
   channels: ["email", "linkedin_message"]
   affiliations: ["Example Polytechnic Institute", "Example Perception Lab"]
